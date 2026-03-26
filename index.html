@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Senior Frontend – Interview Cheatsheet v2</title>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--card:#21253a;--border:#2e3352;--accent:#6c8fff;--accent2:#a78bfa;--accent3:#34d399;--text:#e2e8f0;--muted:#8892a4;--warn:#fbbf24;--danger:#f87171;--code-bg:#141720;--radius:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.7;display:flex}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:252px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:0.75rem 0}
+.sidebar-logo{font-size:13px;font-weight:700;color:var(--accent);padding:0.5rem 1.25rem 0.75rem;letter-spacing:0.05em}
+.nav-cat{font-size:10px;font-weight:700;letter-spacing:0.1em;color:#3d4470;text-transform:uppercase;padding:0.85rem 1.25rem 0.25rem}
+.nav-item{display:flex;align-items:center;gap:8px;padding:0.35rem 1.25rem;cursor:pointer;border-left:3px solid transparent;color:var(--muted);font-size:12.5px;text-decoration:none;transition:color .1s,background .1s}
+.nav-item:hover{color:var(--text);background:rgba(108,143,255,.05)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(108,143,255,.08)}
+.nav-num{font-size:10px;background:#1a1d27;border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--muted);min-width:22px;text-align:center;flex-shrink:0}
+.nav-item.active .nav-num{color:var(--accent);border-color:var(--accent)}
+.main{margin-left:252px;padding:2rem 2.5rem;max-width:920px;width:100%}
+.page-header{margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)}
+.page-header h1{font-size:24px;font-weight:700;margin-bottom:0.3rem}
+.page-header p{color:var(--muted);font-size:13px}
+.section{margin-bottom:3rem;scroll-margin-top:1rem}
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.sec-num{width:30px;height:30px;border-radius:8px;background:rgba(108,143,255,.12);border:1px solid rgba(108,143,255,.25);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0}
+.sec-title{font-size:19px;font-weight:700}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;margin-left:6px;vertical-align:middle}
+.b-hot{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.25)}
+.b-ng{background:rgba(167,139,250,.12);color:var(--accent2);border:1px solid rgba(167,139,250,.25)}
+.b-key{background:rgba(251,191,36,.1);color:var(--warn);border:1px solid rgba(251,191,36,.22)}
+.b-grn{background:rgba(52,211,153,.1);color:var(--accent3);border:1px solid rgba(52,211,153,.22)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.75rem;overflow:hidden}
+.ch{padding:.75rem 1.2rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;transition:background .1s}
+.ch:hover{background:rgba(255,255,255,.02)}
+.ch h3{font-size:13.5px;font-weight:600;color:var(--text)}
+.cb{padding:.9rem 1.2rem;border-top:1px solid var(--border);display:none}
+.cb.open{display:block}
+.arrow{color:var(--muted);font-size:11px;transition:transform .15s}
+.arrow.open{transform:rotate(90deg)}
+p{margin-bottom:.65rem}
+ul,ol{margin:.4rem 0 .7rem 1.4rem}
+li{margin-bottom:.3rem}
+strong{color:#fff;font-weight:600}
+code{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:12.5px;color:#a5b4fc;font-family:'Fira Code',monospace}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:12px;line-height:1.65;overflow-x:auto;margin:.6rem 0;color:#c4cfff;font-family:'Fira Code',monospace}
+pre .kw{color:#a78bfa}pre .fn{color:#6c8fff}pre .str{color:#34d399}pre .cm{color:#4a5580}pre .cls{color:#fbbf24}pre .op{color:#f87171}pre .num{color:#fb923c}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:.6rem 0}
+th{background:#1a1d27;border:1px solid var(--border);padding:5px 8px;color:var(--muted);font-weight:600;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+td{border:1px solid var(--border);padding:5px 8px;vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.012)}
+.tip{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:.6rem .9rem;margin:.6rem 0;font-size:13px}
+.tip::before{content:"✦ TIP  ";font-weight:700;color:var(--accent3);font-size:10px;letter-spacing:.08em;display:block;margin-bottom:.15rem}
+.warn-box{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.6rem .9rem;margin:.6rem 0;font-size:13px}
+.warn-box::before{content:"⚠ GOTCHA  ";font-weight:700;color:var(--warn);font-size:10px;letter-spacing:.08em;display:block;margin-bottom:.15rem}
+
+/* ── MOBILE TOPBAR ── */
+.topbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);border-bottom:1px solid var(--border);z-index:200;align-items:center;padding:0 1rem;gap:12px}
+.topbar-logo{font-size:13px;font-weight:700;color:var(--accent);flex:1;letter-spacing:.05em}
+.menu-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:6px 9px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.menu-btn span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;transition:all .2s}
+.menu-btn.open span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-btn.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.menu-btn.open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+
+/* ── SIDEBAR OVERLAY (mobile) ── */
+.backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:149;opacity:0;transition:opacity .25s}
+.backdrop.visible{opacity:1}
+
+/* ── RESPONSIVE BREAKPOINTS ── */
+@media(max-width:900px){
+  .main{padding:2rem 1.5rem}
+}
+@media(max-width:768px){
+  body{flex-direction:column}
+
+  /* show topbar */
+  .topbar{display:flex}
+
+  /* sidebar becomes a drawer */
+  .sidebar{
+    top:52px;
+    transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);
+    width:270px;
+    z-index:150;
+    box-shadow:4px 0 24px rgba(0,0,0,.4)
+  }
+  .sidebar.open{transform:translateX(0)}
+
+  /* main gets top padding for topbar */
+  .main{margin-left:0;padding:1.25rem 1rem;padding-top:68px}
+
+  /* section headers smaller */
+  .sec-title{font-size:17px}
+
+  /* tables: allow horizontal scroll */
+  .cb{padding:.75rem .9rem;overflow-x:auto}
+  table{min-width:480px}
+  .cb table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* code blocks */
+  pre{font-size:11px;padding:.7rem .8rem}
+
+  /* card headers */
+  .ch{padding:.7rem 1rem}
+  .ch h3{font-size:13px}
+
+  /* page header */
+  .page-header h1{font-size:20px}
+  .page-header p{font-size:12px}
+
+  /* section spacing */
+  .section{margin-bottom:2rem;scroll-margin-top:60px}
+}
+@media(max-width:480px){
+  .main{padding:1rem .75rem;padding-top:64px}
+  .sec-title{font-size:15px}
+  pre{font-size:10.5px}
+  .tip,.warn-box{font-size:12.5px;padding:.5rem .75rem}
+}
+</style>
+</head>
+<body>
+<!-- mobile topbar -->
+<div class="topbar">
+  <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="topbar-logo">⚡ Interview Cheatsheet v2</span>
+</div>
+<div class="backdrop" id="backdrop"></div>
+
+<nav class="sidebar" id="sidebar">
+<div class="sidebar-logo">⚡ Interview Cheatsheet v2</div>
+
+<div class="nav-cat">JavaScript Core</div>
+<a class="nav-item active" href="#s1"><span class="nav-num">1</span>Hoisting & var/let/const</a>
+<a class="nav-item" href="#s2"><span class="nav-num">2</span>Event Loop</a>
+<a class="nav-item" href="#s3"><span class="nav-num">3</span>this, Context, Closure</a>
+<a class="nav-item" href="#s4"><span class="nav-num">4</span>Higher-Order Functions</a>
+<a class="nav-item" href="#s5"><span class="nav-num">5</span>Objects & Object Methods</a>
+<a class="nav-item" href="#s6"><span class="nav-num">6</span>Array Methods</a>
+<a class="nav-item" href="#s7"><span class="nav-num">7</span>Map / Set / WeakMap / WeakSet</a>
+<a class="nav-item" href="#s8"><span class="nav-num">8</span>Classes</a>
+<a class="nav-item" href="#s9"><span class="nav-num">9</span>Promises & async/await</a>
+<a class="nav-item" href="#s10"><span class="nav-num">10</span>Generators & Iterators</a>
+<a class="nav-item" href="#s11"><span class="nav-num">11</span>Scope, Coercion & Types</a>
+<a class="nav-item" href="#s12"><span class="nav-num">12</span>ES6+ Features</a>
+<a class="nav-item" href="#s13"><span class="nav-num">13</span>Big O & Structures</a>
+
+<div class="nav-cat">TypeScript</div>
+<a class="nav-item" href="#s14"><span class="nav-num">14</span>TS Basics</a>
+<a class="nav-item" href="#s15"><span class="nav-num">15</span>Types vs Interfaces</a>
+<a class="nav-item" href="#s16"><span class="nav-num">16</span>Advanced TS</a>
+
+<div class="nav-cat">Web APIs & Browser</div>
+<a class="nav-item" href="#s17"><span class="nav-num">17</span>Storage APIs</a>
+<a class="nav-item" href="#s18"><span class="nav-num">18</span>WebSockets</a>
+<a class="nav-item" href="#s19"><span class="nav-num">19</span>Service Workers</a>
+<a class="nav-item" href="#s20"><span class="nav-num">20</span>Web Workers</a>
+<a class="nav-item" href="#s21"><span class="nav-num">21</span>HTML & CSS</a>
+
+<div class="nav-cat">RxJS</div>
+<a class="nav-item" href="#s22"><span class="nav-num">22</span>RxJS Core</a>
+<a class="nav-item" href="#s23"><span class="nav-num">23</span>Higher-Order Observables</a>
+<a class="nav-item" href="#s24"><span class="nav-num">24</span>Subjects & Hot/Cold</a>
+
+<div class="nav-cat">Angular</div>
+<a class="nav-item" href="#s25"><span class="nav-num">25</span>Angular Fundamentals</a>
+<a class="nav-item" href="#s26"><span class="nav-num">26</span>Dependency Injection</a>
+<a class="nav-item" href="#s27"><span class="nav-num">27</span>Change Detection</a>
+<a class="nav-item" href="#s28"><span class="nav-num">28</span>Signals</a>
+<a class="nav-item" href="#s29"><span class="nav-num">29</span>Forms — All Types</a>
+<a class="nav-item" href="#s30"><span class="nav-num">30</span>Performance Manual</a>
+<a class="nav-item" href="#s31"><span class="nav-num">31</span>Angular 15–21 Updates</a>
+<a class="nav-item" href="#s32"><span class="nav-num">32</span>Directive Composition API</a>
+<a class="nav-item" href="#s33"><span class="nav-num">33</span>DI & Lifecycle Hooks</a>
+
+<div class="nav-cat">State Management</div>
+<a class="nav-item" href="#s34"><span class="nav-num">34</span>NgRx Full Guide</a>
+
+<div class="nav-cat">OOP & Architecture</div>
+<a class="nav-item" href="#s35"><span class="nav-num">35</span>Core Principles</a>
+<a class="nav-item" href="#s36"><span class="nav-num">36</span>OOP Pillars</a>
+<a class="nav-item" href="#s37"><span class="nav-num">37</span>Design Patterns</a>
+<a class="nav-item" href="#s38"><span class="nav-num">38</span>SOLID</a>
+<a class="nav-item" href="#s39"><span class="nav-num">39</span>Micro Frontends & Nx</a>
+
+<div class="nav-cat">Testing</div>
+<a class="nav-item" href="#s40"><span class="nav-num">40</span>Unit Testing & Jasmine</a>
+<a class="nav-item" href="#s41"><span class="nav-num">41</span>Playwright E2E</a>
+
+<div class="nav-cat">Infrastructure</div>
+<a class="nav-item" href="#s42"><span class="nav-num">42</span>REST & HTTP</a>
+<a class="nav-item" href="#s43"><span class="nav-num">43</span>CI/CD</a>
+<a class="nav-item" href="#s44"><span class="nav-num">44</span>Docker</a>
+
+<div class="nav-cat">Graphics</div>
+<a class="nav-item" href="#s45"><span class="nav-num">45</span>D3 / SVG / Canvas / WebGL</a>
+</nav>
+
+<main class="main">
+<div class="page-header">
+  <h1>Senior Frontend Developer — Interview Cheatsheet v2</h1>
+  <p>Angular 18+ · TypeScript · RxJS · NgRx · Testing · Architecture · CI/CD · Docker · 45 sections</p>
+</div>
+
+<!-- ===== 1. HOISTING ===== -->
+<div class="section" id="s1">
+<div class="sec-hdr"><div class="sec-num">1</div><div class="sec-title">Hoisting & var / let / const <span class="badge b-hot">Warm-up</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Hoisting rules & TDZ</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>JS engine does a two-pass scan: first collects declarations, then executes. Only declarations are hoisted — not initializations.</p>
+<table>
+<tr><th>Declaration</th><th>Hoisted?</th><th>Initialized?</th><th>Usable before?</th></tr>
+<tr><td><code>var x</code></td><td>Yes</td><td>Yes (undefined)</td><td>Yes → undefined</td></tr>
+<tr><td><code>let x</code></td><td>Yes</td><td>No (TDZ)</td><td>No – ReferenceError</td></tr>
+<tr><td><code>const x</code></td><td>Yes</td><td>No (TDZ)</td><td>No – ReferenceError</td></tr>
+<tr><td>function declaration</td><td>Yes</td><td>Yes (full body)</td><td>Yes ✓</td></tr>
+<tr><td><code>class</code></td><td>Yes</td><td>No (TDZ)</td><td>No – ReferenceError</td></tr>
+</table>
+<pre><span class="fn">console</span>.log(x);  <span class="cm">// undefined</span>
+<span class="kw">var</span> x = <span class="num">5</span>;
+
+<span class="fn">greet</span>();          <span class="cm">// works — function fully hoisted</span>
+<span class="kw">function</span> <span class="fn">greet</span>() { <span class="fn">console</span>.log(<span class="str">"Hello"</span>); }
+
+<span class="fn">sayHi</span>();          <span class="cm">// TypeError — var hoisted, value = undefined</span>
+<span class="kw">var</span> sayHi = <span class="kw">function</span>() {};</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>var vs let vs const + loop gotcha</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>var</th><th>let</th><th>const</th></tr>
+<tr><td>Scope</td><td>Function</td><td>Block</td><td>Block</td></tr>
+<tr><td>Re-declare</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Re-assign</td><td>Yes</td><td>Yes</td><td>No (binding)</td></tr>
+<tr><td>TDZ</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+</table>
+<pre><span class="kw">for</span> (<span class="kw">var</span> i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) setTimeout(() =&gt; <span class="fn">console</span>.log(i), <span class="num">0</span>);
+<span class="cm">// 3 3 3 — shared binding</span>
+<span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) setTimeout(() =&gt; <span class="fn">console</span>.log(i), <span class="num">0</span>);
+<span class="cm">// 0 1 2 — new binding per iteration</span></pre>
+<div class="warn-box"><code>const</code> prevents re-assignment of binding, not mutation. <code>const obj = {}; obj.x = 1</code> is valid.</div>
+</div></div>
+</div>
+
+<!-- ===== 2. EVENT LOOP ===== -->
+<div class="section" id="s2">
+<div class="sec-hdr"><div class="sec-num">2</div><div class="sec-title">Event Loop <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Call Stack → Microtasks → Macrotasks</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ol>
+<li><strong>Call Stack</strong> — synchronous code runs here</li>
+<li><strong>Microtask Queue</strong> — <code>Promise.then/catch/finally</code>, <code>queueMicrotask()</code>, <code>MutationObserver</code></li>
+<li><strong>Macrotask Queue</strong> — <code>setTimeout</code>, <code>setInterval</code>, UI events, I/O (one per loop tick)</li>
+</ol>
+<div class="warn-box">After every single macrotask, the <em>entire</em> microtask queue is drained before the next macrotask.</div>
+<pre><span class="fn">console</span>.log(<span class="str">'1'</span>);
+setTimeout(() =&gt; <span class="fn">console</span>.log(<span class="str">'2'</span>), <span class="num">0</span>);
+Promise.resolve().then(() =&gt; <span class="fn">console</span>.log(<span class="str">'3'</span>));
+<span class="fn">console</span>.log(<span class="str">'4'</span>);
+<span class="cm">// Output: 1 → 4 → 3 → 2</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Complex example + async/await</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>setTimeout(() =&gt; {
+  <span class="fn">console</span>.log(<span class="str">'A'</span>);
+  Promise.resolve().then(() =&gt; <span class="fn">console</span>.log(<span class="str">'B'</span>));
+}, <span class="num">0</span>);
+Promise.resolve()
+  .then(() =&gt; { <span class="fn">console</span>.log(<span class="str">'C'</span>); <span class="kw">return</span> Promise.resolve(); })
+  .then(() =&gt; <span class="fn">console</span>.log(<span class="str">'D'</span>));
+<span class="fn">console</span>.log(<span class="str">'E'</span>);
+<span class="cm">// E → C → D → A → B</span></pre>
+<pre><span class="kw">async function</span> <span class="fn">main</span>() {
+  <span class="fn">console</span>.log(<span class="str">'start'</span>);
+  <span class="kw">await</span> Promise.resolve();
+  <span class="fn">console</span>.log(<span class="str">'after await'</span>); <span class="cm">// microtask</span>
+}
+<span class="fn">main</span>();
+<span class="fn">console</span>.log(<span class="str">'sync'</span>);
+<span class="cm">// start → sync → after await</span></pre>
+</div></div>
+</div>
+
+<!-- ===== 3. THIS ===== -->
+<div class="section" id="s3">
+<div class="sec-hdr"><div class="sec-num">3</div><div class="sec-title">this, Context & Closures <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>5 rules for this + call/apply/bind</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Context</th><th>Value of this</th></tr>
+<tr><td>Global (non-strict)</td><td><code>window</code> / <code>global</code></td></tr>
+<tr><td>Global (strict mode)</td><td><code>undefined</code></td></tr>
+<tr><td>Object method</td><td>The object before the dot</td></tr>
+<tr><td>Constructor (<code>new</code>)</td><td>The newly created object</td></tr>
+<tr><td>Arrow function</td><td>Lexical — from enclosing scope at definition time</td></tr>
+<tr><td><code>call/apply/bind</code></td><td>Explicitly set first argument</td></tr>
+</table>
+<pre><span class="kw">function</span> <span class="fn">greet</span>(hi, punct) { <span class="kw">return</span> <span class="str">`${hi}, ${<span class="kw">this</span>.name}${punct}`</span>; }
+<span class="kw">const</span> p = { name: <span class="str">'Bob'</span> };
+<span class="fn">greet</span>.call(p, <span class="str">'Hi'</span>, <span class="str">'!'</span>);       <span class="cm">// immediate, args spread</span>
+<span class="fn">greet</span>.apply(p, [<span class="str">'Hey'</span>, <span class="str">'.'</span>]);   <span class="cm">// immediate, args array</span>
+<span class="kw">const</span> bound = <span class="fn">greet</span>.bind(p, <span class="str">'Hello'</span>); <span class="cm">// returns new fn</span>
+bound(<span class="str">'?'</span>);</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Closures — definition & use cases</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>A closure retains access to outer scope variables even after the outer function returns.</p>
+<pre><span class="kw">function</span> <span class="fn">makeCounter</span>(init = <span class="num">0</span>) {
+  <span class="kw">let</span> count = init;
+  <span class="kw">return</span> { inc: () =&gt; ++count, dec: () =&gt; --count, val: () =&gt; count };
+}
+<span class="kw">const</span> c = <span class="fn">makeCounter</span>(<span class="num">10</span>);
+c.inc(); <span class="cm">// 11</span></pre>
+<div class="tip">Use cases: module pattern, memoization, partial application, event handlers, data encapsulation, factory functions.</div>
+</div></div>
+</div>
+
+<!-- ===== 4. HOF ===== -->
+<div class="section" id="s4">
+<div class="sec-hdr"><div class="sec-num">4</div><div class="sec-title">Higher-Order Functions</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>HOF, currying, memoization, composition</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A HOF either <strong>takes a function as argument</strong> or <strong>returns a function</strong>.</p>
+<pre><span class="cm">// Currying</span>
+<span class="kw">const</span> add = a =&gt; b =&gt; a + b;
+<span class="kw">const</span> add5 = add(<span class="num">5</span>);
+add5(<span class="num">3</span>); <span class="cm">// 8</span>
+
+<span class="cm">// Generic curry</span>
+<span class="kw">const</span> curry = fn =&gt; <span class="kw">function</span> curried(...args) {
+  <span class="kw">return</span> args.length &gt;= fn.length ? fn(...args) : (...more) =&gt; curried(...args, ...more);
+};
+
+<span class="cm">// Memoize</span>
+<span class="kw">function</span> <span class="fn">memoize</span>(fn) {
+  <span class="kw">const</span> cache = <span class="kw">new</span> Map();
+  <span class="kw">return function</span>(...args) {
+    <span class="kw">const</span> key = JSON.stringify(args);
+    <span class="kw">if</span> (cache.has(key)) <span class="kw">return</span> cache.get(key);
+    <span class="kw">const</span> r = fn.apply(<span class="kw">this</span>, args);
+    cache.set(key, r); <span class="kw">return</span> r;
+  };
+}
+
+<span class="cm">// Composition & pipe</span>
+<span class="kw">const</span> compose = (...fns) =&gt; x =&gt; fns.reduceRight((v, f) =&gt; f(v), x);
+<span class="kw">const</span> pipe    = (...fns) =&gt; x =&gt; fns.reduce((v, f) =&gt; f(v), x);</pre>
+</div></div>
+</div>
+
+<!-- ===== 5. OBJECTS ===== -->
+<div class="section" id="s5">
+<div class="sec-hdr"><div class="sec-num">5</div><div class="sec-title">Objects & Object Methods</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Object creation patterns</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Object literal</span>
+<span class="kw">const</span> user = { name: <span class="str">'Alice'</span>, age: <span class="num">30</span> };
+
+<span class="cm">// Object.create — set prototype explicitly</span>
+<span class="kw">const</span> proto = { greet() { <span class="kw">return</span> <span class="str">`Hi, ${<span class="kw">this</span>.name}`</span>; } };
+<span class="kw">const</span> obj = Object.create(proto);
+obj.name = <span class="str">'Bob'</span>;
+
+<span class="cm">// Factory function</span>
+<span class="kw">const</span> makeUser = (name, age) =&gt; ({ name, age, greet() { <span class="kw">return</span> name; } });
+
+<span class="cm">// Constructor function (pre-ES6)</span>
+<span class="kw">function</span> <span class="cls">User</span>(name) { <span class="kw">this</span>.name = name; }
+<span class="cls">User</span>.prototype.greet = <span class="kw">function</span>() { <span class="kw">return</span> <span class="kw">this</span>.name; };</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Essential Object static methods</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td><code>Object.keys(obj)</code></td><td>Array of own enumerable keys</td></tr>
+<tr><td><code>Object.values(obj)</code></td><td>Array of own enumerable values</td></tr>
+<tr><td><code>Object.entries(obj)</code></td><td>Array of [key, value] pairs</td></tr>
+<tr><td><code>Object.assign(target, ...src)</code></td><td>Shallow merge — mutates target</td></tr>
+<tr><td><code>Object.freeze(obj)</code></td><td>Make all properties immutable (shallow)</td></tr>
+<tr><td><code>Object.seal(obj)</code></td><td>No add/delete, but can modify existing</td></tr>
+<tr><td><code>Object.create(proto)</code></td><td>Create with specific prototype</td></tr>
+<tr><td><code>Object.fromEntries(pairs)</code></td><td>Convert [key, value] pairs to object</td></tr>
+<tr><td><code>Object.getOwnPropertyDescriptor</code></td><td>Get property metadata (writable, enumerable, configurable)</td></tr>
+<tr><td><code>Object.defineProperty</code></td><td>Define/modify property with descriptor</td></tr>
+</table>
+<pre><span class="cm">// Common patterns</span>
+<span class="kw">const</span> copy = { ...obj };                           <span class="cm">// shallow clone</span>
+<span class="kw">const</span> deep = JSON.parse(JSON.stringify(obj));       <span class="cm">// deep clone (no fns/Date)</span>
+<span class="kw">const</span> deep2 = structuredClone(obj);                <span class="cm">// modern deep clone</span>
+<span class="kw">const</span> merged = Object.assign({}, obj1, obj2);      <span class="cm">// merge</span>
+
+<span class="cm">// Destructuring with rename & default</span>
+<span class="kw">const</span> { name: n = <span class="str">'anon'</span>, age = <span class="num">0</span> } = user;
+
+<span class="cm">// Optional chaining & nullish coalescing</span>
+user?.address?.city ?? <span class="str">'Unknown'</span>;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Property descriptors & getters/setters</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>Object.defineProperty(obj, <span class="str">'id'</span>, {
+  value: <span class="num">42</span>,
+  writable: <span class="kw">false</span>,
+  enumerable: <span class="kw">false</span>,
+  configurable: <span class="kw">false</span>
+});
+
+<span class="cm">// Getter / Setter</span>
+<span class="kw">const</span> circle = {
+  _r: <span class="num">5</span>,
+  <span class="kw">get</span> area() { <span class="kw">return</span> Math.PI * <span class="kw">this</span>._r ** <span class="num">2</span>; },
+  <span class="kw">set</span> radius(v) { <span class="kw">this</span>._r = v > <span class="num">0</span> ? v : <span class="kw">this</span>._r; }
+};</pre>
+</div></div>
+</div>
+
+<!-- ===== 6. ARRAY METHODS ===== -->
+<div class="section" id="s6">
+<div class="sec-hdr"><div class="sec-num">6</div><div class="sec-title">Array Methods</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Complete array methods reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Category</th><th>Method</th><th>Returns</th><th>Mutates?</th></tr>
+<tr><td>Transform</td><td><code>map(fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Filter</td><td><code>filter(fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Reduce</td><td><code>reduce(fn, init)</code></td><td>Single value</td><td>No</td></tr>
+<tr><td>Search</td><td><code>find(fn)</code> / <code>findIndex(fn)</code></td><td>Item / index</td><td>No</td></tr>
+<tr><td>Test</td><td><code>some(fn)</code> / <code>every(fn)</code></td><td>Boolean</td><td>No</td></tr>
+<tr><td>Flatten</td><td><code>flat(depth)</code> / <code>flatMap(fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Sort</td><td><code>sort(compareFn)</code></td><td>Same array</td><td><strong>Yes</strong></td></tr>
+<tr><td>Reverse</td><td><code>reverse()</code></td><td>Same array</td><td><strong>Yes</strong></td></tr>
+<tr><td>Mutate</td><td><code>push/pop/shift/unshift/splice</code></td><td>Varies</td><td><strong>Yes</strong></td></tr>
+<tr><td>Slice</td><td><code>slice(start, end)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Join</td><td><code>join(sep)</code></td><td>String</td><td>No</td></tr>
+<tr><td>Includes</td><td><code>includes(val)</code></td><td>Boolean</td><td>No</td></tr>
+<tr><td>Iterate</td><td><code>forEach(fn)</code></td><td>undefined</td><td>No</td></tr>
+<tr><td>From</td><td><code>Array.from(iter, fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Fill</td><td><code>fill(val, start, end)</code></td><td>Same array</td><td><strong>Yes</strong></td></tr>
+</table>
+<pre><span class="cm">// Gotcha: sort mutates AND defaults to lexicographic</span>
+[<span class="num">10</span>, <span class="num">9</span>, <span class="num">2</span>].sort();              <span class="cm">// [10, 2, 9] — wrong!</span>
+[<span class="num">10</span>, <span class="num">9</span>, <span class="num">2</span>].sort((a, b) =&gt; a - b); <span class="cm">// [2, 9, 10] — correct</span>
+
+<span class="cm">// flatMap = map + flat(1)</span>
+[[<span class="num">1</span>,<span class="num">2</span>],[<span class="num">3</span>]].flatMap(x =&gt; x); <span class="cm">// [1,2,3]</span>
+
+<span class="cm">// Immutable sort/reverse (ES2023)</span>
+arr.toSorted((a, b) =&gt; a - b);
+arr.toReversed();</pre>
+</div></div>
+</div>
+
+<!-- ===== 7. MAP/SET ===== -->
+<div class="section" id="s7">
+<div class="sec-hdr"><div class="sec-num">7</div><div class="sec-title">Map / Set / WeakMap / WeakSet</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Map vs Object, Set vs Array</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Map</th><th>Object</th></tr>
+<tr><td>Key types</td><td>Any (objects, functions)</td><td>Strings/Symbols only</td></tr>
+<tr><td>Order</td><td>Insertion order guaranteed</td><td>Mostly, with caveats</td></tr>
+<tr><td>Size</td><td><code>.size</code> property</td><td>Manual count</td></tr>
+<tr><td>Prototype keys</td><td>None</td><td>Inherited keys possible</td></tr>
+<tr><td>Performance</td><td>Better for frequent add/delete</td><td>Good for static shapes</td></tr>
+</table>
+<pre><span class="kw">const</span> map = <span class="kw">new</span> Map();
+map.set(<span class="str">'key'</span>, <span class="num">1</span>);
+map.set(objKey, <span class="str">'value'</span>); <span class="cm">// object as key!</span>
+map.get(<span class="str">'key'</span>);  map.has(<span class="str">'key'</span>);  map.delete(<span class="str">'key'</span>);
+map.size;
+<span class="kw">for</span> (<span class="kw">const</span> [k, v] <span class="kw">of</span> map) { ... }
+
+<span class="kw">const</span> set = <span class="kw">new</span> Set([<span class="num">1</span>, <span class="num">2</span>, <span class="num">2</span>, <span class="num">3</span>]);  <span class="cm">// {1, 2, 3}</span>
+set.add(<span class="num">4</span>);  set.has(<span class="num">2</span>);  set.delete(<span class="num">2</span>);
+
+<span class="cm">// Deduplicate array</span>
+<span class="kw">const</span> unique = [...<span class="kw">new</span> Set(arr)];</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WeakMap & WeakSet — weak references</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>WeakMap</strong>/<strong>WeakSet</strong> hold <em>weak references</em> — keys/items can be garbage-collected when there are no other references. Keys must be objects.</p>
+<table>
+<tr><th></th><th>WeakMap</th><th>WeakSet</th></tr>
+<tr><td>Keys / Items</td><td>Objects only</td><td>Objects only</td></tr>
+<tr><td>GC when no other refs</td><td>Yes ✓</td><td>Yes ✓</td></tr>
+<tr><td>Iterable</td><td>No ✗</td><td>No ✗</td></tr>
+<tr><td><code>.size</code></td><td>No</td><td>No</td></tr>
+<tr><td>Use case</td><td>Private data, DOM node metadata</td><td>Track processed objects without leaks</td></tr>
+</table>
+<pre><span class="kw">const</span> cache = <span class="kw">new</span> WeakMap();
+<span class="kw">function</span> <span class="fn">process</span>(obj) {
+  <span class="kw">if</span> (cache.has(obj)) <span class="kw">return</span> cache.get(obj);
+  <span class="kw">const</span> result = heavyWork(obj);
+  cache.set(obj, result); <span class="cm">// auto-GCd when obj goes out of scope</span>
+  <span class="kw">return</span> result;
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 8. CLASSES ===== -->
+<div class="section" id="s8">
+<div class="sec-hdr"><div class="sec-num">8</div><div class="sec-title">Classes (all about)</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Class syntax — full reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">class</span> <span class="cls">Animal</span> {
+  <span class="cm">// Class field (ES2022)</span>
+  #name;                          <span class="cm">// private field</span>
+  species = <span class="str">'unknown'</span>;           <span class="cm">// public field</span>
+  <span class="kw">static</span> count = <span class="num">0</span>;              <span class="cm">// static field</span>
+
+  constructor(name) {
+    <span class="kw">this</span>.#name = name;
+    <span class="cls">Animal</span>.count++;
+  }
+
+  <span class="cm">// Getter / setter</span>
+  <span class="kw">get</span> name() { <span class="kw">return</span> <span class="kw">this</span>.#name; }
+  <span class="kw">set</span> name(v) { <span class="kw">this</span>.#name = v; }
+
+  speak() { <span class="kw">return</span> <span class="str">`${<span class="kw">this</span>.#name} makes noise`</span>; }
+  <span class="kw">static</span> getCount() { <span class="kw">return</span> <span class="cls">Animal</span>.count; }
+}
+
+<span class="kw">class</span> <span class="cls">Dog</span> <span class="kw">extends</span> <span class="cls">Animal</span> {
+  #tricks = [];
+
+  constructor(name) {
+    <span class="kw">super</span>(name);           <span class="cm">// must call super first</span>
+  }
+
+  speak() {
+    <span class="kw">return</span> <span class="kw">super</span>.speak() + <span class="str">' — Woof!'</span>;
+  }
+
+  learn(trick) { <span class="kw">this</span>.#tricks.push(trick); }
+}
+
+<span class="cm">// instanceof works through prototype chain</span>
+<span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">'Rex'</span>) <span class="kw">instanceof</span> <span class="cls">Animal</span>; <span class="cm">// true</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Abstract classes, mixins & Symbol</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Abstract class simulation in TS</span>
+<span class="kw">abstract class</span> <span class="cls">Shape</span> {
+  <span class="kw">abstract</span> area(): number;
+  toString() { <span class="kw">return</span> <span class="str">`Area: ${<span class="kw">this</span>.area()}`</span>; }
+}
+
+<span class="cm">// Mixin pattern (multiple inheritance simulation)</span>
+<span class="kw">const</span> Serializable = (Base) =&gt; <span class="kw">class extends</span> Base {
+  serialize() { <span class="kw">return</span> JSON.stringify(<span class="kw">this</span>); }
+};
+<span class="kw">const</span> Validatable = (Base) =&gt; <span class="kw">class extends</span> Base {
+  validate() { <span class="kw">return</span> Object.keys(<span class="kw">this</span>).length > <span class="num">0</span>; }
+};
+<span class="kw">class</span> <span class="cls">User</span> <span class="kw">extends</span> Serializable(Validatable(<span class="cls">BaseModel</span>)) {}
+
+<span class="cm">// Symbol.iterator — make object iterable</span>
+<span class="kw">class</span> <span class="cls">Range</span> {
+  constructor(<span class="kw">public</span> from: number, <span class="kw">public</span> to: number) {}
+  [Symbol.iterator]() {
+    <span class="kw">let</span> cur = <span class="kw">this</span>.from;
+    <span class="kw">return</span> { next: () =&gt; cur &lt;= <span class="kw">this</span>.to
+      ? { value: cur++, done: <span class="kw">false</span> }
+      : { value: undefined, done: <span class="kw">true</span> } };
+  }
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 9. PROMISES ===== -->
+<div class="section" id="s9">
+<div class="sec-hdr"><div class="sec-num">9</div><div class="sec-title">Promises & async/await</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Promise states, chaining, error handling</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A Promise is an object representing eventual completion or failure of an async operation. States: <strong>pending → fulfilled | rejected</strong> (immutable once settled).</p>
+<pre><span class="cm">// Create</span>
+<span class="kw">const</span> p = <span class="kw">new</span> Promise((resolve, reject) =&gt; {
+  setTimeout(() =&gt; resolve(<span class="str">'done'</span>), <span class="num">1000</span>);
+});
+
+<span class="cm">// Chain — each .then returns a new Promise</span>
+p.then(v =&gt; v.toUpperCase())
+ .then(v =&gt; <span class="fn">console</span>.log(v))
+ .catch(err =&gt; <span class="fn">console</span>.error(err))
+ .finally(() =&gt; <span class="fn">console</span>.log(<span class="str">'done'</span>));
+
+<span class="cm">// Static methods</span>
+Promise.all([p1, p2]);          <span class="cm">// fail-fast: rejects if any rejects</span>
+Promise.allSettled([p1, p2]);   <span class="cm">// waits all, returns {status, value/reason}[]</span>
+Promise.any([p1, p2]);          <span class="cm">// first fulfilled</span>
+Promise.race([p1, p2]);         <span class="cm">// first settled (fulfilled OR rejected)</span>
+Promise.resolve(val);
+Promise.reject(err);</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>async/await — patterns & error handling</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Basic</span>
+<span class="kw">async function</span> <span class="fn">fetchUser</span>(id) {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`/api/users/${id}`</span>);
+    <span class="kw">if</span> (!res.ok) <span class="kw">throw new</span> Error(<span class="str">`HTTP ${res.status}`</span>);
+    <span class="kw">return await</span> res.json();
+  } <span class="kw">catch</span> (err) {
+    <span class="fn">console</span>.error(err);
+    <span class="kw">throw</span> err;  <span class="cm">// re-throw or return fallback</span>
+  }
+}
+
+<span class="cm">// Parallel — don't await one by one!</span>
+<span class="kw">const</span> [users, posts] = <span class="kw">await</span> Promise.all([
+  fetch(<span class="str">'/api/users'</span>).then(r =&gt; r.json()),
+  fetch(<span class="str">'/api/posts'</span>).then(r =&gt; r.json())
+]);
+
+<span class="cm">// Top-level await (ES2022, in modules)</span>
+<span class="kw">const</span> config = <span class="kw">await</span> loadConfig();</pre>
+<div class="warn-box">Never <code>await</code> inside a <code>forEach</code> — it doesn't work as expected. Use <code>for...of</code> for sequential or <code>Promise.all(arr.map(...))</code> for parallel.</div>
+</div></div>
+</div>
+
+<!-- ===== 10. GENERATORS ===== -->
+<div class="section" id="s10">
+<div class="sec-hdr"><div class="sec-num">10</div><div class="sec-title">Generators & Iterators</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Generator functions</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A generator function returns a <strong>Generator</strong> object. Execution pauses at each <code>yield</code> and resumes on <code>.next()</code>.</p>
+<pre><span class="kw">function</span>* <span class="fn">counter</span>(start = <span class="num">0</span>) {
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> reset = <span class="kw">yield</span> start;  <span class="cm">// can receive value via .next(val)</span>
+    start = reset ?? start + <span class="num">1</span>;
+  }
+}
+<span class="kw">const</span> gen = counter(<span class="num">1</span>);
+gen.next();         <span class="cm">// { value: 1, done: false }</span>
+gen.next();         <span class="cm">// { value: 2, done: false }</span>
+gen.next(<span class="num">10</span>);       <span class="cm">// { value: 10, done: false } — reset</span>
+
+<span class="cm">// Finite generator</span>
+<span class="kw">function</span>* <span class="fn">range</span>(start, end, step = <span class="num">1</span>) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = start; i &lt; end; i += step) <span class="kw">yield</span> i;
+}
+[...range(<span class="num">0</span>, <span class="num">10</span>, <span class="num">2</span>)]; <span class="cm">// [0, 2, 4, 6, 8]</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Custom iterators & async generators</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Custom iterable object</span>
+<span class="kw">const</span> iterable = {
+  [Symbol.iterator]() {
+    <span class="kw">let</span> n = <span class="num">0</span>;
+    <span class="kw">return</span> { next: () =&gt; n &lt; <span class="num">3</span>
+      ? { value: n++, done: <span class="kw">false</span> }
+      : { value: undefined, done: <span class="kw">true</span> } };
+  }
+};
+[...iterable]; <span class="cm">// [0, 1, 2]</span>
+
+<span class="cm">// Async generator — paginate API</span>
+<span class="kw">async function</span>* <span class="fn">paginate</span>(url) {
+  <span class="kw">let</span> page = <span class="num">1</span>;
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> data = <span class="kw">await</span> fetch(<span class="str">`${url}?page=${page++}`</span>).then(r =&gt; r.json());
+    <span class="kw">if</span> (!data.length) <span class="kw">return</span>;
+    <span class="kw">yield</span> data;
+  }
+}
+<span class="kw">for await</span> (<span class="kw">const</span> page <span class="kw">of</span> paginate(<span class="str">'/api/items'</span>)) {
+  <span class="fn">process</span>(page);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 11. SCOPE & COERCION ===== -->
+<div class="section" id="s11">
+<div class="sec-hdr"><div class="sec-num">11</div><div class="sec-title">Scope, Coercion & Types</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Types, coercion & equality</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Primitives:</strong> <code>string</code>, <code>number</code>, <code>boolean</code>, <code>null</code>, <code>undefined</code>, <code>symbol</code>, <code>bigint</code>. Everything else is an object.</p>
+<pre><span class="kw">typeof</span> null     <span class="cm">// 'object' — historical bug!</span>
+<span class="kw">typeof</span> []       <span class="cm">// 'object'</span>
+<span class="kw">typeof</span> NaN      <span class="cm">// 'number'</span>
+Array.isArray([]) <span class="cm">// true</span>
+
+<span class="cm">// == abstract — converts types</span>
+<span class="num">0</span> == <span class="str">''</span>       <span class="cm">// true</span>
+null == undefined <span class="cm">// true</span>
+<span class="num">0</span> == <span class="kw">false</span>    <span class="cm">// true</span>
+
+<span class="cm">// Passed by value vs reference</span>
+<span class="kw">let</span> a = <span class="num">5</span>; <span class="kw">let</span> b = a; b = <span class="num">10</span>; <span class="cm">// a=5 (copy)</span>
+<span class="kw">const</span> obj = {x:<span class="num">1</span>}; <span class="kw">const</span> ref = obj; ref.x = <span class="num">99</span>; <span class="cm">// obj.x=99 (reference)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== 12. ES6+ ===== -->
+<div class="section" id="s12">
+<div class="sec-hdr"><div class="sec-num">12</div><div class="sec-title">ES6+ Key Features</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Quick reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Destructuring, spread, rest</span>
+<span class="kw">const</span> { a, b: renamed } = obj;
+<span class="kw">const</span> [first, ...rest] = arr;
+<span class="kw">const</span> merged = { ...obj1, ...obj2 };
+
+<span class="cm">// Tagged template literals</span>
+<span class="kw">function</span> <span class="fn">tag</span>(strings, ...vals) { <span class="kw">return</span> strings.raw[<span class="num">0</span>]; }
+<span class="fn">tag</span><span class="str">`Hello ${name}`</span>;
+
+<span class="cm">// Optional chaining & nullish coalescing</span>
+user?.address?.city;
+value ?? <span class="str">'default'</span>;
+count ??= <span class="num">0</span>;      <span class="cm">// logical assignment (ES2021)</span>
+
+<span class="cm">// Dynamic import</span>
+<span class="kw">const</span> module = <span class="kw">await import</span>(<span class="str">'./module.js'</span>);
+
+<span class="cm">// Symbols</span>
+<span class="kw">const</span> id = Symbol(<span class="str">'id'</span>);
+obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key</span></pre>
+</div></div>
+</div>
+
+<!-- ===== 13. BIG O ===== -->
+<div class="section" id="s13">
+<div class="sec-hdr"><div class="sec-num">13</div><div class="sec-title">Big O & Data Structures</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Array / Set / Map complexity</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Operation</th><th>Array</th><th>Set</th><th>Map</th></tr>
+<tr><td>Access by index/key</td><td>O(1)</td><td>—</td><td>O(1)</td></tr>
+<tr><td>Search (has/includes)</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Insert end / add</td><td>O(1) amortized</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Insert beginning</td><td>O(n)</td><td>—</td><td>—</td></tr>
+<tr><td>Delete</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Iterate</td><td>O(n)</td><td>O(n)</td><td>O(n)</td></tr>
+</table>
+<div class="tip">Use <code>Set</code> for unique-value lookups (O(1) vs Array's O(n)). Algorithm complexity matters far more than loop style.</div>
+</div></div>
+</div>
+
+<!-- ===== 14. TS BASICS ===== -->
+<div class="section" id="s14">
+<div class="sec-hdr"><div class="sec-num">14</div><div class="sec-title">TypeScript Basics <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Annotations, arrays, tuples, enums, unions</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Annotations</span>
+<span class="kw">let</span> n: number = <span class="num">10</span>;
+<span class="kw">const</span> name: string = <span class="str">"Alice"</span>;
+<span class="kw">let</span> active: boolean = <span class="kw">true</span>;
+<span class="kw">let</span> val: unknown;   <span class="cm">// must narrow before use</span>
+<span class="kw">let</span> x: any;         <span class="cm">// escapes type system — avoid</span>
+<span class="kw">function</span> <span class="fn">log</span>(msg: string): <span class="kw">void</span> {}
+
+<span class="cm">// Arrays & tuples</span>
+<span class="kw">let</span> arr: number[] = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>];
+<span class="kw">let</span> tuple: [string, number] = [<span class="str">"age"</span>, <span class="num">30</span>];
+<span class="kw">let</span> readonly_arr: <span class="kw">readonly</span> number[] = [<span class="num">1</span>, <span class="num">2</span>];
+
+<span class="cm">// Enums</span>
+<span class="kw">enum</span> Role { Admin = <span class="str">'ADMIN'</span>, User = <span class="str">'USER'</span> }  <span class="cm">// string enum</span>
+<span class="kw">const enum</span> Dir { Up, Down }  <span class="cm">// const enum — inlined at compile time</span>
+
+<span class="cm">// Union & intersection</span>
+<span class="kw">type</span> ID = string | number;
+<span class="kw">type</span> AdminUser = Admin & User;
+
+<span class="cm">// Literal types</span>
+<span class="kw">type</span> Dir = <span class="str">"left"</span> | <span class="str">"right"</span> | <span class="str">"up"</span> | <span class="str">"down"</span>;
+
+<span class="cm">// Functions</span>
+<span class="kw">type</span> Fn = (a: number, b: number) =&gt; number;
+<span class="kw">function</span> <span class="fn">greet</span>(name: string, greeting?: string): string {
+  <span class="kw">return</span> <span class="str">`${greeting ?? <span class="str">'Hello'</span>}, ${name}`</span>;
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 15. TYPE vs INTERFACE ===== -->
+<div class="section" id="s15">
+<div class="sec-hdr"><div class="sec-num">15</div><div class="sec-title">type vs interface <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Key differences</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Feature</th><th>interface</th><th>type</th></tr>
+<tr><td>Declaration merging</td><td>Yes ✓</td><td>No ✗</td></tr>
+<tr><td>Extending</td><td><code>extends</code></td><td><code>&amp;</code> intersection</td></tr>
+<tr><td>Union types</td><td>No ✗</td><td>Yes ✓</td></tr>
+<tr><td>Mapped/conditional types</td><td>No ✗</td><td>Yes ✓</td></tr>
+<tr><td>Primitive aliases</td><td>No ✗</td><td>Yes ✓</td></tr>
+</table>
+<div class="tip">Use <code>interface</code> for public API shapes & class contracts. Use <code>type</code> for unions, mapped types, complex generics.</div>
+</div></div>
+</div>
+
+<!-- ===== 16. ADVANCED TS ===== -->
+<div class="section" id="s16">
+<div class="sec-hdr"><div class="sec-num">16</div><div class="sec-title">Advanced TypeScript <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Utility types — full table</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Utility</th><th>Effect</th></tr>
+<tr><td><code>Partial&lt;T&gt;</code></td><td>All properties optional</td></tr>
+<tr><td><code>Required&lt;T&gt;</code></td><td>All required</td></tr>
+<tr><td><code>Readonly&lt;T&gt;</code></td><td>All read-only</td></tr>
+<tr><td><code>Pick&lt;T,K&gt;</code></td><td>Keep only K keys</td></tr>
+<tr><td><code>Omit&lt;T,K&gt;</code></td><td>Remove K keys</td></tr>
+<tr><td><code>Record&lt;K,V&gt;</code></td><td>Map type</td></tr>
+<tr><td><code>Exclude&lt;T,U&gt;</code></td><td>Remove from T assignable to U</td></tr>
+<tr><td><code>Extract&lt;T,U&gt;</code></td><td>Keep from T assignable to U</td></tr>
+<tr><td><code>NonNullable&lt;T&gt;</code></td><td>Remove null/undefined</td></tr>
+<tr><td><code>ReturnType&lt;T&gt;</code></td><td>Function return type</td></tr>
+<tr><td><code>Parameters&lt;T&gt;</code></td><td>Function params tuple</td></tr>
+<tr><td><code>InstanceType&lt;T&gt;</code></td><td>Class instance type</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Generics, mapped, conditional, infer</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Generic with constraint</span>
+<span class="kw">function</span> <span class="fn">getProperty</span>&lt;T, K <span class="kw">extends keyof</span> T&gt;(obj: T, key: K): T[K] {
+  <span class="kw">return</span> obj[key];
+}
+
+<span class="cm">// Mapped type</span>
+<span class="kw">type</span> Nullable&lt;T&gt; = { [K <span class="kw">in keyof</span> T]: T[K] | null };
+<span class="kw">type</span> Mutable&lt;T&gt; = { <span class="op">-readonly</span> [K <span class="kw">in keyof</span> T]: T[K] };   <span class="cm">// remove readonly</span>
+<span class="kw">type</span> Optional&lt;T&gt; = { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: T[K] };           <span class="cm">// add ?</span>
+
+<span class="cm">// Conditional + infer</span>
+<span class="kw">type</span> UnwrapPromise&lt;T&gt; = T <span class="kw">extends</span> Promise&lt;<span class="kw">infer</span> R&gt; ? R : T;
+<span class="kw">type</span> IsArray&lt;T&gt; = T <span class="kw">extends</span> any[] ? <span class="str">'yes'</span> : <span class="str">'no'</span>;
+
+<span class="cm">// Template literal types</span>
+<span class="kw">type</span> EventName&lt;T <span class="kw">extends</span> string&gt; = <span class="str">`on${Capitalize&lt;T&gt;}`</span>;
+
+<span class="cm">// Discriminated union + narrowing</span>
+<span class="kw">type</span> Shape = { kind: <span class="str">'circle'</span>; r: number } | { kind: <span class="str">'rect'</span>; w: number; h: number };
+<span class="kw">function</span> area(s: Shape): number {
+  <span class="kw">switch</span> (s.kind) {
+    <span class="kw">case</span> <span class="str">'circle'</span>: <span class="kw">return</span> Math.PI * s.r ** <span class="num">2</span>;
+    <span class="kw">case</span> <span class="str">'rect'</span>:   <span class="kw">return</span> s.w * s.h;
+  }
+}
+
+<span class="cm">// Deep partial (recursive)</span>
+<span class="kw">type</span> DeepPartial&lt;T&gt; = T <span class="kw">extends</span> object
+  ? { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: DeepPartial&lt;T[K]&gt; } : T;</pre>
+</div></div>
+</div>
+
+<!-- ===== 17. STORAGE ===== -->
+<div class="section" id="s17">
+<div class="sec-hdr"><div class="sec-num">17</div><div class="sec-title">Storage APIs</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>localStorage vs sessionStorage vs Cookies vs IndexedDB</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>localStorage</th><th>sessionStorage</th><th>Cookie</th><th>IndexedDB</th></tr>
+<tr><td>Capacity</td><td>~5–10 MB</td><td>~5 MB</td><td>~4 KB</td><td>GBs</td></tr>
+<tr><td>Persists</td><td>Until cleared</td><td>Tab lifetime</td><td>Expiry date</td><td>Until cleared</td></tr>
+<tr><td>Scope</td><td>Same origin</td><td>Same tab</td><td>Same origin + server</td><td>Same origin</td></tr>
+<tr><td>Sent to server</td><td>No</td><td>No</td><td>Yes (header)</td><td>No</td></tr>
+<tr><td>Async</td><td>No (blocking)</td><td>No</td><td>No</td><td>Yes</td></tr>
+</table>
+<div class="warn-box">Never store auth tokens in localStorage — XSS vulnerable. Use <code>httpOnly</code> cookies for sensitive auth data.</div>
+</div></div>
+</div>
+
+<!-- ===== 18. WEBSOCKETS ===== -->
+<div class="section" id="s18">
+<div class="sec-hdr"><div class="sec-num">18</div><div class="sec-title">WebSockets <span class="badge b-grn">Real-time</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket vs HTTP vs SSE</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>HTTP</th><th>WebSocket</th><th>SSE</th></tr>
+<tr><td>Connection</td><td>New per request</td><td>Persistent, full-duplex</td><td>Persistent, one-way (server→client)</td></tr>
+<tr><td>Direction</td><td>Request/Response</td><td>Bidirectional</td><td>Server push only</td></tr>
+<tr><td>Overhead</td><td>High (headers)</td><td>Low (frames)</td><td>Low</td></tr>
+<tr><td>Use case</td><td>Standard API calls</td><td>Chat, live games, trading</td><td>Notifications, live feeds</td></tr>
+<tr><td>Auto-reconnect</td><td>N/A</td><td>Manual</td><td>Built-in</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket API & lifecycle</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Connection lifecycle</span>
+<span class="kw">const</span> ws = <span class="kw">new</span> WebSocket(<span class="str">'wss://api.example.com/ws'</span>);
+
+ws.onopen    = () =&gt; ws.send(JSON.stringify({ type: <span class="str">'auth'</span>, token }));
+ws.onmessage = (e) =&gt; { <span class="kw">const</span> data = JSON.parse(e.data); handle(data); };
+ws.onclose   = (e) =&gt; <span class="fn">console</span>.log(<span class="str">`Closed: ${e.code} ${e.reason}`</span>);
+ws.onerror   = (e) =&gt; <span class="fn">console</span>.error(<span class="str">'WS Error'</span>, e);
+
+ws.send(<span class="str">'text'</span>);
+ws.send(JSON.stringify({ type: <span class="str">'message'</span>, body: <span class="str">'hello'</span> }));
+ws.close(<span class="num">1000</span>, <span class="str">'Normal closure'</span>);
+
+<span class="cm">// ReadyState</span>
+<span class="cm">// CONNECTING=0, OPEN=1, CLOSING=2, CLOSED=3</span>
+ws.readyState === WebSocket.OPEN;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Auto-reconnect pattern + RxJS WebSocket</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Reconnect with exponential backoff</span>
+<span class="kw">class</span> <span class="cls">ReconnectingWS</span> {
+  <span class="kw">private</span> ws: WebSocket | null = null;
+  <span class="kw">private</span> retries = <span class="num">0</span>;
+
+  connect() {
+    <span class="kw">this</span>.ws = <span class="kw">new</span> WebSocket(<span class="kw">this</span>.url);
+    <span class="kw">this</span>.ws.onclose = () =&gt; {
+      <span class="kw">const</span> delay = Math.min(<span class="num">1000</span> * <span class="num">2</span> ** <span class="kw">this</span>.retries++, <span class="num">30000</span>);
+      setTimeout(() =&gt; <span class="kw">this</span>.connect(), delay);
+    };
+  }
+}
+
+<span class="cm">// RxJS webSocket</span>
+<span class="kw">import</span> { webSocket } <span class="kw">from</span> <span class="str">'rxjs/webSocket'</span>;
+<span class="kw">const</span> subject = webSocket(<span class="str">'wss://api.example.com/ws'</span>);
+subject.subscribe(msg =&gt; handle(msg));
+subject.next({ type: <span class="str">'subscribe'</span>, channel: <span class="str">'prices'</span> });
+subject.pipe(
+  retryWhen(errors =&gt; errors.pipe(delay(<span class="num">2000</span>)))
+).subscribe();</pre>
+<div class="tip">In Angular, always close WebSocket on <code>ngOnDestroy</code>. Use <code>shareReplay(1)</code> to share a single connection across multiple components.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Common close codes</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Code</th><th>Meaning</th></tr>
+<tr><td>1000</td><td>Normal closure</td></tr>
+<tr><td>1001</td><td>Going away (page navigation)</td></tr>
+<tr><td>1006</td><td>Abnormal closure (no close frame)</td></tr>
+<tr><td>1011</td><td>Server error</td></tr>
+<tr><td>4xxx</td><td>Application-specific (custom)</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 19. SERVICE WORKERS ===== -->
+<div class="section" id="s19">
+<div class="sec-hdr"><div class="sec-num">19</div><div class="sec-title">Service Workers</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Concept, lifecycle & caching strategies</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Separate thread acting as network proxy. HTTPS only. Enables offline, background sync, push notifications.</p>
+<p><strong>Lifecycle:</strong> Installing → Waiting → Activating → Activated → Redundant</p>
+<pre>navigator.serviceWorker.register(<span class="str">'/sw.js'</span>);
+self.addEventListener(<span class="str">'install'</span>, e =&gt; e.waitUntil(caches.open(<span class="str">'v1'</span>).then(c =&gt; c.addAll([<span class="str">'/'</span>]))));
+self.addEventListener(<span class="str">'fetch'</span>, e =&gt; e.respondWith(
+  caches.match(e.request).then(cached =&gt; cached || fetch(e.request))
+));</pre>
+<table>
+<tr><th>Strategy</th><th>Use when</th></tr>
+<tr><td>Cache first</td><td>Static assets</td></tr>
+<tr><td>Network first</td><td>API data — freshness critical</td></tr>
+<tr><td>Stale-while-revalidate</td><td>Balance: serve cache, refresh in bg</td></tr>
+<tr><td>Network only</td><td>Auth requests</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 20. WEB WORKERS ===== -->
+<div class="section" id="s20">
+<div class="sec-hdr"><div class="sec-num">20</div><div class="sec-title">Web Workers</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Web Workers vs Service Workers</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Web Worker</th><th>Service Worker</th></tr>
+<tr><td>Purpose</td><td>CPU computation</td><td>Network proxy / offline</td></tr>
+<tr><td>Lifecycle</td><td>Tied to page</td><td>Independent</td></tr>
+<tr><td>DOM</td><td>No access</td><td>No access</td></tr>
+</table>
+<pre><span class="kw">const</span> w = <span class="kw">new</span> Worker(<span class="str">'worker.js'</span>);
+w.postMessage({ data: largeArr });
+w.onmessage = e =&gt; <span class="fn">console</span>.log(e.data);
+<span class="cm">// worker.js</span>
+self.onmessage = e =&gt; self.postMessage(heavyWork(e.data.data));</pre>
+<div class="tip">Angular 18 added official Web Worker support. Use for: sorting/filtering, encryption, image processing — anything blocking 16ms+.</div>
+</div></div>
+</div>
+
+<!-- ===== 21. HTML & CSS ===== -->
+<div class="section" id="s21">
+<div class="sec-hdr"><div class="sec-num">21</div><div class="sec-title">HTML & CSS Essentials</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Key questions reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td><code>div</code> vs <code>span</code></td><td>block vs inline. Can't put block inside inline.</td></tr>
+<tr><td><code>*ngIf</code> vs <code>[hidden]</code></td><td>ngIf removes from DOM; [hidden] = display:none (stays in DOM)</td></tr>
+<tr><td><code>async</code> vs <code>defer</code></td><td>Both non-blocking. async: execute immediately on load; defer: execute after parsing, in order</td></tr>
+<tr><td>Pseudo-class vs pseudo-element</td><td><code>:hover</code>, <code>:nth-child</code> — states; <code>::before</code>, <code>::after</code> — virtual elements</td></tr>
+<tr><td><code>box-sizing: border-box</code></td><td>width/height includes padding+border</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 22. RxJS ===== -->
+<div class="section" id="s22">
+<div class="sec-hdr"><div class="sec-num">22</div><div class="sec-title">RxJS Core <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Observable vs Promise + operators</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Observable</th><th>Promise</th></tr>
+<tr><td>Execution</td><td>Lazy — starts on subscribe</td><td>Eager — immediately</td></tr>
+<tr><td>Values</td><td>Multiple over time</td><td>Single</td></tr>
+<tr><td>Cancellable</td><td>Yes</td><td>No</td></tr>
+</table>
+<table>
+<tr><th>Category</th><th>Operators</th></tr>
+<tr><td>Transform</td><td><code>map</code>, <code>scan</code>, <code>reduce</code></td></tr>
+<tr><td>Filter</td><td><code>filter</code>, <code>take</code>, <code>debounceTime</code>, <code>distinctUntilChanged</code></td></tr>
+<tr><td>Combination</td><td><code>combineLatest</code>, <code>merge</code>, <code>forkJoin</code>, <code>withLatestFrom</code></td></tr>
+<tr><td>Higher-order</td><td><code>switchMap</code>, <code>mergeMap</code>, <code>concatMap</code>, <code>exhaustMap</code></td></tr>
+<tr><td>Error</td><td><code>catchError</code>, <code>retry</code>, <code>finalize</code></td></tr>
+<tr><td>Utility</td><td><code>tap</code>, <code>shareReplay</code>, <code>share</code></td></tr>
+</table>
+<pre><span class="cm">// Unsubscribe — ALWAYS do this</span>
+data$.pipe(takeUntilDestroyed()).subscribe(...); <span class="cm">// Angular 16+</span></pre>
+</div></div>
+</div>
+
+<!-- ===== 23. HIGHER ORDER OBS ===== -->
+<div class="section" id="s23">
+<div class="sec-hdr"><div class="sec-num">23</div><div class="sec-title">Higher-Order Observables <span class="badge b-ng">RxJS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>switchMap vs mergeMap vs concatMap vs exhaustMap</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Operator</th><th>Cancels prev?</th><th>Concurrent?</th><th>Best for</th></tr>
+<tr><td><code>switchMap</code></td><td>Yes ✓</td><td>No (max 1)</td><td>Search — only latest matters</td></tr>
+<tr><td><code>mergeMap</code></td><td>No</td><td>Yes (unlimited)</td><td>Parallel independent requests</td></tr>
+<tr><td><code>concatMap</code></td><td>No</td><td>No (queues)</td><td>Sequential, order-preserving</td></tr>
+<tr><td><code>exhaustMap</code></td><td>N/A (ignores new)</td><td>No</td><td>Login/submit — no double-submit</td></tr>
+</table>
+<pre>search$.pipe(switchMap(q =&gt; http.get(<span class="str">`/api?q=${q}`</span>)));
+submit$.pipe(exhaustMap(() =&gt; http.post(<span class="str">'/submit'</span>, form)));
+queue$.pipe(concatMap(a =&gt; http.post(<span class="str">'/log'</span>, a)));
+files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)));</pre>
+</div></div>
+</div>
+
+<!-- ===== 24. SUBJECTS ===== -->
+<div class="section" id="s24">
+<div class="sec-hdr"><div class="sec-num">24</div><div class="sec-title">Subjects & Hot/Cold <span class="badge b-ng">RxJS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Cold vs Hot + Subject types</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Cold</th><th>Hot</th></tr>
+<tr><td>Starts emitting</td><td>On subscription</td><td>Regardless of subscribers</td></tr>
+<tr><td>Multicast</td><td>No (unicast)</td><td>Yes (shared)</td></tr>
+<tr><td>Examples</td><td><code>of()</code>, HTTP calls</td><td>Subject, DOM events, WebSocket</td></tr>
+</table>
+<table>
+<tr><th>Subject type</th><th>Initial value</th><th>Replays</th><th>Use case</th></tr>
+<tr><td><code>Subject</code></td><td>None</td><td>No</td><td>Events, actions</td></tr>
+<tr><td><code>BehaviorSubject(v)</code></td><td>Required</td><td>Current to new subs</td><td>State — most common</td></tr>
+<tr><td><code>ReplaySubject(n)</code></td><td>None</td><td>Last n values</td><td>Caching, late subscribers</td></tr>
+<tr><td><code>AsyncSubject</code></td><td>None</td><td>Last on complete</td><td>Single result</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 25. ANGULAR FUNDAMENTALS ===== -->
+<div class="section" id="s25">
+<div class="sec-hdr"><div class="sec-num">25</div><div class="sec-title">Angular Fundamentals <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>AngularJS vs Angular 2+ & key building blocks</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>AngularJS (1.x)</th><th>Angular (2+)</th></tr>
+<tr><td>Language</td><td>JavaScript</td><td>TypeScript</td></tr>
+<tr><td>Architecture</td><td>MVC</td><td>MVVM (Component + Template + Service)</td></tr>
+<tr><td>Building block</td><td>Directives</td><td>Components</td></tr>
+<tr><td>Change detection</td><td>Digest cycle</td><td>Zone.js + OnPush + Signals</td></tr>
+</table>
+<ul>
+<li><strong>Component</strong> — UI block. <code>@Component</code></li>
+<li><strong>Directive</strong> — modify DOM. Structural (<code>@if</code>, <code>@for</code>) or Attribute</li>
+<li><strong>Pipe</strong> — transform template values. Pure pipes are memoized.</li>
+<li><strong>Service</strong> — shared business logic via DI</li>
+<li><strong>Guard</strong> — route protection (<code>CanActivate</code>, <code>CanDeactivate</code>, <code>Resolve</code>)</li>
+<li><strong>Interceptor</strong> — HTTP middleware (auth headers, error handling, caching)</li>
+</ul>
+<div class="tip">Pure pipe vs function in template: pipe is cached — won't re-run if input didn't change. Always prefer pipes for template transformations.</div>
+</div></div>
+</div>
+
+<!-- ===== 26. DI ===== -->
+<div class="section" id="s26">
+<div class="sec-hdr"><div class="sec-num">26</div><div class="sec-title">Dependency Injection <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>DI system — hierarchical injectors</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Angular has a <strong>hierarchical DI system</strong>. Each component has its own injector; if a dependency is not found, it walks up to the parent injector, then to the root injector.</p>
+<p><strong>Injector hierarchy:</strong> Platform → Root (AppModule) → Feature Module → Component → Element</p>
+<pre><span class="cm">// Singleton in root</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })   <span class="cm">// tree-shakeable</span>
+<span class="kw">class</span> <span class="cls">AuthService</span> {}
+
+<span class="cm">// Scoped to component (new instance per component)</span>
+@Component({ providers: [<span class="cls">MyService</span>] })
+<span class="kw">class</span> <span class="cls">MyComponent</span> {}
+
+<span class="cm">// InjectionToken — for non-class values</span>
+<span class="kw">const</span> API_URL = <span class="kw">new</span> InjectionToken&lt;string&gt;(<span class="str">'API_URL'</span>);
+<span class="cm">// providers: [{ provide: API_URL, useValue: 'https://...' }]</span>
+inject(API_URL); <span class="cm">// functional injection (Angular 14+)</span>
+
+<span class="cm">// @Optional — null if not found</span>
+constructor(@Optional() <span class="kw">private</span> logger?: LoggerService) {}
+
+<span class="cm">// @Self — only look in own injector</span>
+constructor(@Self() <span class="kw">private</span> svc: MyService) {}
+
+<span class="cm">// @SkipSelf — skip own, look in parent</span>
+constructor(@SkipSelf() <span class="kw">private</span> parent: MyService) {}
+
+<span class="cm">// @Host — stop at host element boundary</span>
+constructor(@Host() <span class="kw">private</span> svc: MyService) {}
+
+<span class="cm">// Factory provider</span>
+{ provide: Logger, useFactory: (http: HttpClient) =&gt; <span class="kw">new</span> RemoteLogger(http), deps: [HttpClient] }
+
+<span class="cm">// Multi-provider (interceptors, validators)</span>
+{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: <span class="kw">true</span> }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Functional inject() API (Angular 14+)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Use inject() outside constructor — in factories, guards, pipes</span>
+<span class="kw">export function</span> <span class="fn">authGuard</span>(): CanActivateFn {
+  <span class="kw">return</span> () =&gt; {
+    <span class="kw">const</span> auth = inject(AuthService);
+    <span class="kw">const</span> router = inject(Router);
+    <span class="kw">return</span> auth.isLoggedIn() || router.createUrlTree([<span class="str">'/login'</span>]);
+  };
+}
+
+<span class="cm">// inject() in class fields</span>
+<span class="kw">class</span> <span class="cls">MyComponent</span> {
+  <span class="kw">private</span> store = inject(Store);
+  users$ = <span class="kw">this</span>.store.select(selectAllUsers);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 27. CHANGE DETECTION ===== -->
+<div class="section" id="s27">
+<div class="sec-hdr"><div class="sec-num">27</div><div class="sec-title">Change Detection <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Default vs OnPush + Zone.js</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Zone.js</strong> monkey-patches all async APIs and notifies Angular after async work. <strong>Default</strong>: checks whole tree. <strong>OnPush</strong>: skips subtree unless:</p>
+<ul>
+<li>An <code>@Input()</code> <em>reference</em> changes (not mutation)</li>
+<li>An event fires inside component</li>
+<li>Observable emits via <code>async</code> pipe</li>
+<li><code>markForCheck()</code> / <code>detectChanges()</code> called</li>
+</ul>
+<pre>@Component({ changeDetection: ChangeDetectionStrategy.OnPush })
+<span class="kw">class</span> <span class="cls">CardComponent</span> {
+  @Input() data!: Data;   <span class="cm">// must pass NEW reference</span>
+
+  constructor(<span class="kw">private</span> cd: ChangeDetectorRef) {}
+
+  update() {
+    <span class="kw">this</span>.cd.markForCheck();    <span class="cm">// schedule check in next cycle</span>
+    <span class="cm">// OR</span>
+    <span class="kw">this</span>.cd.detectChanges();   <span class="cm">// immediate synchronous check</span>
+  }
+  pauseCD()  { <span class="kw">this</span>.cd.detach(); }
+  resumeCD() { <span class="kw">this</span>.cd.reattach(); }</pre>
+</div></div>
+</div>
+
+<!-- ===== 28. SIGNALS ===== -->
+<div class="section" id="s28">
+<div class="sec-hdr"><div class="sec-num">28</div><div class="sec-title">Signals (Angular 16+, stable 19) <span class="badge b-key">New</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>signal / computed / effect</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { signal, computed, effect } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+
+<span class="cm">// Writable signal</span>
+<span class="kw">const</span> count = signal(<span class="num">0</span>);
+count.set(<span class="num">5</span>);
+count.update(v =&gt; v + <span class="num">1</span>);
+
+<span class="cm">// Computed — auto-tracks dependencies</span>
+<span class="kw">const</span> doubled = computed(() =&gt; count() * <span class="num">2</span>);
+
+<span class="cm">// Effect — runs side effects when deps change</span>
+effect(() =&gt; <span class="fn">console</span>.log(<span class="str">'count changed:'</span>, count()));
+
+<span class="cm">// In template</span>
+<span class="cm">// &lt;p&gt;{{ count() }}&lt;/p&gt;  &lt;!-- call as function --&gt;</span>
+
+<span class="cm">// Signal inputs (Angular 17.1+)</span>
+<span class="kw">import</span> { input, output, model } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">class</span> <span class="cls">MyComponent</span> {
+  name = input&lt;string&gt;(<span class="str">''</span>);        <span class="cm">// replaces @Input()</span>
+  nameChange = output&lt;string&gt;();  <span class="cm">// replaces @Output()</span>
+  value = model&lt;string&gt;(<span class="str">''</span>);      <span class="cm">// two-way binding</span>
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>toSignal / toObservable + zoneless</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { toSignal, toObservable } <span class="kw">from</span> <span class="str">'@angular/core/rxjs-interop'</span>;
+
+<span class="cm">// Observable → Signal</span>
+<span class="kw">const</span> users = toSignal(<span class="kw">this</span>.store.select(selectAllUsers), { initialValue: [] });
+
+<span class="cm">// Signal → Observable</span>
+<span class="kw">const</span> count$ = toObservable(count);
+
+<span class="cm">// Zoneless (Angular 18+ experimental)</span>
+<span class="cm">// bootstrapApplication(AppComponent, {</span>
+<span class="cm">//   providers: [provideExperimentalZonelessChangeDetection()]</span>
+<span class="cm">// });</span></pre>
+<div class="tip">Signals bypass Zone.js entirely — fine-grained reactivity, no unnecessary checks. Angular 21 plans zoneless by default. Prefer signals for new code.</div>
+</div></div>
+</div>
+
+<!-- ===== 29. FORMS ===== -->
+<div class="section" id="s29">
+<div class="sec-hdr"><div class="sec-num">29</div><div class="sec-title">Forms — All Types <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Template-driven vs Reactive — comparison</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Template-driven</th><th>Reactive</th></tr>
+<tr><td>Definition</td><td>In template with directives</td><td>In component class</td></tr>
+<tr><td>Data model</td><td>Implicit (NgModel)</td><td>Explicit (FormGroup/Control)</td></tr>
+<tr><td>Validation</td><td>Template directives</td><td>Validator functions</td></tr>
+<tr><td>Testability</td><td>Harder</td><td>Easy (pure TS)</td></tr>
+<tr><td>Async updates</td><td>Requires <code>ngModel</code> + <code>[(ngModel)]</code></td><td>Observables via <code>valueChanges</code></td></tr>
+<tr><td>Use when</td><td>Simple forms</td><td>Complex, dynamic, tested forms</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Reactive Forms — full example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { FormBuilder, Validators, FormGroup, FormArray } <span class="kw">from</span> <span class="str">'@angular/forms'</span>;
+
+<span class="kw">class</span> <span class="cls">ProfileComponent</span> {
+  <span class="kw">private</span> fb = inject(FormBuilder);
+
+  form = <span class="kw">this</span>.fb.group({
+    name:  [<span class="str">''</span>, [Validators.required, Validators.minLength(<span class="num">2</span>)]],
+    email: [<span class="str">''</span>, [Validators.required, Validators.email]],
+    age:   [<span class="kw">null</span>, [Validators.min(<span class="num">18</span>), Validators.max(<span class="num">99</span>)]],
+    tags:  <span class="kw">this</span>.fb.array([]),   <span class="cm">// FormArray</span>
+    address: <span class="kw">this</span>.fb.group({    <span class="cm">// nested FormGroup</span>
+      city: [<span class="str">''</span>, Validators.required]
+    })
+  });
+
+  <span class="kw">get</span> tags() { <span class="kw">return</span> <span class="kw">this</span>.form.get(<span class="str">'tags'</span>) <span class="kw">as</span> FormArray; }
+  addTag() { <span class="kw">this</span>.tags.push(<span class="kw">this</span>.fb.control(<span class="str">''</span>)); }
+
+  ngOnInit() {
+    <span class="cm">// React to value changes</span>
+    <span class="kw">this</span>.form.get(<span class="str">'email'</span>)!.valueChanges.pipe(
+      debounceTime(<span class="num">300</span>),
+      distinctUntilChanged(),
+      switchMap(email =&gt; <span class="kw">this</span>.api.checkEmail(email))
+    ).subscribe(taken =&gt; { ... });
+
+    <span class="cm">// Programmatic updates</span>
+    <span class="kw">this</span>.form.patchValue({ name: <span class="str">'Alice'</span> });  <span class="cm">// partial</span>
+    <span class="kw">this</span>.form.setValue({ name: <span class="str">'Alice'</span>, email: <span class="str">'<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7d1c3d1f531e">[email&#160;protected]</a>'</span>, age: <span class="num">25</span>, tags: [], address: { city: <span class="str">'Kyiv'</span> } }); <span class="cm">// full</span>
+    <span class="kw">this</span>.form.reset();
+  }
+
+  submit() {
+    <span class="kw">if</span> (<span class="kw">this</span>.form.invalid) <span class="kw">return</span>;
+    <span class="fn">console</span>.log(<span class="kw">this</span>.form.getRawValue());
+  }
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Dynamic Forms</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Build form dynamically from config</span>
+<span class="kw">interface</span> <span class="cls">FieldConfig</span> { key: string; type: string; validators?: ValidatorFn[]; }
+
+<span class="kw">function</span> <span class="fn">buildForm</span>(fields: FieldConfig[], fb: FormBuilder): FormGroup {
+  <span class="kw">return</span> fb.group(
+    fields.reduce((acc, f) =&gt; ({
+      ...acc,
+      [f.key]: [<span class="str">''</span>, f.validators ?? []]
+    }), {})
+  );
+}
+
+<span class="cm">// Add/remove controls at runtime</span>
+form.addControl(<span class="str">'phone'</span>, <span class="kw">new</span> FormControl(<span class="str">''</span>));
+form.removeControl(<span class="str">'phone'</span>);
+form.get(<span class="str">'email'</span>)!.disable();
+form.get(<span class="str">'email'</span>)!.enable();</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Custom validators & async validators</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Sync custom validator</span>
+<span class="kw">function</span> <span class="fn">noSpacesValidator</span>(control: AbstractControl): ValidationErrors | null {
+  <span class="kw">return</span> control.value?.includes(<span class="str">' '</span>)
+    ? { noSpaces: <span class="kw">true</span> }
+    : null;
+}
+
+<span class="cm">// Async validator (check unique email)</span>
+<span class="kw">function</span> <span class="fn">emailTakenValidator</span>(api: ApiService): AsyncValidatorFn {
+  <span class="kw">return</span> (control) =&gt; <span class="kw">of</span>(control.value).pipe(
+    debounceTime(<span class="num">300</span>),
+    switchMap(v =&gt; api.emailExists(v)),
+    map(exists =&gt; exists ? { emailTaken: <span class="kw">true</span> } : null)
+  );
+}
+
+<span class="cm">// Cross-field validator (group level)</span>
+<span class="kw">function</span> <span class="fn">passwordMatch</span>(group: AbstractControl): ValidationErrors | null {
+  <span class="kw">const</span> pwd = group.get(<span class="str">'password'</span>)?.value;
+  <span class="kw">const</span> confirm = group.get(<span class="str">'confirmPassword'</span>)?.value;
+  <span class="kw">return</span> pwd === confirm ? null : { mismatch: <span class="kw">true</span> };
+}
+
+<span class="cm">// Usage</span>
+fb.group({ password: [<span class="str">''</span>], confirmPassword: [<span class="str">''</span>] }, { validators: passwordMatch })</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Signal Forms (Angular 21, experimental)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Experimental API — subject to change</span>
+<span class="kw">import</span> { formGroup, formControl } <span class="kw">from</span> <span class="str">'@angular/forms/experimental'</span>;
+
+<span class="kw">const</span> form = formGroup({
+  name: formControl(<span class="str">''</span>, { validators: [Validators.required] }),
+  email: formControl(<span class="str">''</span>)
+});
+
+<span class="cm">// Values are signals — reactive without subscriptions</span>
+<span class="fn">console</span>.log(form.value());  <span class="cm">// { name: '', email: '' }</span>
+form.controls.name.set(<span class="str">'Alice'</span>);</pre>
+<div class="tip">Signal Forms are composable, type-safe, and integrate directly with Angular's signal-based change detection — no Zone.js needed.</div>
+</div></div>
+</div>
+
+<!-- ===== 30. PERFORMANCE ===== -->
+<div class="section" id="s30">
+<div class="sec-hdr"><div class="sec-num">30</div><div class="sec-title">Angular Performance Manual <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Change detection optimization</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ul>
+<li><strong>OnPush everywhere</strong> — reduce CD checks drastically</li>
+<li><strong>Signals</strong> — skip Zone.js, fine-grained updates</li>
+<li><strong>Avoid function calls in templates</strong> — use pipes or computed signals instead</li>
+<li><strong>trackBy in *ngFor / track in @for</strong> — prevents full DOM re-render</li>
+<li><strong>async pipe</strong> — auto-unsubscribe + triggers CD only on emit</li>
+<li><strong>detach/reattach</strong> — manually control CD for heavy real-time components</li>
+</ul>
+<pre><span class="cm">// BAD — recalculates every CD cycle</span>
+<span class="cm">// &lt;li *ngFor="let item of items"&gt;{{ format(item) }}&lt;/li&gt;</span>
+
+<span class="cm">// GOOD — pipe is memoized</span>
+<span class="cm">// &lt;li *ngFor="let item of items; trackBy: trackById"&gt;{{ item | myFormat }}&lt;/li&gt;</span>
+
+trackById(index: number, item: Item) { <span class="kw">return</span> item.id; }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Lazy loading & code splitting</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Lazy route (standalone)</span>
+{ path: <span class="str">'admin'</span>, loadComponent: () =&gt; <span class="kw">import</span>(<span class="str">'./admin/admin.component'</span>) }
+
+<span class="cm">// Lazy feature module</span>
+{ path: <span class="str">'shop'</span>, loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'./shop/shop.routes'</span>) }
+
+<span class="cm">// Preloading strategy</span>
+RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })
+
+<span class="cm">// Defer block — Angular 17</span>
+<span class="cm">// @defer (on viewport) {</span>
+<span class="cm">//   &lt;heavy-component /&gt;</span>
+<span class="cm">// } @loading { &lt;spinner /&gt; } @placeholder { &lt;div&gt;Soon...&lt;/div&gt; }</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Bundle & runtime optimizations</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong>AOT compilation</strong> — compile templates at build time (default); smaller bundles, faster startup</li>
+<li><strong>Tree-shaking</strong> — unused code removed by ESBuild (default Angular 17+)</li>
+<li><strong>Source map explorer</strong> / <code>ng build --stats-json</code> + Webpack Bundle Analyzer</li>
+<li><strong>Angular SSR + hydration</strong> — faster First Contentful Paint</li>
+<li><strong>Image optimization</strong> — <code>NgOptimizedImage</code> directive (Angular 15+)</li>
+<li><strong>Virtual scrolling</strong> — <code>CdkVirtualScrollViewport</code> for large lists</li>
+<li><strong>Web Workers</strong> — offload heavy computation</li>
+<li><strong>HTTP caching</strong> — <code>shareReplay(1)</code> on HTTP calls</li>
+</ul>
+<pre><span class="cm">// Virtual scroll</span>
+<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height: 400px"&gt;</span>
+<span class="cm">//   &lt;div *cdkVirtualFor="let item of items"&gt;{{ item }}&lt;/div&gt;</span>
+<span class="cm">// &lt;/cdk-virtual-scroll-viewport&gt;</span>
+
+<span class="cm">// HTTP caching</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>@defer — deferred loading (Angular 17+)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Load only when visible</span>
+<span class="cm">// @defer (on viewport; prefetch on idle) {</span>
+<span class="cm">//   &lt;chart-component [data]="data" /&gt;</span>
+<span class="cm">// } @loading (minimum 150ms) {</span>
+<span class="cm">//   &lt;skeleton /&gt;</span>
+<span class="cm">// } @placeholder (minimum 500ms) {</span>
+<span class="cm">//   &lt;div class="placeholder"&gt;Chart will load soon&lt;/div&gt;</span>
+<span class="cm">// } @error {</span>
+<span class="cm">//   &lt;p&gt;Failed to load chart&lt;/p&gt;</span>
+<span class="cm">// }</span>
+
+<span class="cm">// Triggers: on idle, on viewport, on interaction, on hover, on immediate</span>
+<span class="cm">// when (condition)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== 31. ANGULAR VERSIONS ===== -->
+<div class="section" id="s31">
+<div class="sec-hdr"><div class="sec-num">31</div><div class="sec-title">Angular 15–21 Updates <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Version timeline</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Version</th><th>Key Feature</th></tr>
+<tr><td><strong>15</strong></td><td>Stable Standalone Components, Directive Composition API, NgOptimizedImage</td></tr>
+<tr><td><strong>16</strong></td><td>Signals (experimental), Zone.js optional, <code>takeUntilDestroyed</code>, required inputs</td></tr>
+<tr><td><strong>17</strong></td><td>ESBuild default, new <code>@if</code>/<code>@for</code>/<code>@switch</code> syntax, <code>@defer</code> blocks, view transitions</td></tr>
+<tr><td><strong>18</strong></td><td>Zoneless experimental, typed forms stable, Web Worker support</td></tr>
+<tr><td><strong>19</strong></td><td>Signals stable, Standalone default in new projects, <code>input()</code>/<code>output()</code>/<code>model()</code> stable</td></tr>
+<tr><td><strong>20</strong></td><td>Full Signals integration, micro frontend support, improved DX</td></tr>
+<tr><td><strong>21</strong></td><td>Zoneless by default, Signal Forms (experimental), Vitest default, Angular ARIA</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 32. DIRECTIVE COMP ===== -->
+<div class="section" id="s32">
+<div class="sec-hdr"><div class="sec-num">32</div><div class="sec-title">Directive Composition API <span class="badge b-ng">Angular 15+</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>hostDirectives — mixin-style</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>@Component({
+  selector: <span class="str">'app-button'</span>,
+  standalone: <span class="kw">true</span>,
+  hostDirectives: [
+    HighlightDirective,
+    { directive: ClickTrackDirective, inputs: [<span class="str">'trackLabel'</span>], outputs: [<span class="str">'tracked'</span>] }
+  ],
+  template: <span class="str">'&lt;ng-content /&gt;'</span>
+})
+<span class="kw">class</span> <span class="cls">ButtonComponent</span> {}</pre>
+<div class="tip">Replaces base-class inheritance. Great for: accessibility, analytics, validation, theming. Composable + tree-shakeable.</div>
+</div></div>
+</div>
+
+<!-- ===== 33. DI & LIFECYCLE ===== -->
+<div class="section" id="s33">
+<div class="sec-hdr"><div class="sec-num">33</div><div class="sec-title">Lifecycle Hooks & Route Guards <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Lifecycle hooks order</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ol>
+<li><code>ngOnChanges</code> — @Input changes (before init and on each change)</li>
+<li><code>ngOnInit</code> — initialized (once)</li>
+<li><code>ngDoCheck</code> — every CD cycle</li>
+<li><code>ngAfterContentInit</code> — projected content ready</li>
+<li><code>ngAfterContentChecked</code></li>
+<li><code>ngAfterViewInit</code> — view + child views ready</li>
+<li><code>ngAfterViewChecked</code></li>
+<li><code>ngOnDestroy</code> — cleanup</li>
+</ol>
+<div class="tip"><code>ngAfterContentInit</code> fires before <code>ngAfterViewInit</code> — content must be ready before view.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Route Guards</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Guard</th><th>Purpose</th></tr>
+<tr><td><code>CanActivate</code></td><td>Can user enter this route?</td></tr>
+<tr><td><code>CanDeactivate</code></td><td>Can user leave? (unsaved changes)</td></tr>
+<tr><td><code>CanLoad</code></td><td>Can module be lazy loaded?</td></tr>
+<tr><td><code>Resolve</code></td><td>Pre-fetch data before activating</td></tr>
+<tr><td><code>CanActivateChild</code></td><td>Protect child routes</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 34. NGRX ===== -->
+<div class="section" id="s34">
+<div class="sec-hdr"><div class="sec-num">34</div><div class="sec-title">NgRx Full Guide <span class="badge b-key">State</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core concepts + full example</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Store → Selector → Component → dispatch(Action) → Reducer/Effect → Store</strong></p>
+<pre><span class="cm">// Actions</span>
+<span class="kw">const</span> loadUsers = createAction(<span class="str">'[Users] Load'</span>);
+<span class="kw">const</span> loadSuccess = createAction(<span class="str">'[Users] Success'</span>, props&lt;{ users: User[] }&gt;());
+<span class="kw">const</span> loadFailure = createAction(<span class="str">'[Users] Failure'</span>, props&lt;{ error: string }&gt;());
+
+<span class="cm">// Reducer</span>
+<span class="kw">const</span> reducer = createReducer(initialState,
+  on(loadUsers, s =&gt; ({ ...s, loading: <span class="kw">true</span> })),
+  on(loadSuccess, (s, { users }) =&gt; ({ ...s, users, loading: <span class="kw">false</span> })),
+  on(loadFailure, (s, { error }) =&gt; ({ ...s, error, loading: <span class="kw">false</span> }))
+);
+
+<span class="cm">// Selectors — memoized</span>
+<span class="kw">const</span> selectState  = createFeatureSelector&lt;UsersState&gt;(<span class="str">'users'</span>);
+<span class="kw">const</span> selectAll    = createSelector(selectState, s =&gt; s.users);
+<span class="kw">const</span> selectById   = (id: string) =&gt; createSelector(selectAll, us =&gt; us.find(u =&gt; u.id === id));
+
+<span class="cm">// Effects</span>
+loadUsers$ = createEffect(() =&gt; <span class="kw">this</span>.actions$.pipe(
+  ofType(loadUsers),
+  switchMap(() =&gt; <span class="kw">this</span>.svc.getAll().pipe(
+    map(users =&gt; loadSuccess({ users })),
+    catchError(err =&gt; of(loadFailure({ error: err.message })))
+  ))
+));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NgRx tips & when NOT to use it</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li>Actions describe <strong>events</strong>, not commands — <code>[Users Page] Load Requested</code></li>
+<li>Reducers must be <strong>pure and immutable</strong> — never mutate state</li>
+<li>Use <strong>selectors</strong> — decouple components from state shape + memoization</li>
+<li>Use DevTools for time-travel debugging</li>
+</ul>
+<div class="tip">Don't use NgRx for: simple feature-local state, single-component state, straightforward forms. Use <code>BehaviorSubject</code> services or Signals instead.</div>
+</div></div>
+</div>
+
+<!-- ===== 35. CORE PRINCIPLES ===== -->
+<div class="section" id="s35">
+<div class="sec-hdr"><div class="sec-num">35</div><div class="sec-title">Core Software Principles</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>KISS, DRY, YAGNI, SoC, SRP</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Principle</th><th>Meaning</th><th>Violation example</th><th>Fix</th></tr>
+<tr><td><strong>KISS</strong> — Keep It Simple, Stupid</td><td>Prefer simplest solution that works</td><td>6-layer abstraction for a simple flag</td><td>Use a boolean; add complexity only when needed</td></tr>
+<tr><td><strong>DRY</strong> — Don't Repeat Yourself</td><td>Every piece of knowledge has one authoritative source</td><td>Same validation logic in 5 components</td><td>Extract to shared validator / service</td></tr>
+<tr><td><strong>YAGNI</strong> — You Aren't Gonna Need It</td><td>Don't implement features until needed</td><td>Build plugin system before anyone needs plugins</td><td>Implement only what's required now</td></tr>
+<tr><td><strong>SoC</strong> — Separation of Concerns</td><td>Different concerns in different modules</td><td>Component fetches + formats + validates + renders</td><td>Separate service + pipe + validator + component</td></tr>
+<tr><td><strong>SRP</strong> — Single Responsibility</td><td>One class = one reason to change</td><td><code>UserService</code> handles auth + profile + notifications</td><td>Split into <code>AuthService</code>, <code>ProfileService</code>, <code>NotificationService</code></td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 36. OOP PILLARS ===== -->
+<div class="section" id="s36">
+<div class="sec-hdr"><div class="sec-num">36</div><div class="sec-title">OOP Pillars in Angular</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Encapsulation, Inheritance, Polymorphism, Abstraction</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Pillar</th><th>Definition</th><th>Angular example</th></tr>
+<tr><td>Encapsulation</td><td>Bundle data + methods, restrict access</td><td><code>private</code>/<code>protected</code> in services; component encapsulates its state</td></tr>
+<tr><td>Inheritance</td><td>Child inherits from parent</td><td><code>abstract class BaseComponent</code>; extend for shared <code>ngOnDestroy</code></td></tr>
+<tr><td>Polymorphism</td><td>One interface, many implementations</td><td>DI with interface tokens; multiple <code>Logger</code> implementations</td></tr>
+<tr><td>Abstraction</td><td>Hide complexity behind simple API</td><td><code>interface ApiService</code>; service hides HTTP complexity</td></tr>
+</table>
+<pre><span class="cm">// Polymorphism via DI tokens</span>
+<span class="kw">abstract class</span> <span class="cls">Logger</span> { <span class="kw">abstract</span> log(msg: string): <span class="kw">void</span>; }
+<span class="kw">class</span> <span class="cls">ConsoleLogger</span> <span class="kw">extends</span> <span class="cls">Logger</span> { log(m: string) { <span class="fn">console</span>.log(m); } }
+<span class="kw">class</span> <span class="cls">RemoteLogger</span>  <span class="kw">extends</span> <span class="cls">Logger</span> { log(m: string) { <span class="cm">/* send to server */</span> } }
+<span class="cm">// { provide: Logger, useClass: environment.production ? RemoteLogger : ConsoleLogger }</span></pre>
+</div></div>
+</div>
+
+<!-- ===== 37. DESIGN PATTERNS ===== -->
+<div class="section" id="s37">
+<div class="sec-hdr"><div class="sec-num">37</div><div class="sec-title">Design Patterns</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Creational, Structural, Behavioral</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Group</th><th>Patterns</th><th>Angular example</th></tr>
+<tr><td>Creational</td><td>Singleton, Factory, Builder, Prototype</td><td><code>providedIn:'root'</code>; factory providers; FormBuilder</td></tr>
+<tr><td>Structural</td><td>Decorator, Adapter, Facade, Proxy, Composite</td><td><code>@Component</code>/<code>@Injectable</code>; Http Interceptors (Proxy); NgRx (Facade)</td></tr>
+<tr><td>Behavioral</td><td>Observer, Strategy, Command, Chain of Responsibility</td><td>RxJS Subjects (Observer); DI with interfaces (Strategy); NgRx Actions (Command)</td></tr>
+</table>
+<pre><span class="cm">// Strategy pattern — swappable implementations</span>
+<span class="kw">interface</span> <span class="cls">SortStrategy</span>&lt;T&gt; { sort(items: T[]): T[]; }
+<span class="kw">class</span> <span class="cls">AlphaSort</span> <span class="kw">implements</span> <span class="cls">SortStrategy</span>&lt;string&gt; { sort(i) { <span class="kw">return</span> [...i].sort(); } }
+<span class="kw">class</span> <span class="cls">DataService</span>&lt;T&gt; { constructor(<span class="kw">private</span> sorter: SortStrategy&lt;T&gt;) {} }
+
+<span class="cm">// Facade — hide NgRx complexity behind a service</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">class</span> <span class="cls">UsersFacade</span> {
+  users$ = <span class="kw">this</span>.store.select(selectAllUsers);
+  load() { <span class="kw">this</span>.store.dispatch(loadUsers()); }
+  constructor(<span class="kw">private</span> store: Store) {}
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 38. SOLID ===== -->
+<div class="section" id="s38">
+<div class="sec-hdr"><div class="sec-num">38</div><div class="sec-title">SOLID Principles</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>All 5 with examples</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Principle</th><th>Rule</th><th>Violation</th><th>Fix</th></tr>
+<tr><td><strong>S</strong> — Single Responsibility</td><td>One class, one reason to change</td><td>Component fetches + formats + validates</td><td>Split to service + pipe + validator</td></tr>
+<tr><td><strong>O</strong> — Open/Closed</td><td>Open for extension, closed for modification</td><td><code>if (type==='card') ... else if...</code></td><td><code>interface PaymentMethod</code> + separate classes</td></tr>
+<tr><td><strong>L</strong> — Liskov Substitution</td><td>Subclasses must be substitutable for parent</td><td><code>Penguin extends Bird</code> breaks <code>fly()</code></td><td>Separate <code>FlyingBird</code> + <code>Penguin</code></td></tr>
+<tr><td><strong>I</strong> — Interface Segregation</td><td>Don't depend on methods you don't use</td><td><code>Robot implements Worker</code> with <code>eat()</code></td><td>Split into <code>Workable</code> + <code>Eatable</code></td></tr>
+<tr><td><strong>D</strong> — Dependency Inversion</td><td>Depend on abstractions, not implementations</td><td><code>new FileStorage()</code> inside service</td><td>Inject <code>Storage</code> interface</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 39. MFE & NX ===== -->
+<div class="section" id="s39">
+<div class="sec-hdr"><div class="sec-num">39</div><div class="sec-title">Micro Frontends & Nx</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Micro Frontends — concepts</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Extend microservices thinking to the frontend — each team owns an independently deployable UI slice with its own tech stack, CI/CD, and deployment.</p>
+<table>
+<tr><th>Approach</th><th>How it works</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><strong>Module Federation</strong> (Webpack 5)</td><td>Remote modules loaded at runtime via shared chunk</td><td>True independent deploy; runtime composition</td><td>Complex Webpack config; shared deps challenges</td></tr>
+<tr><td><strong>Web Components</strong></td><td>Custom elements expose framework-agnostic UI</td><td>Framework-agnostic</td><td>Limited Angular DI; styling encapsulation issues</td></tr>
+<tr><td><strong>Single-SPA</strong></td><td>Router-based micro app orchestration</td><td>Mature; multi-framework</td><td>Large bundle overhead; complex lifecycle</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Module Federation with Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Shell app webpack.config.js</span>
+<span class="kw">new</span> ModuleFederationPlugin({
+  remotes: {
+    checkout: <span class="str">'checkout@http://localhost:3001/remoteEntry.js'</span>,
+    catalog:  <span class="str">'catalog@http://localhost:3002/remoteEntry.js'</span>
+  },
+  shared: { <span class="str">'@angular/core'</span>: { singleton: <span class="kw">true</span>, strictVersion: <span class="kw">true</span> } }
+});
+
+<span class="cm">// Checkout app webpack.config.js (remote)</span>
+<span class="kw">new</span> ModuleFederationPlugin({
+  name: <span class="str">'checkout'</span>,
+  filename: <span class="str">'remoteEntry.js'</span>,
+  exposes: { <span class="str">'./CheckoutModule'</span>: <span class="str">'./src/app/checkout/checkout.module.ts'</span> }
+});
+
+<span class="cm">// Lazy load remote in shell routing</span>
+{
+  path: <span class="str">'checkout'</span>,
+  loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'checkout/CheckoutModule'</span>)
+    .then(m =&gt; m.CheckoutModule)
+}</pre>
+<div class="tip">Use <code>@angular-architects/module-federation</code> package to simplify setup. Key challenge: shared state between MFEs — use custom events, <code>localStorage</code>, or a shared service in the shell.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Nx — monorepo tooling</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Nx is a smart build system + monorepo tool that helps manage multiple apps and shared libraries in one repo.</p>
+<pre><span class="cm">// Workspace structure</span>
+<span class="cm">// apps/</span>
+<span class="cm">//   shell/          ← main Angular app</span>
+<span class="cm">//   admin/          ← admin MFE</span>
+<span class="cm">//   checkout/       ← checkout MFE</span>
+<span class="cm">// libs/</span>
+<span class="cm">//   shared/ui/      ← shared UI components</span>
+<span class="cm">//   shared/data/    ← shared state/services</span>
+<span class="cm">//   feature/auth/   ← auth feature lib</span>
+
+<span class="cm">// Key commands</span>
+<span class="cm">// nx serve shell</span>
+<span class="cm">// nx build checkout --prod</span>
+<span class="cm">// nx test shared-ui</span>
+<span class="cm">// nx affected --target=test    ← only run tests for changed code</span>
+<span class="cm">// nx graph                      ← visualize dependencies</span></pre>
+<table>
+<tr><th>Nx Feature</th><th>What it does</th></tr>
+<tr><td>Computation cache</td><td>Cache build/test results; skip if unchanged</td></tr>
+<tr><td>Affected commands</td><td>Only build/test code affected by a change</td></tr>
+<tr><td>Enforce boundaries</td><td>Lint rules to prevent libs from depending on apps</td></tr>
+<tr><td>Generators</td><td>Scaffold apps, libs, components consistently</td></tr>
+<tr><td>Distributed caching</td><td>Share cache across CI machines (Nx Cloud)</td></tr>
+</table>
+<pre><span class="cm">// nx.json — enforce lib boundaries</span>
+{
+  <span class="str">"@nx/enforce-module-boundaries"</span>: [{
+    <span class="str">"sourceTag"</span>: <span class="str">"scope:shell"</span>,
+    <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"scope:shared"</span>]
+  }]
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== 40. UNIT TESTING ===== -->
+<div class="section" id="s40">
+<div class="sec-hdr"><div class="sec-num">40</div><div class="sec-title">Unit Testing & Jasmine <span class="badge b-key">Testing</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Component & service testing</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>describe(<span class="str">'UserCardComponent'</span>, () =&gt; {
+  <span class="kw">let</span> fixture: ComponentFixture&lt;UserCardComponent&gt;;
+  beforeEach(<span class="kw">async</span> () =&gt; {
+    <span class="kw">await</span> TestBed.configureTestingModule({
+      imports: [UserCardComponent],
+      providers: [{ provide: UsersService, useValue: jasmine.createSpyObj(<span class="str">'UsersService'</span>, [<span class="str">'getUser'</span>]) }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UserCardComponent);
+  });
+  it(<span class="str">'displays user name'</span>, () =&gt; {
+    fixture.componentInstance.user = { name: <span class="str">'Alice'</span> };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector(<span class="str">'.name'</span>).textContent).toContain(<span class="str">'Alice'</span>);
+  });
+});</pre>
+<ul>
+<li><strong>Testing pyramid:</strong> Many unit → fewer integration → few E2E</li>
+<li><strong>AAA:</strong> Arrange → Act → Assert</li>
+<li><strong>Test behavior, not implementation</strong></li>
+<li>Use <code>HttpClientTestingModule</code> + <code>HttpTestingController</code> for HTTP</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== 41. PLAYWRIGHT ===== -->
+<div class="section" id="s41">
+<div class="sec-hdr"><div class="sec-num">41</div><div class="sec-title">Playwright E2E <span class="badge b-key">Testing</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Essentials + Page Object Model</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>test(<span class="str">'login flow'</span>, <span class="kw">async</span> ({ page }) =&gt; {
+  <span class="kw">await</span> page.goto(<span class="str">'/login'</span>);
+  <span class="kw">await</span> page.getByTestId(<span class="str">'email'</span>).fill(<span class="str">'<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="afdadccaddefdbcadcdb81ccc0c2">[email&#160;protected]</a>'</span>);
+  <span class="kw">await</span> page.getByRole(<span class="str">'button'</span>, { name: <span class="str">'Login'</span> }).click();
+  <span class="kw">await</span> expect(page).toHaveURL(<span class="str">/dashboard/</span>);
+});
+
+<span class="cm">// API mock</span>
+<span class="kw">await</span> page.route(<span class="str">'**/api/users'</span>, route =&gt; route.fulfill({ json: [] }));
+
+<span class="cm">// Page Object Model — always mention!</span>
+<span class="kw">class</span> <span class="cls">LoginPage</span> {
+  constructor(<span class="kw">private</span> page: Page) {}
+  <span class="kw">async</span> login(email: string, pass: string) {
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByTestId(<span class="str">'email'</span>).fill(email);
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByTestId(<span class="str">'pwd'</span>).fill(pass);
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByRole(<span class="str">'button'</span>, { name: <span class="str">'Login'</span> }).click();
+  }
+}</pre>
+<div class="tip">Use <code>data-testid</code> attributes — stable, not tied to CSS. POM = reusable, maintainable selectors. E2E: cover critical user journeys only.</div>
+</div></div>
+</div>
+
+<!-- ===== 42. REST ===== -->
+<div class="section" id="s42">
+<div class="sec-hdr"><div class="sec-num">42</div><div class="sec-title">REST & HTTP</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Methods & status codes</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Method</th><th>Purpose</th><th>Idempotent?</th></tr>
+<tr><td>GET</td><td>Read</td><td>Yes</td></tr>
+<tr><td>POST</td><td>Create</td><td>No</td></tr>
+<tr><td>PUT</td><td>Replace fully</td><td>Yes</td></tr>
+<tr><td>PATCH</td><td>Partial update</td><td>Yes</td></tr>
+<tr><td>DELETE</td><td>Delete</td><td>Yes</td></tr>
+<tr><td>OPTIONS</td><td>CORS preflight, list methods</td><td>Yes</td></tr>
+</table>
+<table>
+<tr><th>Range</th><th>Key codes</th></tr>
+<tr><td>2xx Success</td><td>200 OK, 201 Created, 204 No Content</td></tr>
+<tr><td>3xx Redirect</td><td>301 Moved, 304 Not Modified</td></tr>
+<tr><td>4xx Client error</td><td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Unprocessable, 429 Too Many Requests</td></tr>
+<tr><td>5xx Server error</td><td>500 Internal, 502 Bad Gateway, 503 Unavailable</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== 43. CI/CD ===== -->
+<div class="section" id="s43">
+<div class="sec-hdr"><div class="sec-num">43</div><div class="sec-title">CI/CD <span class="badge b-grn">DevOps</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>CI/CD concepts</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>CI (Continuous Integration)</strong> — automatically build and test every push/PR. Catches issues early. <strong>CD (Continuous Delivery/Deployment)</strong> — automatically deploy to environments when CI passes.</p>
+<table>
+<tr><th>Stage</th><th>What happens</th></tr>
+<tr><td>Trigger</td><td>Push to branch / PR opened / tag created</td></tr>
+<tr><td>Install</td><td><code>npm ci</code> — clean, reproducible install</td></tr>
+<tr><td>Lint</td><td>ESLint, Stylelint — code quality</td></tr>
+<tr><td>Test</td><td>Unit tests (Jasmine/Vitest), coverage report</td></tr>
+<tr><td>Build</td><td><code>ng build --prod</code> — production bundle</td></tr>
+<tr><td>E2E</td><td>Playwright against staging</td></tr>
+<tr><td>Deploy</td><td>Push to staging / prod (Kubernetes, S3, etc.)</td></tr>
+<tr><td>Notify</td><td>Slack/email on success or failure</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GitHub Actions — Angular example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># .github/workflows/ci.yml</span>
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: <span class="str">'20'</span>
+          cache: <span class="str">'npm'</span>
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --no-watch --browsers=ChromeHeadless --coverage
+      - run: npm run build -- --configuration=production
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  deploy-staging:
+    needs: build-and-test
+    if: github.ref == <span class="str">'refs/heads/develop'</span>
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging
+        run: |
+          aws s3 sync dist/app s3://my-app-staging
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CF_ID }} --paths <span class="str">"/*"</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GitLab CI — Angular example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># .gitlab-ci.yml</span>
+stages: [install, test, build, deploy]
+
+variables:
+  NODE_IMAGE: node:20-alpine
+
+install:
+  stage: install
+  image: $NODE_IMAGE
+  script: npm ci
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths: [node_modules/]
+
+test:
+  stage: test
+  image: $NODE_IMAGE
+  script:
+    - npm run lint
+    - npm test -- --no-watch --browsers=ChromeHeadless
+  coverage: <span class="str">'/Statements.*?(\d+(?:\.\d+)?)%/'</span>
+
+build:
+  stage: build
+  image: $NODE_IMAGE
+  script: npm run build -- --configuration=production
+  artifacts:
+    paths: [dist/]
+    expire_in: 1 week
+
+deploy_staging:
+  stage: deploy
+  script: ./scripts/deploy-staging.sh
+  environment: staging
+  only: [develop]</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>CI/CD best practices for frontend</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong><code>npm ci</code></strong> instead of <code>npm install</code> — uses exact lockfile, faster, reproducible</li>
+<li><strong>Cache node_modules</strong> by lockfile hash — skip install if unchanged</li>
+<li><strong>Run tests in headless Chrome</strong> — <code>--browsers=ChromeHeadless</code></li>
+<li><strong>Fail fast</strong> — lint before tests, tests before build</li>
+<li><strong>Separate staging and production</strong> — deploy staging on merge to develop, prod on tag/release</li>
+<li><strong>Environment variables via secrets</strong> — never commit API keys</li>
+<li><strong>Nx affected</strong> — in monorepo, only test/build changed packages</li>
+<li><strong>Bundle size budget</strong> — configure in <code>angular.json</code>, fail CI if exceeded</li>
+</ul>
+<pre><span class="cm">// angular.json — bundle budget</span>
+<span class="str">"budgets"</span>: [
+  { <span class="str">"type"</span>: <span class="str">"initial"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"500kb"</span>, <span class="str">"maximumError"</span>: <span class="str">"1mb"</span> },
+  { <span class="str">"type"</span>: <span class="str">"anyComponentStyle"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"2kb"</span> }
+]</pre>
+</div></div>
+</div>
+
+<!-- ===== 44. DOCKER ===== -->
+<div class="section" id="s44">
+<div class="sec-hdr"><div class="sec-num">44</div><div class="sec-title">Docker <span class="badge b-grn">DevOps</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core concepts</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Concept</th><th>Description</th></tr>
+<tr><td><strong>Image</strong></td><td>Read-only template. Built from Dockerfile. Like a class.</td></tr>
+<tr><td><strong>Container</strong></td><td>Running instance of an image. Like an object.</td></tr>
+<tr><td><strong>Dockerfile</strong></td><td>Script of instructions to build an image</td></tr>
+<tr><td><strong>Volume</strong></td><td>Persistent storage mounted into container</td></tr>
+<tr><td><strong>Network</strong></td><td>Virtual network connecting containers</td></tr>
+<tr><td><strong>Registry</strong></td><td>Image storage (Docker Hub, ECR, GCR)</td></tr>
+<tr><td><strong>docker-compose</strong></td><td>Multi-container setup via YAML config</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Dockerfile for Angular app (multi-stage)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Stage 1 — build</span>
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci                        <span class="cm"># reproducible install</span>
+COPY . .
+RUN npm run build -- --configuration=production
+
+<span class="cm"># Stage 2 — serve (nginx, ~23MB)</span>
+FROM nginx:alpine
+COPY --from=builder /app/dist/my-app /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD [<span class="str">"nginx"</span>, <span class="str">"-g"</span>, <span class="str">"daemon off;"</span>]</pre>
+<pre><span class="cm"># nginx.conf — handle Angular routing</span>
+server {
+  listen 80;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ /index.html;   <span class="cm"># SPA routing</span>
+  }
+
+  location /api {
+    proxy_pass http://backend:3000;     <span class="cm"># proxy to backend</span>
+  }
+
+  gzip on;
+  gzip_types text/plain application/javascript text/css;
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>docker-compose for local dev</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># docker-compose.yml</span>
+version: <span class="str">'3.9'</span>
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: builder           <span class="cm"># use builder stage for dev</span>
+    ports:
+      - <span class="str">"4200:4200"</span>
+    volumes:
+      - ./frontend:/app         <span class="cm"># hot reload</span>
+      - /app/node_modules       <span class="cm"># anonymous volume — don't overwrite</span>
+    command: npm run start -- --host 0.0.0.0
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - <span class="str">"3000:3000"</span>
+    command: npm run dev
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - <span class="str">"5432:5432"</span>
+
+volumes:
+  pgdata:</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Essential Docker commands</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Build & run</span>
+docker build -t my-app:latest .
+docker run -p 4200:80 my-app:latest
+docker run -d --name my-app -p 80:80 my-app:latest
+
+<span class="cm"># docker-compose</span>
+docker-compose up -d          <span class="cm"># start all services</span>
+docker-compose down           <span class="cm"># stop and remove containers</span>
+docker-compose logs -f frontend <span class="cm"># follow logs</span>
+docker-compose exec frontend sh <span class="cm"># shell into container</span>
+
+<span class="cm"># Images</span>
+docker images
+docker pull nginx:alpine
+docker push my-registry/my-app:v1.0.0
+docker rmi my-app:latest
+
+<span class="cm"># Containers</span>
+docker ps                     <span class="cm"># running containers</span>
+docker ps -a                  <span class="cm"># all containers</span>
+docker logs -f container_id
+docker stop container_id
+docker rm container_id</pre>
+<div class="tip">Multi-stage builds are essential — keep the final image small (use nginx:alpine instead of node). Never run as root in production (<code>USER nginx</code>). Use <code>.dockerignore</code> to exclude <code>node_modules</code>, <code>dist</code>, <code>.git</code>.</div>
+</div></div>
+</div>
+
+<!-- ===== 45. GRAPHICS ===== -->
+<div class="section" id="s45">
+<div class="sec-hdr"><div class="sec-num">45</div><div class="sec-title">D3 / SVG / Canvas / WebGL / PixiJS</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Comparison & when to use</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Tech</th><th>Type</th><th>Best for</th><th>Limit</th></tr>
+<tr><td>SVG</td><td>Vector DOM</td><td>Charts, diagrams, icons (&lt;5k elements)</td><td>Slow with many elements</td></tr>
+<tr><td>Canvas 2D</td><td>Raster JS API</td><td>Games, particles, large datasets</td><td>Not accessible per-element</td></tr>
+<tr><td>D3.js</td><td>Data-binding + SVG/Canvas</td><td>Custom interactive data viz</td><td>Steep learning curve</td></tr>
+<tr><td>WebGL</td><td>GPU-accelerated</td><td>3D, massive data, shaders, VR/AR</td><td>Very complex (GLSL)</td></tr>
+<tr><td>PixiJS</td><td>WebGL abstraction</td><td>Games, animated UIs, 2D engine</td><td>Not for 3D</td></tr>
+</table>
+<div class="tip">&lt;1k elements → SVG; 1k–100k → Canvas; 100k+ or 3D → WebGL/PixiJS. Use D3's <code>.join()</code> API (v5+) over manual enter/exit.</div>
+</div></div>
+</div>
+
+</main>
+<script>
+/* ── Card toggle ── */
+function T(h){
+  var b=h.nextElementSibling,a=h.querySelector('.arrow'),o=b.classList.contains('open');
+  b.classList.toggle('open',!o);
+  a.classList.toggle('open',!o);
+}
+
+/* ── Mobile sidebar drawer ── */
+var sidebar  = document.getElementById('sidebar');
+var menuBtn  = document.getElementById('menuBtn');
+var backdrop = document.getElementById('backdrop');
+
+function openMenu(){
+  sidebar.classList.add('open');
+  backdrop.style.display='block';
+  // trigger reflow so transition plays
+  backdrop.offsetHeight;
+  backdrop.classList.add('visible');
+  menuBtn.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeMenu(){
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('visible');
+  menuBtn.classList.remove('open');
+  document.body.style.overflow='';
+  // hide backdrop after transition
+  setTimeout(function(){ backdrop.style.display='none'; }, 260);
+}
+function toggleMenu(){
+  if(sidebar.classList.contains('open')) closeMenu(); else openMenu();
+}
+
+if(menuBtn)  menuBtn.addEventListener('click', toggleMenu);
+if(backdrop) backdrop.addEventListener('click', closeMenu);
+
+// close on Escape
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape' && sidebar.classList.contains('open')) closeMenu();
+});
+
+/* ── Active nav tracking ── */
+var secs = Array.from(document.querySelectorAll('.section'));
+var navs = Array.from(document.querySelectorAll('.nav-item'));
+
+function setActive(id){
+  navs.forEach(function(n){ n.classList.remove('active'); });
+  var a = document.querySelector('.nav-item[href="#'+id+'"]');
+  if(a){
+    a.classList.add('active');
+    // scroll sidebar nav to keep active item visible
+    a.scrollIntoView({ block:'nearest' });
+  }
+}
+
+function onScroll(){
+  var mid = window.scrollY + window.innerHeight * 0.35;
+  var active = secs[0];
+  for(var i=0; i<secs.length; i++){
+    if(secs[i].offsetTop <= mid) active = secs[i];
+    else break;
+  }
+  if(active) setActive(active.id);
+}
+
+window.addEventListener('scroll', onScroll, { passive:true });
+onScroll(); // set initial state
+
+/* ── Nav link clicks ── */
+navs.forEach(function(link){
+  link.addEventListener('click', function(e){
+    e.preventDefault();
+    var target = document.querySelector(link.getAttribute('href'));
+    if(!target) return;
+    // on mobile: close drawer first, then scroll after it animates
+    var isMobile = window.innerWidth <= 768;
+    if(isMobile && sidebar.classList.contains('open')){
+      closeMenu();
+      setTimeout(function(){ target.scrollIntoView({ block:'start' }); }, 50);
+    } else {
+      target.scrollIntoView({ block:'start' });
+    }
+    setActive(target.id);
+  });
+});
+
+/* ── Close drawer on resize to desktop ── */
+window.addEventListener('resize', function(){
+  if(window.innerWidth > 768 && sidebar.classList.contains('open')) closeMenu();
+}, { passive:true });
+</script>
+</body>
+</html>
