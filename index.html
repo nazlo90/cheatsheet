@@ -469,6 +469,15 @@ arr.toReversed();</pre>
 <tr><td>Prototype keys</td><td>None</td><td>Inherited keys possible</td></tr>
 <tr><td>Performance</td><td>Better for frequent add/delete</td><td>Good for static shapes</td></tr>
 </table>
+<table>
+<tr><th></th><th>Set</th><th>Array</th></tr>
+<tr><td>Duplicates</td><td>Not allowed (unique values)</td><td>Allowed</td></tr>
+<tr><td>Order</td><td>Insertion order guaranteed</td><td>Insertion order guaranteed</td></tr>
+<tr><td>Size</td><td><code>.size</code> property</td><td><code>.length</code> property</td></tr>
+<tr><td>Lookup</td><td><code>.has()</code> — O(1)</td><td><code>.includes()</code> — O(n)</td></tr>
+<tr><td>Index access</td><td>Not supported</td><td><code>arr[i]</code> — O(1)</td></tr>
+<tr><td>Use case</td><td>Unique values, fast membership test</td><td>Ordered list, index-based access</td></tr>
+</table>
 <pre><span class="kw">const</span> map = <span class="kw">new</span> Map();
 map.set(<span class="str">'key'</span>, <span class="num">1</span>);
 map.set(objKey, <span class="str">'value'</span>); <span class="cm">// object as key!</span>
@@ -780,6 +789,31 @@ obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key<
 <span class="kw">type</span> Fn = (a: number, b: number) =&gt; number;
 <span class="kw">function</span> <span class="fn">greet</span>(name: string, greeting?: string): string {
   <span class="kw">return</span> <span class="str">`${greeting ?? <span class="str">'Hello'</span>}, ${name}`</span>;
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>unknown vs any</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Both accept any value, but <code>unknown</code> is the <em>type-safe</em> counterpart — you must narrow it before use, while <code>any</code> silently disables all type checking.</p>
+<table>
+<tr><th></th><th>unknown</th><th>any</th></tr>
+<tr><td>Accepts any value</td><td>Yes ✓</td><td>Yes ✓</td></tr>
+<tr><td>Assignable to other types</td><td>No — must narrow first</td><td>Yes — bypasses checks</td></tr>
+<tr><td>Property/method access</td><td>Error until narrowed</td><td>Always allowed</td></tr>
+<tr><td>Type safety</td><td>Preserved ✓</td><td>Disabled ✗</td></tr>
+<tr><td>Use case</td><td>External data, API responses</td><td>Migration, quick escape hatch</td></tr>
+</table>
+<pre><span class="kw">let</span> a: unknown = <span class="fn">fetchData</span>();
+a.toFixed();            <span class="cm">// ✗ Error — not narrowed yet</span>
+<span class="kw">if</span> (<span class="kw">typeof</span> a === <span class="str">'number'</span>) a.toFixed(); <span class="cm">// ✓ narrowed</span>
+
+<span class="kw">let</span> b: any = <span class="fn">fetchData</span>();
+b.toFixed();            <span class="cm">// ✓ no error — but runtime may explode</span>
+b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</span>
+
+<span class="cm">// Prefer unknown for function params accepting arbitrary input</span>
+<span class="kw">function</span> <span class="fn">parse</span>(val: unknown): string {
+  <span class="kw">if</span> (<span class="kw">typeof</span> val === <span class="str">'string'</span>) <span class="kw">return</span> val;
+  <span class="kw">return</span> String(val);
 }</pre>
 </div></div>
 </div>
@@ -1629,6 +1663,38 @@ loadUsers$ = createEffect(() =&gt; <span class="kw">this</span>.actions$.pipe(
 <tr><td><strong>Web Components</strong></td><td>Custom elements expose framework-agnostic UI</td><td>Framework-agnostic</td><td>Limited Angular DI; styling encapsulation issues</td></tr>
 <tr><td><strong>Single-SPA</strong></td><td>Router-based micro app orchestration</td><td>Mature; multi-framework</td><td>Large bundle overhead; complex lifecycle</td></tr>
 </table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>MFE communication methods</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Micro frontends are isolated by design — they communicate through well-defined contracts, not shared internals.</p>
+<table>
+<tr><th>Method</th><th>How it works</th><th>Best for</th><th>Drawbacks</th></tr>
+<tr><td><strong>Custom Events</strong></td><td><code>dispatchEvent</code> on <code>window</code>; others listen via <code>addEventListener</code></td><td>Loose coupling, any framework</td><td>No type safety; hard to trace</td></tr>
+<tr><td><strong>Shared State (shell service)</strong></td><td>Shell exposes a service/store; MFEs import it as a shared singleton</td><td>Complex shared state (auth, cart)</td><td>Tight coupling to shell; shared dep version must match</td></tr>
+<tr><td><strong>URL / Query Params</strong></td><td>State encoded in URL; MFEs read via router</td><td>Navigation state, deep links</td><td>Limited payload; not for ephemeral data</td></tr>
+<tr><td><strong>localStorage / sessionStorage</strong></td><td>Key-value storage shared across same origin</td><td>Auth tokens, simple flags</td><td>Sync issues; no reactivity; XSS risk</td></tr>
+<tr><td><strong>BroadcastChannel API</strong></td><td>Native browser channel across same-origin tabs/iframes</td><td>Cross-tab sync, auth logout</td><td>Same origin only; no history</td></tr>
+<tr><td><strong>Web Component props/events</strong></td><td>Attributes/properties as input; custom events as output</td><td>Framework-agnostic MFEs</td><td>Complex objects need serialization</td></tr>
+</table>
+<pre><span class="cm">// 1. Custom Event — emitter MFE</span>
+window.dispatchEvent(<span class="kw">new</span> CustomEvent(<span class="str">'mfe:cart:updated'</span>, {
+  detail: { itemCount: <span class="num">3</span> }, bubbles: <span class="kw">true</span>
+}));
+
+<span class="cm">// 1. Custom Event — listener MFE</span>
+window.addEventListener(<span class="str">'mfe:cart:updated'</span>, (e: CustomEvent) =&gt; {
+  <span class="kw">this</span>.cartCount = e.detail.itemCount;
+});
+
+<span class="cm">// 2. BroadcastChannel — logout across tabs</span>
+<span class="kw">const</span> channel = <span class="kw">new</span> BroadcastChannel(<span class="str">'auth'</span>);
+channel.postMessage({ type: <span class="str">'logout'</span> });
+channel.onmessage = (e) =&gt; { <span class="kw">if</span> (e.data.type === <span class="str">'logout'</span>) router.navigate([<span class="str">'/login'</span>]); };
+
+<span class="cm">// 3. Shared singleton service via Module Federation</span>
+<span class="cm">// webpack.config — mark as singleton shared dep</span>
+shared: { <span class="str">'@myorg/auth-state'</span>: { singleton: <span class="kw">true</span>, strictVersion: <span class="kw">true</span> } }</pre>
+<div class="tip">Rule of thumb: use <strong>Custom Events</strong> for simple notifications, <strong>shared singleton</strong> for complex reactive state, <strong>URL</strong> for navigation-driven state. Avoid direct imports between MFEs — that breaks independent deployability.</div>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Module Federation with Angular</h3><span class="arrow">▶</span></div>
 <div class="cb">
