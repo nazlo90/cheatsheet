@@ -210,6 +210,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
 <div class="sec-hdr"><div class="sec-num">1</div><div class="sec-title">Hoisting & var / let / const <span class="badge b-hot">Warm-up</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Hoisting rules & TDZ</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Hoisting</strong> is JS's behavior of moving declarations to the top of their scope before execution — so variables and functions can be referenced before their line in code.</p>
 <p>JS engine does a two-pass scan: first collects declarations, then executes. Only declarations are hoisted — not initializations.</p>
 <table>
 <tr><th>Declaration</th><th>Hoisted?</th><th>Initialized?</th><th>Usable before?</th></tr>
@@ -250,6 +251,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
 <div class="sec-hdr"><div class="sec-num">2</div><div class="sec-title">Event Loop <span class="badge b-hot">Core</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Call Stack → Microtasks → Macrotasks</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>The <strong>event loop</strong> is the mechanism that allows JS (single-threaded) to handle async operations — it continuously checks if the call stack is empty, then processes queued tasks.</p>
 <ol>
 <li><strong>Call Stack</strong> — synchronous code runs here</li>
 <li><strong>Microtask Queue</strong> — <code>Promise.then/catch/finally</code>, <code>queueMicrotask()</code>, <code>MutationObserver</code></li>
@@ -289,6 +291,7 @@ Promise.resolve()
 <div class="sec-hdr"><div class="sec-num">3</div><div class="sec-title">this, Context & Closures <span class="badge b-hot">Core</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>5 rules for this + call/apply/bind</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>The <code><strong>this</strong></code> keyword refers to the object that is currently executing the function — its value is determined by <em>how</em> the function is called, not where it's defined.</p>
 <table>
 <tr><th>Context</th><th>Value of this</th></tr>
 <tr><td>Global (non-strict)</td><td><code>window</code> / <code>global</code></td></tr>
@@ -457,6 +460,7 @@ arr.toReversed();</pre>
 <div class="sec-hdr"><div class="sec-num">7</div><div class="sec-title">Map / Set / WeakMap / WeakSet</div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Map vs Object, Set vs Array</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Map</strong> is a key-value store that accepts any type as key (including objects). <strong>Set</strong> is a collection of unique values. Both offer O(1) lookup — prefer them over plain objects/arrays when key flexibility or uniqueness matters.</p>
 <table>
 <tr><th></th><th>Map</th><th>Object</th></tr>
 <tr><td>Key types</td><td>Any (objects, functions)</td><td>Strings/Symbols only</td></tr>
@@ -504,6 +508,7 @@ set.add(<span class="num">4</span>);  set.has(<span class="num">2</span>);  set.
 <div class="sec-hdr"><div class="sec-num">8</div><div class="sec-title">Classes (all about)</div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Class syntax — full reference</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>A <strong>class</strong> is syntactic sugar over prototype-based inheritance — a blueprint for creating objects with shared methods, private fields, and constructor logic. Under the hood, it's still prototype chains.</p>
 <pre><span class="kw">class</span> <span class="cls">Animal</span> {
   <span class="cm">// Class field (ES2022)</span>
   #name;                          <span class="cm">// private field</span>
@@ -727,6 +732,7 @@ obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key<
 <div class="sec-hdr"><div class="sec-num">13</div><div class="sec-title">Big O & Data Structures</div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Array / Set / Map complexity</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Big O</strong> notation describes worst-case time or space complexity as input size (n) grows — ignoring constants. O(1) is instant; O(n) scales linearly; O(n²) is quadratic.</p>
 <table>
 <tr><th>Operation</th><th>Array</th><th>Set</th><th>Map</th></tr>
 <tr><td>Access by index/key</td><td>O(1)</td><td>—</td><td>O(1)</td></tr>
@@ -745,6 +751,7 @@ obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key<
 <div class="sec-hdr"><div class="sec-num">14</div><div class="sec-title">TypeScript Basics <span class="badge b-ng">TS</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Annotations, arrays, tuples, enums, unions</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>TypeScript</strong> is a statically typed superset of JavaScript — it adds type annotations and catches type errors at compile time, then compiles to plain JS.</p>
 <pre><span class="cm">// Annotations</span>
 <span class="kw">let</span> n: number = <span class="num">10</span>;
 <span class="kw">const</span> name: string = <span class="str">"Alice"</span>;
@@ -782,6 +789,7 @@ obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key<
 <div class="sec-hdr"><div class="sec-num">15</div><div class="sec-title">type vs interface <span class="badge b-ng">TS</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Key differences</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>Both <code>interface</code> and <code>type</code> describe object shapes — but <code>interface</code> supports declaration merging and is preferred for class contracts, while <code>type</code> is more flexible for unions, mapped types, and aliases.</p>
 <table>
 <tr><th>Feature</th><th>interface</th><th>type</th></tr>
 <tr><td>Declaration merging</td><td>Yes ✓</td><td>No ✗</td></tr>
@@ -854,6 +862,7 @@ obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key<
 <div class="sec-hdr"><div class="sec-num">17</div><div class="sec-title">Storage APIs</div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>localStorage vs sessionStorage vs Cookies vs IndexedDB</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Browser storage APIs</strong> let you persist data client-side. The right choice depends on data size, required lifetime, and whether it needs to be sent to the server.</p>
 <table>
 <tr><th></th><th>localStorage</th><th>sessionStorage</th><th>Cookie</th><th>IndexedDB</th></tr>
 <tr><td>Capacity</td><td>~5–10 MB</td><td>~5 MB</td><td>~4 KB</td><td>GBs</td></tr>
@@ -871,6 +880,7 @@ obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key<
 <div class="sec-hdr"><div class="sec-num">18</div><div class="sec-title">WebSockets <span class="badge b-grn">Real-time</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket vs HTTP vs SSE</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>WebSocket</strong> is a protocol providing full-duplex, persistent communication over a single TCP connection — unlike HTTP's one-request-one-response model.</p>
 <table>
 <tr><th></th><th>HTTP</th><th>WebSocket</th><th>SSE</th></tr>
 <tr><td>Connection</td><td>New per request</td><td>Persistent, full-duplex</td><td>Persistent, one-way (server→client)</td></tr>
@@ -964,6 +974,7 @@ self.addEventListener(<span class="str">'fetch'</span>, e =&gt; e.respondWith(
 <div class="sec-hdr"><div class="sec-num">20</div><div class="sec-title">Web Workers</div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Web Workers vs Service Workers</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Web Workers</strong> run scripts in background threads, separate from the main UI thread — keeping the page responsive during heavy CPU work. No DOM access; communicate via <code>postMessage</code>.</p>
 <table>
 <tr><th></th><th>Web Worker</th><th>Service Worker</th></tr>
 <tr><td>Purpose</td><td>CPU computation</td><td>Network proxy / offline</td></tr>
@@ -1000,6 +1011,7 @@ self.onmessage = e =&gt; self.postMessage(heavyWork(e.data.data));</pre>
 <div class="sec-hdr"><div class="sec-num">22</div><div class="sec-title">RxJS Core <span class="badge b-ng">Angular</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Observable vs Promise + operators</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>An <strong>Observable</strong> is a lazy stream that can emit multiple values over time — it does nothing until subscribed. RxJS provides operators to transform, filter, and combine streams declaratively.</p>
 <table>
 <tr><th></th><th>Observable</th><th>Promise</th></tr>
 <tr><td>Execution</td><td>Lazy — starts on subscribe</td><td>Eager — immediately</td></tr>
@@ -1025,6 +1037,7 @@ data$.pipe(takeUntilDestroyed()).subscribe(...); <span class="cm">// Angular 16+
 <div class="sec-hdr"><div class="sec-num">23</div><div class="sec-title">Higher-Order Observables <span class="badge b-ng">RxJS</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>switchMap vs mergeMap vs concatMap vs exhaustMap</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Higher-order mapping operators</strong> subscribe to inner observables emitted by a source — they differ in how many concurrent subscriptions they allow and whether previous ones are cancelled.</p>
 <table>
 <tr><th>Operator</th><th>Cancels prev?</th><th>Concurrent?</th><th>Best for</th></tr>
 <tr><td><code>switchMap</code></td><td>Yes ✓</td><td>No (max 1)</td><td>Search — only latest matters</td></tr>
@@ -1044,6 +1057,7 @@ files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)))
 <div class="sec-hdr"><div class="sec-num">24</div><div class="sec-title">Subjects & Hot/Cold <span class="badge b-ng">RxJS</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Cold vs Hot + Subject types</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>A <strong>Subject</strong> is both an Observable and an Observer — it broadcasts to all current subscribers. <strong>Cold</strong> observables start fresh per subscriber; <strong>Hot</strong> observables share one execution.</p>
 <table>
 <tr><th></th><th>Cold</th><th>Hot</th></tr>
 <tr><td>Starts emitting</td><td>On subscription</td><td>Regardless of subscribers</td></tr>
@@ -1065,6 +1079,7 @@ files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)))
 <div class="sec-hdr"><div class="sec-num">25</div><div class="sec-title">Angular Fundamentals <span class="badge b-ng">Angular</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>AngularJS vs Angular 2+ & key building blocks</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p><strong>Angular</strong> is a TypeScript-based framework for building SPAs — component-based architecture with built-in DI, routing, reactive forms, and a powerful CLI.</p>
 <table>
 <tr><th></th><th>AngularJS (1.x)</th><th>Angular (2+)</th></tr>
 <tr><td>Language</td><td>JavaScript</td><td>TypeScript</td></tr>
@@ -1174,6 +1189,7 @@ constructor(@Host() <span class="kw">private</span> svc: MyService) {}
 <div class="sec-hdr"><div class="sec-num">28</div><div class="sec-title">Signals (Angular 16+, stable 19) <span class="badge b-key">New</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>signal / computed / effect</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>A <strong>Signal</strong> is a reactive primitive that holds a value and notifies consumers automatically when it changes — enabling fine-grained change detection without Zone.js.</p>
 <pre><span class="kw">import</span> { signal, computed, effect } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
 
 <span class="cm">// Writable signal</span>
@@ -1221,6 +1237,7 @@ effect(() =&gt; <span class="fn">console</span>.log(<span class="str">'count cha
 <div class="sec-hdr"><div class="sec-num">29</div><div class="sec-title">Forms — All Types <span class="badge b-ng">Angular</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Template-driven vs Reactive — comparison</h3><span class="arrow">▶</span></div>
 <div class="cb open">
+<p>Angular provides two form strategies: <strong>template-driven</strong> (HTML-centric, simple forms) and <strong>reactive</strong> (class-based, explicit model, easier to test and handle dynamic fields).</p>
 <table>
 <tr><th></th><th>Template-driven</th><th>Reactive</th></tr>
 <tr><td>Definition</td><td>In template with directives</td><td>In component class</td></tr>
