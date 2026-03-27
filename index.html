@@ -2194,6 +2194,7 @@ onScroll(); // set initial state
 navs.forEach(function(link){
   link.addEventListener('click', function(e){
     e.preventDefault();
+    if(clearSearch) clearSearch();
     var target = document.querySelector(link.getAttribute('href'));
     if(!target) return;
     // on mobile: close drawer first, then scroll after it animates
@@ -2214,6 +2215,7 @@ window.addEventListener('resize', function(){
 }, { passive:true });
 
 /* ── Search ── */
+var clearSearch; // exposed so nav clicks can call it
 (function(){
   var inp    = document.getElementById('searchInput');
   var clrBtn = document.getElementById('searchClear');
@@ -2346,9 +2348,10 @@ window.addEventListener('resize', function(){
     timer = setTimeout(function(){ doSearch(inp.value); }, 140);
   });
 
+  clearSearch = function(){ inp.value = ''; doSearch(''); };
+
   clrBtn.addEventListener('click', function(){
-    inp.value = '';
-    doSearch('');
+    clearSearch();
     inp.focus();
   });
 
