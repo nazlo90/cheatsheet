@@ -53,6 +53,23 @@ tr:hover td{background:rgba(255,255,255,.012)}
 .warn-box{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.6rem .9rem;margin:.6rem 0;font-size:13px}
 .warn-box::before{content:"⚠ GOTCHA  ";font-weight:700;color:var(--warn);font-size:10px;letter-spacing:.08em;display:block;margin-bottom:.15rem}
 
+/* ── SEARCH ── */
+.search-wrap{padding:.5rem 1rem .6rem;position:sticky;top:0;background:var(--surface);z-index:2;border-bottom:1px solid var(--border)}
+.search-box{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:5px 9px;transition:border-color .15s}
+.search-box:focus-within{border-color:var(--accent)}
+.search-icon{color:var(--muted);font-size:14px;flex-shrink:0;line-height:1}
+#searchInput{background:none;border:none;outline:none;color:var(--text);font-size:12.5px;width:100%;min-width:0}
+#searchInput::placeholder{color:#4a5580}
+#searchInput::-webkit-search-cancel-button{display:none}
+.search-clear{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px;display:none;flex-shrink:0;line-height:1}
+.search-clear:hover{color:var(--text)}
+.search-kbd{font-size:9px;background:#141720;border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--muted);flex-shrink:0}
+.search-count{font-size:10px;color:var(--muted);padding:.3rem 0 0;display:none;letter-spacing:.02em}
+.nav-item.s-hide{display:none}
+.nav-cat.s-hide{display:none}
+.section.s-hide{display:none}
+mark.hl{background:rgba(108,143,255,.28);color:#fff;border-radius:2px;padding:0 1px}
+
 /* ── MOBILE TOPBAR ── */
 .topbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);border-bottom:1px solid var(--border);z-index:200;align-items:center;padding:0 1rem;gap:12px}
 .topbar-logo{font-size:13px;font-weight:700;color:var(--accent);flex:1;letter-spacing:.05em}
@@ -132,6 +149,16 @@ tr:hover td{background:rgba(255,255,255,.012)}
 
 <nav class="sidebar" id="sidebar">
 <div class="sidebar-logo">⚡ Interview Cheatsheet v2</div>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <span class="search-icon">⌕</span>
+    <input type="search" id="searchInput" placeholder="Search topics…" autocomplete="off" spellcheck="false" aria-label="Search sections">
+    <button class="search-clear" id="searchClear" aria-label="Clear search">✕</button>
+    <span class="search-kbd" id="searchKbd">/</span>
+  </div>
+  <div class="search-count" id="searchCount"></div>
+</div>
 
 <div class="nav-cat">JavaScript Core</div>
 <a class="nav-item active" href="#s1"><span class="nav-num">1</span>Hoisting & var/let/const</a>
@@ -327,17 +354,17 @@ c.inc(); <span class="cm">// 11</span></pre>
 <div class="card"><div class="ch" onclick="T(this)"><h3>HOF, currying, memoization, composition</h3><span class="arrow">▶</span></div>
 <div class="cb open">
 <p>A HOF either <strong>takes a function as argument</strong> or <strong>returns a function</strong>.</p>
-<pre><span class="cm">// Currying</span>
+<pre><span class="cm">// Currying: Transform a multi-arg function into a sequence of single-arg functions.</span>
 <span class="kw">const</span> add = a =&gt; b =&gt; a + b;
 <span class="kw">const</span> add5 = add(<span class="num">5</span>);
 add5(<span class="num">3</span>); <span class="cm">// 8</span>
 
-<span class="cm">// Generic curry</span>
+<span class="cm">// Generic curry: Adapts any function — collects args until arity is satisfied, then calls.</span>
 <span class="kw">const</span> curry = fn =&gt; <span class="kw">function</span> curried(...args) {
   <span class="kw">return</span> args.length &gt;= fn.length ? fn(...args) : (...more) =&gt; curried(...args, ...more);
 };
 
-<span class="cm">// Memoize</span>
+<span class="cm">// Memoize: Cache return values keyed by serialized args to skip repeated computation.</span>
 <span class="kw">function</span> <span class="fn">memoize</span>(fn) {
   <span class="kw">const</span> cache = <span class="kw">new</span> Map();
   <span class="kw">return function</span>(...args) {
@@ -348,7 +375,7 @@ add5(<span class="num">3</span>); <span class="cm">// 8</span>
   };
 }
 
-<span class="cm">// Composition & pipe</span>
+<span class="cm">// Composition & pipe: compose = right-to-left (f(g(x))), pipe = left-to-right (g then f).</span>
 <span class="kw">const</span> compose = (...fns) =&gt; x =&gt; fns.reduceRight((v, f) =&gt; f(v), x);
 <span class="kw">const</span> pipe    = (...fns) =&gt; x =&gt; fns.reduce((v, f) =&gt; f(v), x);</pre>
 </div></div>
@@ -590,7 +617,7 @@ set.add(<span class="num">4</span>);  set.has(<span class="num">2</span>);  set.
 <div class="card"><div class="ch" onclick="T(this)"><h3>Promise states, chaining, error handling</h3><span class="arrow">▶</span></div>
 <div class="cb open">
 <p>A Promise is an object representing eventual completion or failure of an async operation. States: <strong>pending → fulfilled | rejected</strong> (immutable once settled).</p>
-<pre><span class="cm">// Create</span>
+<pre><span class="cm">// Create: Wrap an async operation — call resolve on success, reject on failure.</span>
 <span class="kw">const</span> p = <span class="kw">new</span> Promise((resolve, reject) =&gt; {
   setTimeout(() =&gt; resolve(<span class="str">'done'</span>), <span class="num">1000</span>);
 });
@@ -601,7 +628,7 @@ p.then(v =&gt; v.toUpperCase())
  .catch(err =&gt; <span class="fn">console</span>.error(err))
  .finally(() =&gt; <span class="fn">console</span>.log(<span class="str">'done'</span>));
 
-<span class="cm">// Static methods</span>
+<span class="cm">// Static methods: Combinators for coordinating multiple Promises — differ in how they handle rejections.</span>
 Promise.all([p1, p2]);          <span class="cm">// fail-fast: rejects if any rejects</span>
 Promise.allSettled([p1, p2]);   <span class="cm">// waits all, returns {status, value/reason}[]</span>
 Promise.any([p1, p2]);          <span class="cm">// first fulfilled</span>
@@ -611,7 +638,7 @@ Promise.reject(err);</pre>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>async/await — patterns & error handling</h3><span class="arrow">▶</span></div>
 <div class="cb">
-<pre><span class="cm">// Basic</span>
+<pre><span class="cm">// Basic: async/await makes async code look synchronous — always wrap in try/catch.</span>
 <span class="kw">async function</span> <span class="fn">fetchUser</span>(id) {
   <span class="kw">try</span> {
     <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`/api/users/${id}`</span>);
@@ -1535,24 +1562,24 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 <div class="card"><div class="ch" onclick="T(this)"><h3>Core concepts + full example</h3><span class="arrow">▶</span></div>
 <div class="cb open">
 <p><strong>Store → Selector → Component → dispatch(Action) → Reducer/Effect → Store</strong></p>
-<pre><span class="cm">// Actions</span>
+<pre><span class="cm">// Actions: Plain objects describing what happened. They have a type and optional payload.</span>
 <span class="kw">const</span> loadUsers = createAction(<span class="str">'[Users] Load'</span>);
 <span class="kw">const</span> loadSuccess = createAction(<span class="str">'[Users] Success'</span>, props&lt;{ users: User[] }&gt;());
 <span class="kw">const</span> loadFailure = createAction(<span class="str">'[Users] Failure'</span>, props&lt;{ error: string }&gt;());
 
-<span class="cm">// Reducer</span>
+<span class="cm">// Reducers: Pure functions that take the current state and an action, and return a new state.</span>
 <span class="kw">const</span> reducer = createReducer(initialState,
   on(loadUsers, s =&gt; ({ ...s, loading: <span class="kw">true</span> })),
   on(loadSuccess, (s, { users }) =&gt; ({ ...s, users, loading: <span class="kw">false</span> })),
   on(loadFailure, (s, { error }) =&gt; ({ ...s, error, loading: <span class="kw">false</span> }))
 );
 
-<span class="cm">// Selectors — memoized</span>
+<span class="cm">// Selectors: Functions that select (extract) slices of state from the store.</span>
 <span class="kw">const</span> selectState  = createFeatureSelector&lt;UsersState&gt;(<span class="str">'users'</span>);
 <span class="kw">const</span> selectAll    = createSelector(selectState, s =&gt; s.users);
 <span class="kw">const</span> selectById   = (id: string) =&gt; createSelector(selectAll, us =&gt; us.find(u =&gt; u.id === id));
 
-<span class="cm">// Effects</span>
+<span class="cm">// Effects: Handle side effects (like HTTP calls) by listening to actions and dispatching new actions asynchronously.</span>
 loadUsers$ = createEffect(() =&gt; <span class="kw">this</span>.actions$.pipe(
   ofType(loadUsers),
   switchMap(() =&gt; <span class="kw">this</span>.svc.getAll().pipe(
@@ -2185,6 +2212,160 @@ navs.forEach(function(link){
 window.addEventListener('resize', function(){
   if(window.innerWidth > 768 && sidebar.classList.contains('open')) closeMenu();
 }, { passive:true });
+
+/* ── Search ── */
+(function(){
+  var inp    = document.getElementById('searchInput');
+  var clrBtn = document.getElementById('searchClear');
+  var cntEl  = document.getElementById('searchCount');
+  var kbdEl  = document.getElementById('searchKbd');
+  var allSec = Array.from(document.querySelectorAll('.section'));
+  var allNav = Array.from(document.querySelectorAll('.nav-item'));
+  var allCat = Array.from(document.querySelectorAll('.nav-cat'));
+  var timer;
+
+  // store original open-state so we can restore after clearing
+  var originalOpen = new WeakMap();
+  allSec.forEach(function(sec){
+    sec.querySelectorAll('.card').forEach(function(card){
+      var b = card.querySelector('.cb');
+      if(b) originalOpen.set(card, b.classList.contains('open'));
+    });
+  });
+
+  function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+  function clearHL(root){
+    root.querySelectorAll('mark.hl').forEach(function(m){
+      var t = document.createTextNode(m.textContent);
+      m.parentNode.replaceChild(t, m);
+    });
+    // normalize merges adjacent text nodes we may have split
+    root.normalize();
+  }
+
+  function addHL(node, re){
+    if(node.nodeType === 3){
+      if(!re.test(node.textContent)) return;
+      re.lastIndex = 0;
+      var frag = document.createDocumentFragment();
+      var text = node.textContent, match, last = 0;
+      while((match = re.exec(text)) !== null){
+        if(match.index > last) frag.appendChild(document.createTextNode(text.slice(last, match.index)));
+        var mk = document.createElement('mark');
+        mk.className = 'hl';
+        mk.textContent = match[0];
+        frag.appendChild(mk);
+        last = re.lastIndex;
+      }
+      if(last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(frag, node);
+    } else if(node.nodeType === 1 && !/^(SCRIPT|STYLE|PRE|CODE)$/.test(node.tagName)){
+      Array.from(node.childNodes).forEach(function(c){ addHL(c, re); });
+    }
+  }
+
+  function doSearch(q){
+    q = q.trim();
+    var has = q.length > 0;
+    clrBtn.style.display = has ? 'block' : 'none';
+    kbdEl.style.display  = has ? 'none'  : 'block';
+    cntEl.style.display  = has ? 'block' : 'none';
+
+    // restore everything
+    allSec.forEach(function(sec){
+      sec.classList.remove('s-hide');
+      clearHL(sec);
+      sec.querySelectorAll('.card').forEach(function(card){
+        var b = card.querySelector('.cb'), a = card.querySelector('.arrow');
+        var orig = originalOpen.get(card);
+        if(b){ b.classList.toggle('open', !!orig); }
+        if(a){ a.classList.toggle('open', !!orig); }
+      });
+    });
+    allNav.forEach(function(n){ n.classList.remove('s-hide'); });
+    allCat.forEach(function(c){ c.classList.remove('s-hide'); });
+
+    if(!has){ cntEl.textContent = ''; return; }
+
+    var re = new RegExp(escRe(q), 'gi');
+    var matched = 0;
+
+    allSec.forEach(function(sec){
+      var titleEl = sec.querySelector('.sec-title');
+      re.lastIndex = 0;
+      var titleHit = titleEl && re.test(titleEl.textContent);
+
+      var cards = Array.from(sec.querySelectorAll('.card'));
+      var hitCards = cards.filter(function(card){
+        var h = card.querySelector('.ch h3');
+        var b = card.querySelector('.cb');
+        re.lastIndex = 0; var hh = h && re.test(h.textContent);
+        re.lastIndex = 0; var bh = b && re.test(b.textContent);
+        return hh || bh;
+      });
+
+      if(!titleHit && hitCards.length === 0){
+        sec.classList.add('s-hide');
+        var link = document.querySelector('.nav-item[href="#'+sec.id+'"]');
+        if(link) link.classList.add('s-hide');
+      } else {
+        matched++;
+        // open only matching cards (or all if section title matched)
+        cards.forEach(function(card){
+          var h = card.querySelector('.ch h3');
+          var b = card.querySelector('.cb');
+          var a = card.querySelector('.arrow');
+          re.lastIndex = 0; var hh = h && re.test(h.textContent);
+          re.lastIndex = 0; var bh = b && re.test(b.textContent);
+          var open = titleHit || hh || bh;
+          if(b){ b.classList.toggle('open', !!open); }
+          if(a){ a.classList.toggle('open', !!open); }
+        });
+        re.lastIndex = 0;
+        addHL(sec, re);
+      }
+    });
+
+    // hide nav-cat headers that have no visible nav-items beneath them
+    allCat.forEach(function(cat){
+      var sib = cat.nextElementSibling;
+      var anyVisible = false;
+      while(sib && !sib.classList.contains('nav-cat')){
+        if(sib.classList.contains('nav-item') && !sib.classList.contains('s-hide')) anyVisible = true;
+        sib = sib.nextElementSibling;
+      }
+      if(!anyVisible) cat.classList.add('s-hide');
+    });
+
+    cntEl.textContent = matched + ' section' + (matched !== 1 ? 's' : '') + ' found';
+  }
+
+  inp.addEventListener('input', function(){
+    clearTimeout(timer);
+    timer = setTimeout(function(){ doSearch(inp.value); }, 140);
+  });
+
+  clrBtn.addEventListener('click', function(){
+    inp.value = '';
+    doSearch('');
+    inp.focus();
+  });
+
+  document.addEventListener('keydown', function(e){
+    var active = document.activeElement;
+    var inInput = active === inp || active.tagName === 'INPUT' || active.tagName === 'TEXTAREA';
+    if(e.key === '/' && !inInput){
+      e.preventDefault();
+      inp.focus();
+      inp.select();
+    }
+    if(e.key === 'Escape' && active === inp){
+      if(inp.value){ inp.value = ''; doSearch(''); }
+      else { inp.blur(); }
+    }
+  });
+})();
 </script>
 </body>
 </html>
