@@ -116,7 +116,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenu(
 function setActive(id) {
   document.querySelectorAll('.nav-item').forEach(a => a.classList.remove('active'));
   const a = document.querySelector(`.nav-item[href="#${id}"]`);
-  if (a) { a.classList.add('active'); a.scrollIntoView({ block: 'nearest' }); }
+    if (a) { a.classList.add('active'); a.scrollIntoView({ block: 'nearest' }); }
 }
 function initScroll() {
   const onScroll = () => {
@@ -141,8 +141,8 @@ function navClick(e) {
   if (!target) return;
   clearSearch();
   const isMobile = window.innerWidth <= 768;
-  if (isMobile) { closeMenu(); setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 50); }
-  else target.scrollIntoView({ behavior: 'smooth' });
+  if (isMobile) { closeMenu(); setTimeout(() => target.scrollIntoView({ behavior: 'instant' }), 50); }
+  else target.scrollIntoView({ behavior: 'instant' });
   setActive(target.id);
 }
 
