@@ -1,0 +1,549 @@
+<!-- ===== HOISTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Hoisting & var / let / const <span class="badge b-hot">Warm-up</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Hoisting rules & TDZ</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Hoisting</strong> is JS's behavior of moving declarations to the top of their scope before execution — so variables and functions can be referenced before their line in code.</p>
+<p>JS engine does a two-pass scan: first collects declarations, then executes. Only declarations are hoisted — not initializations.</p>
+<table>
+<tr><th>Declaration</th><th>Hoisted?</th><th>Initialized?</th><th>Usable before?</th></tr>
+<tr><td><code>var x</code></td><td>Yes</td><td>Yes (undefined)</td><td>Yes → undefined</td></tr>
+<tr><td><code>let x</code></td><td>Yes</td><td>No (TDZ)</td><td>No – ReferenceError</td></tr>
+<tr><td><code>const x</code></td><td>Yes</td><td>No (TDZ)</td><td>No – ReferenceError</td></tr>
+<tr><td>function declaration</td><td>Yes</td><td>Yes (full body)</td><td>Yes ✓</td></tr>
+<tr><td><code>class</code></td><td>Yes</td><td>No (TDZ)</td><td>No – ReferenceError</td></tr>
+</table>
+<pre><span class="fn">console</span>.log(x);  <span class="cm">// undefined</span>
+<span class="kw">var</span> x = <span class="num">5</span>;
+
+<span class="fn">greet</span>();          <span class="cm">// works — function fully hoisted</span>
+<span class="kw">function</span> <span class="fn">greet</span>() { <span class="fn">console</span>.log(<span class="str">"Hello"</span>); }
+
+<span class="fn">sayHi</span>();          <span class="cm">// TypeError — var hoisted, value = undefined</span>
+<span class="kw">var</span> sayHi = <span class="kw">function</span>() {};</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>var vs let vs const + loop gotcha</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>var</th><th>let</th><th>const</th></tr>
+<tr><td>Scope</td><td>Function</td><td>Block</td><td>Block</td></tr>
+<tr><td>Re-declare</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Re-assign</td><td>Yes</td><td>Yes</td><td>No (binding)</td></tr>
+<tr><td>TDZ</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+</table>
+<pre><span class="kw">for</span> (<span class="kw">var</span> i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) setTimeout(() =&gt; <span class="fn">console</span>.log(i), <span class="num">0</span>);
+<span class="cm">// 3 3 3 — shared binding</span>
+<span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) setTimeout(() =&gt; <span class="fn">console</span>.log(i), <span class="num">0</span>);
+<span class="cm">// 0 1 2 — new binding per iteration</span></pre>
+<div class="warn-box"><code>const</code> prevents re-assignment of binding, not mutation. <code>const obj = {}; obj.x = 1</code> is valid.</div>
+</div></div>
+</div>
+
+<!-- ===== EVENT LOOP ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Event Loop <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Call Stack → Microtasks → Macrotasks</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>The <strong>event loop</strong> is the mechanism that allows JS (single-threaded) to handle async operations — it continuously checks if the call stack is empty, then processes queued tasks.</p>
+<ol>
+<li><strong>Call Stack</strong> — synchronous code runs here</li>
+<li><strong>Microtask Queue</strong> — <code>Promise.then/catch/finally</code>, <code>queueMicrotask()</code>, <code>MutationObserver</code></li>
+<li><strong>Macrotask Queue</strong> — <code>setTimeout</code>, <code>setInterval</code>, UI events, I/O (one per loop tick)</li>
+</ol>
+<div class="warn-box">After every single macrotask, the <em>entire</em> microtask queue is drained before the next macrotask.</div>
+<pre><span class="fn">console</span>.log(<span class="str">'1'</span>);
+setTimeout(() =&gt; <span class="fn">console</span>.log(<span class="str">'2'</span>), <span class="num">0</span>);
+Promise.resolve().then(() =&gt; <span class="fn">console</span>.log(<span class="str">'3'</span>));
+<span class="fn">console</span>.log(<span class="str">'4'</span>);
+<span class="cm">// Output: 1 → 4 → 3 → 2</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Complex example + async/await</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>setTimeout(() =&gt; {
+  <span class="fn">console</span>.log(<span class="str">'A'</span>);
+  Promise.resolve().then(() =&gt; <span class="fn">console</span>.log(<span class="str">'B'</span>));
+}, <span class="num">0</span>);
+Promise.resolve()
+  .then(() =&gt; { <span class="fn">console</span>.log(<span class="str">'C'</span>); <span class="kw">return</span> Promise.resolve(); })
+  .then(() =&gt; <span class="fn">console</span>.log(<span class="str">'D'</span>));
+<span class="fn">console</span>.log(<span class="str">'E'</span>);
+<span class="cm">// E → C → D → A → B</span></pre>
+<pre><span class="kw">async function</span> <span class="fn">main</span>() {
+  <span class="fn">console</span>.log(<span class="str">'start'</span>);
+  <span class="kw">await</span> Promise.resolve();
+  <span class="fn">console</span>.log(<span class="str">'after await'</span>); <span class="cm">// microtask</span>
+}
+<span class="fn">main</span>();
+<span class="fn">console</span>.log(<span class="str">'sync'</span>);
+<span class="cm">// start → sync → after await</span></pre>
+</div></div>
+</div>
+
+<!-- ===== THIS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">this, Context & Closures <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>5 rules for this + call/apply/bind</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>The <code><strong>this</strong></code> keyword refers to the object that is currently executing the function — its value is determined by <em>how</em> the function is called, not where it's defined.</p>
+<table>
+<tr><th>Context</th><th>Value of this</th></tr>
+<tr><td>Global (non-strict)</td><td><code>window</code> / <code>global</code></td></tr>
+<tr><td>Global (strict mode)</td><td><code>undefined</code></td></tr>
+<tr><td>Object method</td><td>The object before the dot</td></tr>
+<tr><td>Constructor (<code>new</code>)</td><td>The newly created object</td></tr>
+<tr><td>Arrow function</td><td>Lexical — from enclosing scope at definition time</td></tr>
+<tr><td><code>call/apply/bind</code></td><td>Explicitly set first argument</td></tr>
+</table>
+<pre><span class="kw">function</span> <span class="fn">greet</span>(hi, punct) { <span class="kw">return</span> <span class="str">`${hi}, ${<span class="kw">this</span>.name}${punct}`</span>; }
+<span class="kw">const</span> p = { name: <span class="str">'Bob'</span> };
+<span class="fn">greet</span>.call(p, <span class="str">'Hi'</span>, <span class="str">'!'</span>);       <span class="cm">// immediate, args spread</span>
+<span class="fn">greet</span>.apply(p, [<span class="str">'Hey'</span>, <span class="str">'.'</span>]);   <span class="cm">// immediate, args array</span>
+<span class="kw">const</span> bound = <span class="fn">greet</span>.bind(p, <span class="str">'Hello'</span>); <span class="cm">// returns new fn</span>
+bound(<span class="str">'?'</span>);</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Closures — definition & use cases</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>A closure retains access to outer scope variables even after the outer function returns.</p>
+<pre><span class="kw">function</span> <span class="fn">makeCounter</span>(init = <span class="num">0</span>) {
+  <span class="kw">let</span> count = init;
+  <span class="kw">return</span> { inc: () =&gt; ++count, dec: () =&gt; --count, val: () =&gt; count };
+}
+<span class="kw">const</span> c = <span class="fn">makeCounter</span>(<span class="num">10</span>);
+c.inc(); <span class="cm">// 11</span></pre>
+<div class="tip">Use cases: module pattern, memoization, partial application, event handlers, data encapsulation, factory functions.</div>
+</div></div>
+</div>
+
+<!-- ===== HOF ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Higher-Order Functions</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>HOF, currying, memoization, composition</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A HOF either <strong>takes a function as argument</strong> or <strong>returns a function</strong>.</p>
+<pre><span class="cm">// Currying: Transform a multi-arg function into a sequence of single-arg functions.</span>
+<span class="kw">const</span> add = a =&gt; b =&gt; a + b;
+<span class="kw">const</span> add5 = add(<span class="num">5</span>);
+add5(<span class="num">3</span>); <span class="cm">// 8</span>
+
+<span class="cm">// Generic curry: Adapts any function — collects args until arity is satisfied, then calls.</span>
+<span class="kw">const</span> curry = fn =&gt; <span class="kw">function</span> curried(...args) {
+  <span class="kw">return</span> args.length &gt;= fn.length ? fn(...args) : (...more) =&gt; curried(...args, ...more);
+};
+
+<span class="cm">// Memoize: Cache return values keyed by serialized args to skip repeated computation.</span>
+<span class="kw">function</span> <span class="fn">memoize</span>(fn) {
+  <span class="kw">const</span> cache = <span class="kw">new</span> Map();
+  <span class="kw">return function</span>(...args) {
+    <span class="kw">const</span> key = JSON.stringify(args);
+    <span class="kw">if</span> (cache.has(key)) <span class="kw">return</span> cache.get(key);
+    <span class="kw">const</span> r = fn.apply(<span class="kw">this</span>, args);
+    cache.set(key, r); <span class="kw">return</span> r;
+  };
+}
+
+<span class="cm">// Composition & pipe: compose = right-to-left (f(g(x))), pipe = left-to-right (g then f).</span>
+<span class="kw">const</span> compose = (...fns) =&gt; x =&gt; fns.reduceRight((v, f) =&gt; f(v), x);
+<span class="kw">const</span> pipe    = (...fns) =&gt; x =&gt; fns.reduce((v, f) =&gt; f(v), x);</pre>
+</div></div>
+</div>
+
+<!-- ===== OBJECTS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Objects & Object Methods</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Object creation patterns</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Object literal</span>
+<span class="kw">const</span> user = { name: <span class="str">'Alice'</span>, age: <span class="num">30</span> };
+
+<span class="cm">// Object.create — set prototype explicitly</span>
+<span class="kw">const</span> proto = { greet() { <span class="kw">return</span> <span class="str">`Hi, ${<span class="kw">this</span>.name}`</span>; } };
+<span class="kw">const</span> obj = Object.create(proto);
+obj.name = <span class="str">'Bob'</span>;
+
+<span class="cm">// Factory function</span>
+<span class="kw">const</span> makeUser = (name, age) =&gt; ({ name, age, greet() { <span class="kw">return</span> name; } });
+
+<span class="cm">// Constructor function (pre-ES6)</span>
+<span class="kw">function</span> <span class="cls">User</span>(name) { <span class="kw">this</span>.name = name; }
+<span class="cls">User</span>.prototype.greet = <span class="kw">function</span>() { <span class="kw">return</span> <span class="kw">this</span>.name; };</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Essential Object static methods</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td><code>Object.keys(obj)</code></td><td>Array of own enumerable keys</td></tr>
+<tr><td><code>Object.values(obj)</code></td><td>Array of own enumerable values</td></tr>
+<tr><td><code>Object.entries(obj)</code></td><td>Array of [key, value] pairs</td></tr>
+<tr><td><code>Object.assign(target, ...src)</code></td><td>Shallow merge — mutates target</td></tr>
+<tr><td><code>Object.freeze(obj)</code></td><td>Make all properties immutable (shallow)</td></tr>
+<tr><td><code>Object.seal(obj)</code></td><td>No add/delete, but can modify existing</td></tr>
+<tr><td><code>Object.create(proto)</code></td><td>Create with specific prototype</td></tr>
+<tr><td><code>Object.fromEntries(pairs)</code></td><td>Convert [key, value] pairs to object</td></tr>
+<tr><td><code>Object.getOwnPropertyDescriptor</code></td><td>Get property metadata (writable, enumerable, configurable)</td></tr>
+<tr><td><code>Object.defineProperty</code></td><td>Define/modify property with descriptor</td></tr>
+</table>
+<pre><span class="cm">// Common patterns</span>
+<span class="kw">const</span> copy = { ...obj };                           <span class="cm">// shallow clone</span>
+<span class="kw">const</span> deep = JSON.parse(JSON.stringify(obj));       <span class="cm">// deep clone (no fns/Date)</span>
+<span class="kw">const</span> deep2 = structuredClone(obj);                <span class="cm">// modern deep clone</span>
+<span class="kw">const</span> merged = Object.assign({}, obj1, obj2);      <span class="cm">// merge</span>
+
+<span class="cm">// Destructuring with rename & default</span>
+<span class="kw">const</span> { name: n = <span class="str">'anon'</span>, age = <span class="num">0</span> } = user;
+
+<span class="cm">// Optional chaining & nullish coalescing</span>
+user?.address?.city ?? <span class="str">'Unknown'</span>;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Property descriptors & getters/setters</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>Object.defineProperty(obj, <span class="str">'id'</span>, {
+  value: <span class="num">42</span>,
+  writable: <span class="kw">false</span>,
+  enumerable: <span class="kw">false</span>,
+  configurable: <span class="kw">false</span>
+});
+
+<span class="cm">// Getter / Setter</span>
+<span class="kw">const</span> circle = {
+  _r: <span class="num">5</span>,
+  <span class="kw">get</span> area() { <span class="kw">return</span> Math.PI * <span class="kw">this</span>._r ** <span class="num">2</span>; },
+  <span class="kw">set</span> radius(v) { <span class="kw">this</span>._r = v > <span class="num">0</span> ? v : <span class="kw">this</span>._r; }
+};</pre>
+</div></div>
+</div>
+
+<!-- ===== ARRAY METHODS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Array Methods</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Complete array methods reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Category</th><th>Method</th><th>Returns</th><th>Mutates?</th></tr>
+<tr><td>Transform</td><td><code>map(fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Filter</td><td><code>filter(fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Reduce</td><td><code>reduce(fn, init)</code></td><td>Single value</td><td>No</td></tr>
+<tr><td>Search</td><td><code>find(fn)</code> / <code>findIndex(fn)</code></td><td>Item / index</td><td>No</td></tr>
+<tr><td>Test</td><td><code>some(fn)</code> / <code>every(fn)</code></td><td>Boolean</td><td>No</td></tr>
+<tr><td>Flatten</td><td><code>flat(depth)</code> / <code>flatMap(fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Sort</td><td><code>sort(compareFn)</code></td><td>Same array</td><td><strong>Yes</strong></td></tr>
+<tr><td>Reverse</td><td><code>reverse()</code></td><td>Same array</td><td><strong>Yes</strong></td></tr>
+<tr><td>Mutate</td><td><code>push/pop/shift/unshift/splice</code></td><td>Varies</td><td><strong>Yes</strong></td></tr>
+<tr><td>Slice</td><td><code>slice(start, end)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Join</td><td><code>join(sep)</code></td><td>String</td><td>No</td></tr>
+<tr><td>Includes</td><td><code>includes(val)</code></td><td>Boolean</td><td>No</td></tr>
+<tr><td>Iterate</td><td><code>forEach(fn)</code></td><td>undefined</td><td>No</td></tr>
+<tr><td>From</td><td><code>Array.from(iter, fn)</code></td><td>New array</td><td>No</td></tr>
+<tr><td>Fill</td><td><code>fill(val, start, end)</code></td><td>Same array</td><td><strong>Yes</strong></td></tr>
+</table>
+<pre><span class="cm">// Gotcha: sort mutates AND defaults to lexicographic</span>
+[<span class="num">10</span>, <span class="num">9</span>, <span class="num">2</span>].sort();              <span class="cm">// [10, 2, 9] — wrong!</span>
+[<span class="num">10</span>, <span class="num">9</span>, <span class="num">2</span>].sort((a, b) =&gt; a - b); <span class="cm">// [2, 9, 10] — correct</span>
+
+<span class="cm">// flatMap = map + flat(1)</span>
+[[<span class="num">1</span>,<span class="num">2</span>],[<span class="num">3</span>]].flatMap(x =&gt; x); <span class="cm">// [1,2,3]</span>
+
+<span class="cm">// Immutable sort/reverse (ES2023)</span>
+arr.toSorted((a, b) =&gt; a - b);
+arr.toReversed();</pre>
+</div></div>
+</div>
+
+<!-- ===== MAP/SET ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Map / Set / WeakMap / WeakSet</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Map vs Object, Set vs Array</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Map</strong> is a key-value store that accepts any type as key (including objects). <strong>Set</strong> is a collection of unique values. Both offer O(1) lookup — prefer them over plain objects/arrays when key flexibility or uniqueness matters.</p>
+<table>
+<tr><th></th><th>Map</th><th>Object</th></tr>
+<tr><td>Key types</td><td>Any (objects, functions)</td><td>Strings/Symbols only</td></tr>
+<tr><td>Order</td><td>Insertion order guaranteed</td><td>Mostly, with caveats</td></tr>
+<tr><td>Size</td><td><code>.size</code> property</td><td>Manual count</td></tr>
+<tr><td>Prototype keys</td><td>None</td><td>Inherited keys possible</td></tr>
+<tr><td>Performance</td><td>Better for frequent add/delete</td><td>Good for static shapes</td></tr>
+</table>
+<table>
+<tr><th></th><th>Set</th><th>Array</th></tr>
+<tr><td>Duplicates</td><td>Not allowed (unique values)</td><td>Allowed</td></tr>
+<tr><td>Order</td><td>Insertion order guaranteed</td><td>Insertion order guaranteed</td></tr>
+<tr><td>Size</td><td><code>.size</code> property</td><td><code>.length</code> property</td></tr>
+<tr><td>Lookup</td><td><code>.has()</code> — O(1)</td><td><code>.includes()</code> — O(n)</td></tr>
+<tr><td>Index access</td><td>Not supported</td><td><code>arr[i]</code> — O(1)</td></tr>
+<tr><td>Use case</td><td>Unique values, fast membership test</td><td>Ordered list, index-based access</td></tr>
+</table>
+<pre><span class="kw">const</span> map = <span class="kw">new</span> Map();
+map.set(<span class="str">'key'</span>, <span class="num">1</span>);
+map.set(objKey, <span class="str">'value'</span>); <span class="cm">// object as key!</span>
+map.get(<span class="str">'key'</span>);  map.has(<span class="str">'key'</span>);  map.delete(<span class="str">'key'</span>);
+map.size;
+<span class="kw">for</span> (<span class="kw">const</span> [k, v] <span class="kw">of</span> map) { ... }
+
+<span class="kw">const</span> set = <span class="kw">new</span> Set([<span class="num">1</span>, <span class="num">2</span>, <span class="num">2</span>, <span class="num">3</span>]);  <span class="cm">// {1, 2, 3}</span>
+set.add(<span class="num">4</span>);  set.has(<span class="num">2</span>);  set.delete(<span class="num">2</span>);
+
+<span class="cm">// Deduplicate array</span>
+<span class="kw">const</span> unique = [...<span class="kw">new</span> Set(arr)];</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WeakMap & WeakSet — weak references</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>WeakMap</strong>/<strong>WeakSet</strong> hold <em>weak references</em> — keys/items can be garbage-collected when there are no other references. Keys must be objects.</p>
+<table>
+<tr><th></th><th>WeakMap</th><th>WeakSet</th></tr>
+<tr><td>Keys / Items</td><td>Objects only</td><td>Objects only</td></tr>
+<tr><td>GC when no other refs</td><td>Yes ✓</td><td>Yes ✓</td></tr>
+<tr><td>Iterable</td><td>No ✗</td><td>No ✗</td></tr>
+<tr><td><code>.size</code></td><td>No</td><td>No</td></tr>
+<tr><td>Use case</td><td>Private data, DOM node metadata</td><td>Track processed objects without leaks</td></tr>
+</table>
+<pre><span class="kw">const</span> cache = <span class="kw">new</span> WeakMap();
+<span class="kw">function</span> <span class="fn">process</span>(obj) {
+  <span class="kw">if</span> (cache.has(obj)) <span class="kw">return</span> cache.get(obj);
+  <span class="kw">const</span> result = heavyWork(obj);
+  cache.set(obj, result); <span class="cm">// auto-GCd when obj goes out of scope</span>
+  <span class="kw">return</span> result;
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== CLASSES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Classes (all about)</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Class syntax — full reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>class</strong> is syntactic sugar over prototype-based inheritance — a blueprint for creating objects with shared methods, private fields, and constructor logic. Under the hood, it's still prototype chains.</p>
+<pre><span class="kw">class</span> <span class="cls">Animal</span> {
+  <span class="cm">// Class field (ES2022)</span>
+  #name;                          <span class="cm">// private field</span>
+  species = <span class="str">'unknown'</span>;           <span class="cm">// public field</span>
+  <span class="kw">static</span> count = <span class="num">0</span>;              <span class="cm">// static field</span>
+
+  constructor(name) {
+    <span class="kw">this</span>.#name = name;
+    <span class="cls">Animal</span>.count++;
+  }
+
+  <span class="cm">// Getter / setter</span>
+  <span class="kw">get</span> name() { <span class="kw">return</span> <span class="kw">this</span>.#name; }
+  <span class="kw">set</span> name(v) { <span class="kw">this</span>.#name = v; }
+
+  speak() { <span class="kw">return</span> <span class="str">`${<span class="kw">this</span>.#name} makes noise`</span>; }
+  <span class="kw">static</span> getCount() { <span class="kw">return</span> <span class="cls">Animal</span>.count; }
+}
+
+<span class="kw">class</span> <span class="cls">Dog</span> <span class="kw">extends</span> <span class="cls">Animal</span> {
+  #tricks = [];
+
+  constructor(name) {
+    <span class="kw">super</span>(name);           <span class="cm">// must call super first</span>
+  }
+
+  speak() {
+    <span class="kw">return</span> <span class="kw">super</span>.speak() + <span class="str">' — Woof!'</span>;
+  }
+
+  learn(trick) { <span class="kw">this</span>.#tricks.push(trick); }
+}
+
+<span class="cm">// instanceof works through prototype chain</span>
+<span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">'Rex'</span>) <span class="kw">instanceof</span> <span class="cls">Animal</span>; <span class="cm">// true</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Abstract classes, mixins & Symbol</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Abstract class simulation in TS</span>
+<span class="kw">abstract class</span> <span class="cls">Shape</span> {
+  <span class="kw">abstract</span> area(): number;
+  toString() { <span class="kw">return</span> <span class="str">`Area: ${<span class="kw">this</span>.area()}`</span>; }
+}
+
+<span class="cm">// Mixin pattern (multiple inheritance simulation)</span>
+<span class="kw">const</span> Serializable = (Base) =&gt; <span class="kw">class extends</span> Base {
+  serialize() { <span class="kw">return</span> JSON.stringify(<span class="kw">this</span>); }
+};
+<span class="kw">const</span> Validatable = (Base) =&gt; <span class="kw">class extends</span> Base {
+  validate() { <span class="kw">return</span> Object.keys(<span class="kw">this</span>).length > <span class="num">0</span>; }
+};
+<span class="kw">class</span> <span class="cls">User</span> <span class="kw">extends</span> Serializable(Validatable(<span class="cls">BaseModel</span>)) {}
+
+<span class="cm">// Symbol.iterator — make object iterable</span>
+<span class="kw">class</span> <span class="cls">Range</span> {
+  constructor(<span class="kw">public</span> from: number, <span class="kw">public</span> to: number) {}
+  [Symbol.iterator]() {
+    <span class="kw">let</span> cur = <span class="kw">this</span>.from;
+    <span class="kw">return</span> { next: () =&gt; cur &lt;= <span class="kw">this</span>.to
+      ? { value: cur++, done: <span class="kw">false</span> }
+      : { value: undefined, done: <span class="kw">true</span> } };
+  }
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== PROMISES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Promises & async/await</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Promise states, chaining, error handling</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A Promise is an object representing eventual completion or failure of an async operation. States: <strong>pending → fulfilled | rejected</strong> (immutable once settled).</p>
+<pre><span class="cm">// Create: Wrap an async operation — call resolve on success, reject on failure.</span>
+<span class="kw">const</span> p = <span class="kw">new</span> Promise((resolve, reject) =&gt; {
+  setTimeout(() =&gt; resolve(<span class="str">'done'</span>), <span class="num">1000</span>);
+});
+
+<span class="cm">// Chain — each .then returns a new Promise</span>
+p.then(v =&gt; v.toUpperCase())
+ .then(v =&gt; <span class="fn">console</span>.log(v))
+ .catch(err =&gt; <span class="fn">console</span>.error(err))
+ .finally(() =&gt; <span class="fn">console</span>.log(<span class="str">'done'</span>));
+
+<span class="cm">// Static methods: Combinators for coordinating multiple Promises — differ in how they handle rejections.</span>
+Promise.all([p1, p2]);          <span class="cm">// fail-fast: rejects if any rejects</span>
+Promise.allSettled([p1, p2]);   <span class="cm">// waits all, returns {status, value/reason}[]</span>
+Promise.any([p1, p2]);          <span class="cm">// first fulfilled</span>
+Promise.race([p1, p2]);         <span class="cm">// first settled (fulfilled OR rejected)</span>
+Promise.resolve(val);
+Promise.reject(err);</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>async/await — patterns & error handling</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Basic: async/await makes async code look synchronous — always wrap in try/catch.</span>
+<span class="kw">async function</span> <span class="fn">fetchUser</span>(id) {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`/api/users/${id}`</span>);
+    <span class="kw">if</span> (!res.ok) <span class="kw">throw new</span> Error(<span class="str">`HTTP ${res.status}`</span>);
+    <span class="kw">return await</span> res.json();
+  } <span class="kw">catch</span> (err) {
+    <span class="fn">console</span>.error(err);
+    <span class="kw">throw</span> err;  <span class="cm">// re-throw or return fallback</span>
+  }
+}
+
+<span class="cm">// Parallel — don't await one by one!</span>
+<span class="kw">const</span> [users, posts] = <span class="kw">await</span> Promise.all([
+  fetch(<span class="str">'/api/users'</span>).then(r =&gt; r.json()),
+  fetch(<span class="str">'/api/posts'</span>).then(r =&gt; r.json())
+]);
+
+<span class="cm">// Top-level await (ES2022, in modules)</span>
+<span class="kw">const</span> config = <span class="kw">await</span> loadConfig();</pre>
+<div class="warn-box">Never <code>await</code> inside a <code>forEach</code> — it doesn't work as expected. Use <code>for...of</code> for sequential or <code>Promise.all(arr.map(...))</code> for parallel.</div>
+</div></div>
+</div>
+
+<!-- ===== GENERATORS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Generators & Iterators</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Generator functions</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A generator function returns a <strong>Generator</strong> object. Execution pauses at each <code>yield</code> and resumes on <code>.next()</code>.</p>
+<pre><span class="kw">function</span>* <span class="fn">counter</span>(start = <span class="num">0</span>) {
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> reset = <span class="kw">yield</span> start;  <span class="cm">// can receive value via .next(val)</span>
+    start = reset ?? start + <span class="num">1</span>;
+  }
+}
+<span class="kw">const</span> gen = counter(<span class="num">1</span>);
+gen.next();         <span class="cm">// { value: 1, done: false }</span>
+gen.next();         <span class="cm">// { value: 2, done: false }</span>
+gen.next(<span class="num">10</span>);       <span class="cm">// { value: 10, done: false } — reset</span>
+
+<span class="cm">// Finite generator</span>
+<span class="kw">function</span>* <span class="fn">range</span>(start, end, step = <span class="num">1</span>) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = start; i &lt; end; i += step) <span class="kw">yield</span> i;
+}
+[...range(<span class="num">0</span>, <span class="num">10</span>, <span class="num">2</span>)]; <span class="cm">// [0, 2, 4, 6, 8]</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Custom iterators & async generators</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Custom iterable object</span>
+<span class="kw">const</span> iterable = {
+  [Symbol.iterator]() {
+    <span class="kw">let</span> n = <span class="num">0</span>;
+    <span class="kw">return</span> { next: () =&gt; n &lt; <span class="num">3</span>
+      ? { value: n++, done: <span class="kw">false</span> }
+      : { value: undefined, done: <span class="kw">true</span> } };
+  }
+};
+[...iterable]; <span class="cm">// [0, 1, 2]</span>
+
+<span class="cm">// Async generator — paginate API</span>
+<span class="kw">async function</span>* <span class="fn">paginate</span>(url) {
+  <span class="kw">let</span> page = <span class="num">1</span>;
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> data = <span class="kw">await</span> fetch(<span class="str">`${url}?page=${page++}`</span>).then(r =&gt; r.json());
+    <span class="kw">if</span> (!data.length) <span class="kw">return</span>;
+    <span class="kw">yield</span> data;
+  }
+}
+<span class="kw">for await</span> (<span class="kw">const</span> page <span class="kw">of</span> paginate(<span class="str">'/api/items'</span>)) {
+  <span class="fn">process</span>(page);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== SCOPE & COERCION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Scope, Coercion & Types</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Types, coercion & equality</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Primitives:</strong> <code>string</code>, <code>number</code>, <code>boolean</code>, <code>null</code>, <code>undefined</code>, <code>symbol</code>, <code>bigint</code>. Everything else is an object.</p>
+<pre><span class="kw">typeof</span> null     <span class="cm">// 'object' — historical bug!</span>
+<span class="kw">typeof</span> []       <span class="cm">// 'object'</span>
+<span class="kw">typeof</span> NaN      <span class="cm">// 'number'</span>
+Array.isArray([]) <span class="cm">// true</span>
+
+<span class="cm">// == abstract — converts types</span>
+<span class="num">0</span> == <span class="str">''</span>       <span class="cm">// true</span>
+null == undefined <span class="cm">// true</span>
+<span class="num">0</span> == <span class="kw">false</span>    <span class="cm">// true</span>
+
+<span class="cm">// Passed by value vs reference</span>
+<span class="kw">let</span> a = <span class="num">5</span>; <span class="kw">let</span> b = a; b = <span class="num">10</span>; <span class="cm">// a=5 (copy)</span>
+<span class="kw">const</span> obj = {x:<span class="num">1</span>}; <span class="kw">const</span> ref = obj; ref.x = <span class="num">99</span>; <span class="cm">// obj.x=99 (reference)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== ES6+ ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">ES6+ Key Features</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Quick reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Destructuring, spread, rest</span>
+<span class="kw">const</span> { a, b: renamed } = obj;
+<span class="kw">const</span> [first, ...rest] = arr;
+<span class="kw">const</span> merged = { ...obj1, ...obj2 };
+
+<span class="cm">// Tagged template literals</span>
+<span class="kw">function</span> <span class="fn">tag</span>(strings, ...vals) { <span class="kw">return</span> strings.raw[<span class="num">0</span>]; }
+<span class="fn">tag</span><span class="str">`Hello ${name}`</span>;
+
+<span class="cm">// Optional chaining & nullish coalescing</span>
+user?.address?.city;
+value ?? <span class="str">'default'</span>;
+count ??= <span class="num">0</span>;      <span class="cm">// logical assignment (ES2021)</span>
+
+<span class="cm">// Dynamic import</span>
+<span class="kw">const</span> module = <span class="kw">await import</span>(<span class="str">'./module.js'</span>);
+
+<span class="cm">// Symbols</span>
+<span class="kw">const</span> id = Symbol(<span class="str">'id'</span>);
+obj[id] = <span class="num">123</span>;  <span class="cm">// non-enumerable key</span></pre>
+</div></div>
+</div>
+
+<!-- ===== BIG O ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Big O & Data Structures</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Array / Set / Map complexity</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Big O</strong> notation describes worst-case time or space complexity as input size (n) grows — ignoring constants. O(1) is instant; O(n) scales linearly; O(n²) is quadratic.</p>
+<table>
+<tr><th>Operation</th><th>Array</th><th>Set</th><th>Map</th></tr>
+<tr><td>Access by index/key</td><td>O(1)</td><td>—</td><td>O(1)</td></tr>
+<tr><td>Search (has/includes)</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Insert end / add</td><td>O(1) amortized</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Insert beginning</td><td>O(n)</td><td>—</td><td>—</td></tr>
+<tr><td>Delete</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Iterate</td><td>O(n)</td><td>O(n)</td><td>O(n)</td></tr>
+</table>
+<div class="tip">Use <code>Set</code> for unique-value lookups (O(1) vs Array's O(n)). Algorithm complexity matters far more than loop style.</div>
+</div></div>
+</div>

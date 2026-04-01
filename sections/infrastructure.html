@@ -1,0 +1,259 @@
+<!-- ===== REST ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">REST & HTTP</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Methods & status codes</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Method</th><th>Purpose</th><th>Idempotent?</th></tr>
+<tr><td>GET</td><td>Read</td><td>Yes</td></tr>
+<tr><td>POST</td><td>Create</td><td>No</td></tr>
+<tr><td>PUT</td><td>Replace fully</td><td>Yes</td></tr>
+<tr><td>PATCH</td><td>Partial update</td><td>Yes</td></tr>
+<tr><td>DELETE</td><td>Delete</td><td>Yes</td></tr>
+<tr><td>OPTIONS</td><td>CORS preflight, list methods</td><td>Yes</td></tr>
+</table>
+<table>
+<tr><th>Range</th><th>Key codes</th></tr>
+<tr><td>2xx Success</td><td>200 OK, 201 Created, 204 No Content</td></tr>
+<tr><td>3xx Redirect</td><td>301 Moved, 304 Not Modified</td></tr>
+<tr><td>4xx Client error</td><td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Unprocessable, 429 Too Many Requests</td></tr>
+<tr><td>5xx Server error</td><td>500 Internal, 502 Bad Gateway, 503 Unavailable</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== CI/CD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">CI/CD <span class="badge b-grn">DevOps</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>CI/CD concepts</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>CI (Continuous Integration)</strong> — automatically build and test every push/PR. Catches issues early. <strong>CD (Continuous Delivery/Deployment)</strong> — automatically deploy to environments when CI passes.</p>
+<table>
+<tr><th>Stage</th><th>What happens</th></tr>
+<tr><td>Trigger</td><td>Push to branch / PR opened / tag created</td></tr>
+<tr><td>Install</td><td><code>npm ci</code> — clean, reproducible install</td></tr>
+<tr><td>Lint</td><td>ESLint, Stylelint — code quality</td></tr>
+<tr><td>Test</td><td>Unit tests (Jasmine/Vitest), coverage report</td></tr>
+<tr><td>Build</td><td><code>ng build --prod</code> — production bundle</td></tr>
+<tr><td>E2E</td><td>Playwright against staging</td></tr>
+<tr><td>Deploy</td><td>Push to staging / prod (Kubernetes, S3, etc.)</td></tr>
+<tr><td>Notify</td><td>Slack/email on success or failure</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GitHub Actions — Angular example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># .github/workflows/ci.yml</span>
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: <span class="str">'20'</span>
+          cache: <span class="str">'npm'</span>
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --no-watch --browsers=ChromeHeadless --coverage
+      - run: npm run build -- --configuration=production
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  deploy-staging:
+    needs: build-and-test
+    if: github.ref == <span class="str">'refs/heads/develop'</span>
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging
+        run: |
+          aws s3 sync dist/app s3://my-app-staging
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CF_ID }} --paths <span class="str">"/*"</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GitLab CI — Angular example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># .gitlab-ci.yml</span>
+stages: [install, test, build, deploy]
+
+variables:
+  NODE_IMAGE: node:20-alpine
+
+install:
+  stage: install
+  image: $NODE_IMAGE
+  script: npm ci
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths: [node_modules/]
+
+test:
+  stage: test
+  image: $NODE_IMAGE
+  script:
+    - npm run lint
+    - npm test -- --no-watch --browsers=ChromeHeadless
+  coverage: <span class="str">'/Statements.*?(\d+(?:\.\d+)?)%/'</span>
+
+build:
+  stage: build
+  image: $NODE_IMAGE
+  script: npm run build -- --configuration=production
+  artifacts:
+    paths: [dist/]
+    expire_in: 1 week
+
+deploy_staging:
+  stage: deploy
+  script: ./scripts/deploy-staging.sh
+  environment: staging
+  only: [develop]</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>CI/CD best practices for frontend</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong><code>npm ci</code></strong> instead of <code>npm install</code> — uses exact lockfile, faster, reproducible</li>
+<li><strong>Cache node_modules</strong> by lockfile hash — skip install if unchanged</li>
+<li><strong>Run tests in headless Chrome</strong> — <code>--browsers=ChromeHeadless</code></li>
+<li><strong>Fail fast</strong> — lint before tests, tests before build</li>
+<li><strong>Separate staging and production</strong> — deploy staging on merge to develop, prod on tag/release</li>
+<li><strong>Environment variables via secrets</strong> — never commit API keys</li>
+<li><strong>Nx affected</strong> — in monorepo, only test/build changed packages</li>
+<li><strong>Bundle size budget</strong> — configure in <code>angular.json</code>, fail CI if exceeded</li>
+</ul>
+<pre><span class="cm">// angular.json — bundle budget</span>
+<span class="str">"budgets"</span>: [
+  { <span class="str">"type"</span>: <span class="str">"initial"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"500kb"</span>, <span class="str">"maximumError"</span>: <span class="str">"1mb"</span> },
+  { <span class="str">"type"</span>: <span class="str">"anyComponentStyle"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"2kb"</span> }
+]</pre>
+</div></div>
+</div>
+
+<!-- ===== DOCKER ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Docker <span class="badge b-grn">DevOps</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core concepts</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Concept</th><th>Description</th></tr>
+<tr><td><strong>Image</strong></td><td>Read-only template. Built from Dockerfile. Like a class.</td></tr>
+<tr><td><strong>Container</strong></td><td>Running instance of an image. Like an object.</td></tr>
+<tr><td><strong>Dockerfile</strong></td><td>Script of instructions to build an image</td></tr>
+<tr><td><strong>Volume</strong></td><td>Persistent storage mounted into container</td></tr>
+<tr><td><strong>Network</strong></td><td>Virtual network connecting containers</td></tr>
+<tr><td><strong>Registry</strong></td><td>Image storage (Docker Hub, ECR, GCR)</td></tr>
+<tr><td><strong>docker-compose</strong></td><td>Multi-container setup via YAML config</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Dockerfile for Angular app (multi-stage)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Stage 1 — build</span>
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci                        <span class="cm"># reproducible install</span>
+COPY . .
+RUN npm run build -- --configuration=production
+
+<span class="cm"># Stage 2 — serve (nginx, ~23MB)</span>
+FROM nginx:alpine
+COPY --from=builder /app/dist/my-app /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD [<span class="str">"nginx"</span>, <span class="str">"-g"</span>, <span class="str">"daemon off;"</span>]</pre>
+<pre><span class="cm"># nginx.conf — handle Angular routing</span>
+server {
+  listen 80;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ /index.html;   <span class="cm"># SPA routing</span>
+  }
+
+  location /api {
+    proxy_pass http://backend:3000;     <span class="cm"># proxy to backend</span>
+  }
+
+  gzip on;
+  gzip_types text/plain application/javascript text/css;
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>docker-compose for local dev</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># docker-compose.yml</span>
+version: <span class="str">'3.9'</span>
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: builder           <span class="cm"># use builder stage for dev</span>
+    ports:
+      - <span class="str">"4200:4200"</span>
+    volumes:
+      - ./frontend:/app         <span class="cm"># hot reload</span>
+      - /app/node_modules       <span class="cm"># anonymous volume — don't overwrite</span>
+    command: npm run start -- --host 0.0.0.0
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - <span class="str">"3000:3000"</span>
+    command: npm run dev
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - <span class="str">"5432:5432"</span>
+
+volumes:
+  pgdata:</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Essential Docker commands</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Build & run</span>
+docker build -t my-app:latest .
+docker run -p 4200:80 my-app:latest
+docker run -d --name my-app -p 80:80 my-app:latest
+
+<span class="cm"># docker-compose</span>
+docker-compose up -d          <span class="cm"># start all services</span>
+docker-compose down           <span class="cm"># stop and remove containers</span>
+docker-compose logs -f frontend <span class="cm"># follow logs</span>
+docker-compose exec frontend sh <span class="cm"># shell into container</span>
+
+<span class="cm"># Images</span>
+docker images
+docker pull nginx:alpine
+docker push my-registry/my-app:v1.0.0
+docker rmi my-app:latest
+
+<span class="cm"># Containers</span>
+docker ps                     <span class="cm"># running containers</span>
+docker ps -a                  <span class="cm"># all containers</span>
+docker logs -f container_id
+docker stop container_id
+docker rm container_id</pre>
+<div class="tip">Multi-stage builds are essential — keep the final image small (use nginx:alpine instead of node). Never run as root in production (<code>USER nginx</code>). Use <code>.dockerignore</code> to exclude <code>node_modules</code>, <code>dist</code>, <code>.git</code>.</div>
+</div></div>
+</div>

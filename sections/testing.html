@@ -1,0 +1,56 @@
+<!-- ===== UNIT TESTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Unit Testing & Jasmine <span class="badge b-key">Testing</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Component & service testing</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>describe(<span class="str">'UserCardComponent'</span>, () =&gt; {
+  <span class="kw">let</span> fixture: ComponentFixture&lt;UserCardComponent&gt;;
+  beforeEach(<span class="kw">async</span> () =&gt; {
+    <span class="kw">await</span> TestBed.configureTestingModule({
+      imports: [UserCardComponent],
+      providers: [{ provide: UsersService, useValue: jasmine.createSpyObj(<span class="str">'UsersService'</span>, [<span class="str">'getUser'</span>]) }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UserCardComponent);
+  });
+  it(<span class="str">'displays user name'</span>, () =&gt; {
+    fixture.componentInstance.user = { name: <span class="str">'Alice'</span> };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector(<span class="str">'.name'</span>).textContent).toContain(<span class="str">'Alice'</span>);
+  });
+});</pre>
+<ul>
+<li><strong>Testing pyramid:</strong> Many unit → fewer integration → few E2E</li>
+<li><strong>AAA:</strong> Arrange → Act → Assert</li>
+<li><strong>Test behavior, not implementation</strong></li>
+<li>Use <code>HttpClientTestingModule</code> + <code>HttpTestingController</code> for HTTP</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== PLAYWRIGHT ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Playwright E2E <span class="badge b-key">Testing</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Essentials + Page Object Model</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>test(<span class="str">'login flow'</span>, <span class="kw">async</span> ({ page }) =&gt; {
+  <span class="kw">await</span> page.goto(<span class="str">'/login'</span>);
+  <span class="kw">await</span> page.getByTestId(<span class="str">'email'</span>).fill(<span class="str">'user@example.com'</span>);
+  <span class="kw">await</span> page.getByRole(<span class="str">'button'</span>, { name: <span class="str">'Login'</span> }).click();
+  <span class="kw">await</span> expect(page).toHaveURL(<span class="str">/dashboard/</span>);
+});
+
+<span class="cm">// API mock</span>
+<span class="kw">await</span> page.route(<span class="str">'**/api/users'</span>, route =&gt; route.fulfill({ json: [] }));
+
+<span class="cm">// Page Object Model — always mention!</span>
+<span class="kw">class</span> <span class="cls">LoginPage</span> {
+  constructor(<span class="kw">private</span> page: Page) {}
+  <span class="kw">async</span> login(email: string, pass: string) {
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByTestId(<span class="str">'email'</span>).fill(email);
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByTestId(<span class="str">'pwd'</span>).fill(pass);
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByRole(<span class="str">'button'</span>, { name: <span class="str">'Login'</span> }).click();
+  }
+}</pre>
+<div class="tip">Use <code>data-testid</code> attributes — stable, not tied to CSS. POM = reusable, maintainable selectors. E2E: cover critical user journeys only.</div>
+</div></div>
+</div>

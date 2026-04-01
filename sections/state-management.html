@@ -1,0 +1,193 @@
+<!-- ===== NGRX ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">NgRx Full Guide <span class="badge b-key">State</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core concepts + full example</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Store → Selector → Component → dispatch(Action) → Reducer/Effect → Store</strong></p>
+<pre><span class="cm">// Actions: Plain objects describing what happened. They have a type and optional payload.</span>
+<span class="kw">const</span> loadUsers = createAction(<span class="str">'[Users] Load'</span>);
+<span class="kw">const</span> loadSuccess = createAction(<span class="str">'[Users] Success'</span>, props&lt;{ users: User[] }&gt;());
+<span class="kw">const</span> loadFailure = createAction(<span class="str">'[Users] Failure'</span>, props&lt;{ error: string }&gt;());
+
+<span class="cm">// Reducers: Pure functions that take the current state and an action, and return a new state.</span>
+<span class="kw">const</span> reducer = createReducer(initialState,
+  on(loadUsers, s =&gt; ({ ...s, loading: <span class="kw">true</span> })),
+  on(loadSuccess, (s, { users }) =&gt; ({ ...s, users, loading: <span class="kw">false</span> })),
+  on(loadFailure, (s, { error }) =&gt; ({ ...s, error, loading: <span class="kw">false</span> }))
+);
+
+<span class="cm">// Selectors: Functions that select (extract) slices of state from the store.</span>
+<span class="kw">const</span> selectState  = createFeatureSelector&lt;UsersState&gt;(<span class="str">'users'</span>);
+<span class="kw">const</span> selectAll    = createSelector(selectState, s =&gt; s.users);
+<span class="kw">const</span> selectById   = (id: string) =&gt; createSelector(selectAll, us =&gt; us.find(u =&gt; u.id === id));
+
+<span class="cm">// Effects: Handle side effects (like HTTP calls) by listening to actions and dispatching new actions asynchronously.</span>
+loadUsers$ = createEffect(() =&gt; <span class="kw">this</span>.actions$.pipe(
+  ofType(loadUsers),
+  switchMap(() =&gt; <span class="kw">this</span>.svc.getAll().pipe(
+    map(users =&gt; loadSuccess({ users })),
+    catchError(err =&gt; of(loadFailure({ error: err.message })))
+  ))
+));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NgRx tips & when NOT to use it</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li>Actions describe <strong>events</strong>, not commands — <code>[Users Page] Load Requested</code></li>
+<li>Reducers must be <strong>pure and immutable</strong> — never mutate state</li>
+<li>Use <strong>selectors</strong> — decouple components from state shape + memoization</li>
+<li>Use DevTools for time-travel debugging</li>
+</ul>
+<div class="tip">Don't use NgRx for: simple feature-local state, single-component state, straightforward forms. Use <code>BehaviorSubject</code> services or Signals instead.</div>
+</div></div>
+</div>
+
+<!-- ===== NGRX SIGNAL STORE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">NgRx SignalStore <span class="badge b-grn">Angular 17+</span></div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>What is SignalStore & when to use it</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SignalStore</strong> (<code>@ngrx/signals</code>) is a lightweight, Signal-based state management solution introduced in NgRx 17. It replaces the Redux-style ceremony (actions/reducers/effects) for feature-local or mid-complexity state that doesn't need global NgRx Store.</p>
+<table>
+<tr><th></th><th>NgRx Store</th><th>NgRx SignalStore</th></tr>
+<tr><td>API style</td><td>Actions → Reducers → Effects</td><td>Signals + methods directly on the store</td></tr>
+<tr><td>Boilerplate</td><td>High</td><td>Low</td></tr>
+<tr><td>Scope</td><td>Global / feature</td><td>Feature-local or global</td></tr>
+<tr><td>Reactivity</td><td>RxJS Observables</td><td>Angular Signals (+ optional RxJS via <code>rxMethod</code>)</td></tr>
+<tr><td>DevTools</td><td>Full NgRx DevTools</td><td>Basic (state snapshot support)</td></tr>
+<tr><td>Best for</td><td>Large app-wide shared state</td><td>Feature state, UI state, smaller apps</td></tr>
+</table>
+<div class="tip">Use SignalStore for feature-scoped state where NgRx Store feels heavy. Use NgRx Store when you need time-travel debugging, complex cross-feature state, or large team conventions.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core building blocks</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Feature</th><th>Function</th><th>Purpose</th></tr>
+<tr><td>State slice</td><td><code>withState()</code></td><td>Define initial state shape — each property becomes a Signal</td></tr>
+<tr><td>Computed</td><td><code>withComputed()</code></td><td>Derived Signals (memoized, like NgRx selectors)</td></tr>
+<tr><td>Methods</td><td><code>withMethods()</code></td><td>Actions — synchronous state updates or async side effects</td></tr>
+<tr><td>Lifecycle</td><td><code>withHooks()</code></td><td><code>onInit</code> / <code>onDestroy</code> hooks on the store</td></tr>
+<tr><td>RxJS bridge</td><td><code>rxMethod()</code></td><td>Wraps an Observable pipeline as a store method (replaces Effects)</td></tr>
+<tr><td>Entities</td><td><code>withEntities()</code></td><td>Built-in CRUD helpers (like NgRx Entity)</td></tr>
+</table>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Basic store — full example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { signalStore, withState, withComputed, withMethods, withHooks, patchState } from <span class="str">'@ngrx/signals'</span>;
+<span class="kw">import</span> { rxMethod } from <span class="str">'@ngrx/signals/rxjs-interop'</span>;
+<span class="kw">import</span> { computed, inject } from <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { switchMap, tap } from <span class="str">'rxjs/operators'</span>;
+
+<span class="kw">interface</span> <span class="cls">UsersState</span> {
+  users: User[];
+  loading: <span class="kw">boolean</span>;
+  error: <span class="kw">string</span> | <span class="kw">null</span>;
+}
+
+<span class="kw">export const</span> <span class="cls">UsersStore</span> = <span class="fn">signalStore</span>(
+  { providedIn: <span class="str">'root'</span> },          <span class="cm">// or provide in component for local scope</span>
+
+  <span class="fn">withState</span>&lt;<span class="cls">UsersState</span>&gt;({           <span class="cm">// initial state</span>
+    users: [],
+    loading: <span class="kw">false</span>,
+    error: <span class="kw">null</span>,
+  }),
+
+  <span class="fn">withComputed</span>(({ users }) =&gt; ({    <span class="cm">// derived Signals</span>
+    totalUsers: <span class="fn">computed</span>(() =&gt; users().length),
+    activeUsers: <span class="fn">computed</span>(() =&gt; users().<span class="fn">filter</span>(u =&gt; u.active)),
+  })),
+
+  <span class="fn">withMethods</span>((store, http = <span class="fn">inject</span>(<span class="cls">HttpClient</span>)) =&gt; ({
+    <span class="cm">// Sync update</span>
+    clearError() {
+      <span class="fn">patchState</span>(store, { error: <span class="kw">null</span> });
+    },
+    <span class="cm">// Async via rxMethod (replaces Effects)</span>
+    loadUsers: <span class="fn">rxMethod</span>&lt;<span class="kw">void</span>&gt;(
+      pipe(
+        <span class="fn">tap</span>(() =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">true</span>, error: <span class="kw">null</span> })),
+        <span class="fn">switchMap</span>(() =&gt; http.<span class="fn">get</span>&lt;User[]&gt;(<span class="str">'/api/users'</span>)),
+        <span class="fn">tap</span>({
+          next: users =&gt; <span class="fn">patchState</span>(store, { users, loading: <span class="kw">false</span> }),
+          error: err  =&gt; <span class="fn">patchState</span>(store, { error: err.message, loading: <span class="kw">false</span> }),
+        })
+      )
+    ),
+  })),
+
+  <span class="fn">withHooks</span>({
+    onInit(store) { store.<span class="fn">loadUsers</span>(); },  <span class="cm">// auto-load on creation</span>
+  })
+);</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Using the store in a component</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Inject and use — no selectors, no dispatch, just Signals</span>
+@<span class="fn">Component</span>({
+  template: <span class="str">`
+    @if (store.loading()) { &lt;p&gt;Loading…&lt;/p&gt; }
+    @for (user of store.activeUsers(); track user.id) {
+      &lt;li&gt;{{ user.name }}&lt;/li&gt;
+    }
+    &lt;p&gt;Total: {{ store.totalUsers() }}&lt;/p&gt;
+  `</span>,
+  providers: [<span class="cls">UsersStore</span>],  <span class="cm">// omit if providedIn:'root'</span>
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+<span class="kw">export class</span> <span class="cls">UsersComponent</span> {
+  <span class="kw">readonly</span> store = <span class="fn">inject</span>(<span class="cls">UsersStore</span>);
+}</pre>
+<div class="tip">Each property in <code>withState()</code> auto-becomes a Signal on the store instance — read with <code>store.users()</code>, update only via <code>patchState()</code> to keep mutations traceable.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>withEntities — built-in CRUD</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { withEntities, setAllEntities, addEntity, updateEntity, removeEntity } from <span class="str">'@ngrx/signals/entities'</span>;
+
+<span class="kw">export const</span> <span class="cls">ProductsStore</span> = <span class="fn">signalStore</span>(
+  <span class="fn">withEntities</span>&lt;<span class="cls">Product</span>&gt;(),   <span class="cm">// adds: ids[], entities{}, entityMap</span>
+
+  <span class="fn">withMethods</span>((store, http = <span class="fn">inject</span>(<span class="cls">HttpClient</span>)) =&gt; ({
+    load: <span class="fn">rxMethod</span>&lt;<span class="kw">void</span>&gt;(
+      pipe(
+        <span class="fn">switchMap</span>(() =&gt; http.<span class="fn">get</span>&lt;Product[]&gt;(<span class="str">'/api/products'</span>)),
+        <span class="fn">tap</span>(products =&gt; <span class="fn">patchState</span>(store, <span class="fn">setAllEntities</span>(products)))
+      )
+    ),
+    add:    (p: Product) =&gt; <span class="fn">patchState</span>(store, <span class="fn">addEntity</span>(p)),
+    update: (id: <span class="kw">string</span>, changes: Partial&lt;Product&gt;) =&gt;
+              <span class="fn">patchState</span>(store, <span class="fn">updateEntity</span>({ id, changes })),
+    remove: (id: <span class="kw">string</span>) =&gt; <span class="fn">patchState</span>(store, <span class="fn">removeEntity</span>(id)),
+  }))
+);</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Custom store features (reusable mixins)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Extract cross-cutting concerns into reusable <strong>store features</strong> — the SignalStore equivalent of NgRx meta-reducers.</p>
+<pre><span class="cm">// Reusable loading/error feature</span>
+<span class="kw">function</span> <span class="fn">withLoadingState</span>() {
+  <span class="kw">return</span> <span class="fn">signalStoreFeature</span>(
+    <span class="fn">withState</span>({ loading: <span class="kw">false</span>, error: <span class="kw">null</span> <span class="kw">as string</span> | <span class="kw">null</span> }),
+    <span class="fn">withMethods</span>(store =&gt; ({
+      setLoading: () =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">true</span>,  error: <span class="kw">null</span> }),
+      setError:  (error: <span class="kw">string</span>) =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">false</span>, error }),
+      setLoaded: () =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">false</span> }),
+    }))
+  );
+}
+
+<span class="cm">// Compose into any store</span>
+<span class="kw">export const</span> <span class="cls">OrdersStore</span> = <span class="fn">signalStore</span>(
+  <span class="fn">withState</span>({ orders: [] <span class="kw">as</span> Order[] }),
+  <span class="fn">withLoadingState</span>(),   <span class="cm">// injects loading + error + helper methods</span>
+  <span class="fn">withMethods</span>(store =&gt; ({ <span class="cm">/* … */</span> }))
+);</pre>
+</div></div>
+
+</div>

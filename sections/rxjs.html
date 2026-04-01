@@ -1,0 +1,67 @@
+<!-- ===== RxJS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">RxJS Core <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Observable vs Promise + operators</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>An <strong>Observable</strong> is a lazy stream that can emit multiple values over time — it does nothing until subscribed. RxJS provides operators to transform, filter, and combine streams declaratively.</p>
+<table>
+<tr><th></th><th>Observable</th><th>Promise</th></tr>
+<tr><td>Execution</td><td>Lazy — starts on subscribe</td><td>Eager — immediately</td></tr>
+<tr><td>Values</td><td>Multiple over time</td><td>Single</td></tr>
+<tr><td>Cancellable</td><td>Yes</td><td>No</td></tr>
+</table>
+<table>
+<tr><th>Category</th><th>Operators</th></tr>
+<tr><td>Transform</td><td><code>map</code>, <code>scan</code>, <code>reduce</code></td></tr>
+<tr><td>Filter</td><td><code>filter</code>, <code>take</code>, <code>debounceTime</code>, <code>distinctUntilChanged</code></td></tr>
+<tr><td>Combination</td><td><code>combineLatest</code>, <code>merge</code>, <code>forkJoin</code>, <code>withLatestFrom</code></td></tr>
+<tr><td>Higher-order</td><td><code>switchMap</code>, <code>mergeMap</code>, <code>concatMap</code>, <code>exhaustMap</code></td></tr>
+<tr><td>Error</td><td><code>catchError</code>, <code>retry</code>, <code>finalize</code></td></tr>
+<tr><td>Utility</td><td><code>tap</code>, <code>shareReplay</code>, <code>share</code></td></tr>
+</table>
+<pre><span class="cm">// Unsubscribe — ALWAYS do this</span>
+data$.pipe(takeUntilDestroyed()).subscribe(...); <span class="cm">// Angular 16+</span></pre>
+</div></div>
+</div>
+
+<!-- ===== HIGHER ORDER OBS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Higher-Order Observables <span class="badge b-ng">RxJS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>switchMap vs mergeMap vs concatMap vs exhaustMap</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Higher-order mapping operators</strong> subscribe to inner observables emitted by a source — they differ in how many concurrent subscriptions they allow and whether previous ones are cancelled.</p>
+<table>
+<tr><th>Operator</th><th>Cancels prev?</th><th>Concurrent?</th><th>Best for</th></tr>
+<tr><td><code>switchMap</code></td><td>Yes ✓</td><td>No (max 1)</td><td>Search — only latest matters</td></tr>
+<tr><td><code>mergeMap</code></td><td>No</td><td>Yes (unlimited)</td><td>Parallel independent requests</td></tr>
+<tr><td><code>concatMap</code></td><td>No</td><td>No (queues)</td><td>Sequential, order-preserving</td></tr>
+<tr><td><code>exhaustMap</code></td><td>N/A (ignores new)</td><td>No</td><td>Login/submit — no double-submit</td></tr>
+</table>
+<pre>search$.pipe(switchMap(q =&gt; http.get(<span class="str">`/api?q=${q}`</span>)));
+submit$.pipe(exhaustMap(() =&gt; http.post(<span class="str">'/submit'</span>, form)));
+queue$.pipe(concatMap(a =&gt; http.post(<span class="str">'/log'</span>, a)));
+files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)));</pre>
+</div></div>
+</div>
+
+<!-- ===== SUBJECTS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Subjects & Hot/Cold <span class="badge b-ng">RxJS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Cold vs Hot + Subject types</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>Subject</strong> is both an Observable and an Observer — it broadcasts to all current subscribers. <strong>Cold</strong> observables start fresh per subscriber; <strong>Hot</strong> observables share one execution.</p>
+<table>
+<tr><th></th><th>Cold</th><th>Hot</th></tr>
+<tr><td>Starts emitting</td><td>On subscription</td><td>Regardless of subscribers</td></tr>
+<tr><td>Multicast</td><td>No (unicast)</td><td>Yes (shared)</td></tr>
+<tr><td>Examples</td><td><code>of()</code>, HTTP calls</td><td>Subject, DOM events, WebSocket</td></tr>
+</table>
+<table>
+<tr><th>Subject type</th><th>Initial value</th><th>Replays</th><th>Use case</th></tr>
+<tr><td><code>Subject</code></td><td>None</td><td>No</td><td>Events, actions</td></tr>
+<tr><td><code>BehaviorSubject(v)</code></td><td>Required</td><td>Current to new subs</td><td>State — most common</td></tr>
+<tr><td><code>ReplaySubject(n)</code></td><td>None</td><td>Last n values</td><td>Caching, late subscribers</td></tr>
+<tr><td><code>AsyncSubject</code></td><td>None</td><td>Last on complete</td><td>Single result</td></tr>
+</table>
+</div></div>
+</div>

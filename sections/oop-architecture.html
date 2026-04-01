@@ -1,0 +1,354 @@
+<!-- ===== CORE PRINCIPLES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Core Software Principles</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>KISS, DRY, YAGNI, SoC, SRP</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Principle</th><th>Meaning</th><th>Violation example</th><th>Fix</th></tr>
+<tr><td><strong>KISS</strong> — Keep It Simple, Stupid</td><td>Prefer simplest solution that works</td><td>6-layer abstraction for a simple flag</td><td>Use a boolean; add complexity only when needed</td></tr>
+<tr><td><strong>DRY</strong> — Don't Repeat Yourself</td><td>Every piece of knowledge has one authoritative source</td><td>Same validation logic in 5 components</td><td>Extract to shared validator / service</td></tr>
+<tr><td><strong>YAGNI</strong> — You Aren't Gonna Need It</td><td>Don't implement features until needed</td><td>Build plugin system before anyone needs plugins</td><td>Implement only what's required now</td></tr>
+<tr><td><strong>SoC</strong> — Separation of Concerns</td><td>Different concerns in different modules</td><td>Component fetches + formats + validates + renders</td><td>Separate service + pipe + validator + component</td></tr>
+<tr><td><strong>SRP</strong> — Single Responsibility</td><td>One class = one reason to change</td><td><code>UserService</code> handles auth + profile + notifications</td><td>Split into <code>AuthService</code>, <code>ProfileService</code>, <code>NotificationService</code></td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== OOP PILLARS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">OOP Pillars in Angular</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Encapsulation, Inheritance, Polymorphism, Abstraction</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Pillar</th><th>Definition</th><th>Angular example</th></tr>
+<tr><td>Encapsulation</td><td>Bundle data + methods, restrict access</td><td><code>private</code>/<code>protected</code> in services; component encapsulates its state</td></tr>
+<tr><td>Inheritance</td><td>Child inherits from parent</td><td><code>abstract class BaseComponent</code>; extend for shared <code>ngOnDestroy</code></td></tr>
+<tr><td>Polymorphism</td><td>One interface, many implementations</td><td>DI with interface tokens; multiple <code>Logger</code> implementations</td></tr>
+<tr><td>Abstraction</td><td>Hide complexity behind simple API</td><td><code>interface ApiService</code>; service hides HTTP complexity</td></tr>
+</table>
+<pre><span class="cm">// Polymorphism via DI tokens</span>
+<span class="kw">abstract class</span> <span class="cls">Logger</span> { <span class="kw">abstract</span> log(msg: string): <span class="kw">void</span>; }
+<span class="kw">class</span> <span class="cls">ConsoleLogger</span> <span class="kw">extends</span> <span class="cls">Logger</span> { log(m: string) { <span class="fn">console</span>.log(m); } }
+<span class="kw">class</span> <span class="cls">RemoteLogger</span>  <span class="kw">extends</span> <span class="cls">Logger</span> { log(m: string) { <span class="cm">/* send to server */</span> } }
+<span class="cm">// { provide: Logger, useClass: environment.production ? RemoteLogger : ConsoleLogger }</span></pre>
+</div></div>
+</div>
+
+<!-- ===== DESIGN PATTERNS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Design Patterns</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Creational, Structural, Behavioral</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Group</th><th>Patterns</th><th>Angular example</th></tr>
+<tr><td>Creational</td><td>Singleton, Factory, Builder, Prototype</td><td><code>providedIn:'root'</code>; factory providers; FormBuilder</td></tr>
+<tr><td>Structural</td><td>Decorator, Adapter, Facade, Proxy, Composite</td><td><code>@Component</code>/<code>@Injectable</code>; Http Interceptors (Proxy); NgRx (Facade)</td></tr>
+<tr><td>Behavioral</td><td>Observer, Strategy, Command, Chain of Responsibility</td><td>RxJS Subjects (Observer); DI with interfaces (Strategy); NgRx Actions (Command)</td></tr>
+</table>
+<pre><span class="cm">// Strategy pattern — swappable implementations</span>
+<span class="kw">interface</span> <span class="cls">SortStrategy</span>&lt;T&gt; { sort(items: T[]): T[]; }
+<span class="kw">class</span> <span class="cls">AlphaSort</span> <span class="kw">implements</span> <span class="cls">SortStrategy</span>&lt;string&gt; { sort(i) { <span class="kw">return</span> [...i].sort(); } }
+<span class="kw">class</span> <span class="cls">DataService</span>&lt;T&gt; { constructor(<span class="kw">private</span> sorter: SortStrategy&lt;T&gt;) {} }
+
+<span class="cm">// Facade — hide NgRx complexity behind a service</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">class</span> <span class="cls">UsersFacade</span> {
+  users$ = <span class="kw">this</span>.store.select(selectAllUsers);
+  load() { <span class="kw">this</span>.store.dispatch(loadUsers()); }
+  constructor(<span class="kw">private</span> store: Store) {}
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== SOLID ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SOLID Principles</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>All 5 with examples</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Principle</th><th>Rule</th><th>Violation</th><th>Fix</th></tr>
+<tr><td><strong>S</strong> — Single Responsibility</td><td>One class, one reason to change</td><td>Component fetches + formats + validates</td><td>Split to service + pipe + validator</td></tr>
+<tr><td><strong>O</strong> — Open/Closed</td><td>Open for extension, closed for modification</td><td><code>if (type==='card') ... else if...</code></td><td><code>interface PaymentMethod</code> + separate classes</td></tr>
+<tr><td><strong>L</strong> — Liskov Substitution</td><td>Subclasses must be substitutable for parent</td><td><code>Penguin extends Bird</code> breaks <code>fly()</code></td><td>Separate <code>FlyingBird</code> + <code>Penguin</code></td></tr>
+<tr><td><strong>I</strong> — Interface Segregation</td><td>Don't depend on methods you don't use</td><td><code>Robot implements Worker</code> with <code>eat()</code></td><td>Split into <code>Workable</code> + <code>Eatable</code></td></tr>
+<tr><td><strong>D</strong> — Dependency Inversion</td><td>Depend on abstractions, not implementations</td><td><code>new FileStorage()</code> inside service</td><td>Inject <code>Storage</code> interface</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== FUNCTIONAL PROGRAMMING & PARADIGMS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Functional Programming & Paradigms <span class="badge b-key">Key</span></div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Programming paradigms overview</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>paradigm</strong> is a fundamental style of building programs — it shapes how you think about state, control flow, and composition. Most modern languages are multi-paradigm.</p>
+<table>
+<tr><th>Paradigm</th><th>Core idea</th><th>How you think</th><th>Examples</th></tr>
+<tr><td><strong>Imperative</strong></td><td>Tell the machine <em>how</em> to do it, step by step</td><td>Sequences of statements that mutate state</td><td>Early C, assembly, classic loops</td></tr>
+<tr><td><strong>Procedural</strong></td><td>Imperative + reusable procedures/functions</td><td>Group steps into named routines</td><td>C, Pascal, early JS scripts</td></tr>
+<tr><td><strong>Object-Oriented (OOP)</strong></td><td>Encapsulate state + behavior into objects</td><td>Model the domain as interacting objects</td><td>Java, C#, Angular services/components</td></tr>
+<tr><td><strong>Functional (FP)</strong></td><td>Transform data through pure functions, avoid side effects</td><td>Pipelines of transformations; data is immutable</td><td>Haskell, Elm, RxJS, Redux, modern JS/TS</td></tr>
+<tr><td><strong>Declarative</strong></td><td>Describe <em>what</em> you want, not how</td><td>Express intent; hide control flow</td><td>SQL, HTML, Angular templates, RxJS operators</td></tr>
+<tr><td><strong>Reactive</strong></td><td>Programs react to data streams over time</td><td>Async event propagation; everything is a stream</td><td>RxJS, Signals, Redux Observable</td></tr>
+</table>
+<div class="tip">JavaScript / TypeScript is multi-paradigm. You freely mix OOP (classes, DI) with FP (pure pipes, immutable NgRx state) and reactive (RxJS) in the same Angular codebase.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>FP core concepts</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Concept</th><th>Definition</th><th>Why it matters</th></tr>
+<tr><td><strong>Pure function</strong></td><td>Same inputs → same output; zero side effects</td><td>Deterministic, testable, cacheable</td></tr>
+<tr><td><strong>Immutability</strong></td><td>Data is never mutated — transformations produce new values</td><td>Prevents shared-state bugs; enables undo/redo; change detection friendliness</td></tr>
+<tr><td><strong>Referential transparency</strong></td><td>An expression can be replaced with its value without changing program behavior</td><td>Enables memoization, equational reasoning</td></tr>
+<tr><td><strong>First-class functions</strong></td><td>Functions are values — storable in variables, passable as arguments, returnable</td><td>Foundation of HOFs, composition, callbacks</td></tr>
+<tr><td><strong>Higher-order functions (HOF)</strong></td><td>A function that takes or returns another function</td><td><code>map</code>, <code>filter</code>, <code>reduce</code>, <code>pipe</code>, RxJS operators</td></tr>
+<tr><td><strong>Side effects</strong></td><td>Any observable change outside the function scope (DOM write, HTTP call, log)</td><td>Isolate side effects to the edges; keep core logic pure</td></tr>
+</table>
+<pre><span class="cm">// Impure — mutates external state</span>
+<span class="kw">let</span> total = <span class="num">0</span>;
+<span class="kw">function</span> <span class="fn">addToTotal</span>(n: <span class="kw">number</span>) { total += n; }
+
+<span class="cm">// Pure — no side effects, same input → same output</span>
+<span class="kw">function</span> <span class="fn">add</span>(a: <span class="kw">number</span>, b: <span class="kw">number</span>): <span class="kw">number</span> { <span class="kw">return</span> a + b; }
+
+<span class="cm">// Immutability — produce new value instead of mutating</span>
+<span class="kw">const</span> original = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>];
+<span class="kw">const</span> updated  = [...original, <span class="num">4</span>];  <span class="cm">// original unchanged</span></pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Function composition, currying & partial application</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Composition</strong> chains functions so that the output of one becomes the input of the next — building complex behavior from small, reusable pieces.</p>
+<p><strong>Currying</strong> transforms a multi-argument function into a sequence of single-argument functions. <strong>Partial application</strong> fixes some arguments up front and returns a function for the rest.</p>
+<pre><span class="cm">// Composition — f(g(x))</span>
+<span class="kw">const</span> <span class="fn">compose</span> = &lt;T&gt;(...fns: Array&lt;(x: T) =&gt; T&gt;) =&gt;
+  (x: T) =&gt; fns.<span class="fn">reduceRight</span>((v, f) =&gt; <span class="fn">f</span>(v), x);
+
+<span class="kw">const</span> <span class="fn">pipe</span> = &lt;T&gt;(...fns: Array&lt;(x: T) =&gt; T&gt;) =&gt;
+  (x: T) =&gt; fns.<span class="fn">reduce</span>((v, f) =&gt; <span class="fn">f</span>(v), x);
+
+<span class="kw">const</span> <span class="fn">double</span>  = (n: <span class="kw">number</span>) =&gt; n * <span class="num">2</span>;
+<span class="kw">const</span> <span class="fn">addOne</span>  = (n: <span class="kw">number</span>) =&gt; n + <span class="num">1</span>;
+<span class="kw">const</span> transform = <span class="fn">pipe</span>(double, addOne);  <span class="cm">// (5) → 10 → 11</span>
+
+<span class="cm">// Currying</span>
+<span class="kw">const</span> <span class="fn">multiply</span> = (a: <span class="kw">number</span>) =&gt; (b: <span class="kw">number</span>) =&gt; a * b;
+<span class="kw">const</span> <span class="fn">triple</span>   = <span class="fn">multiply</span>(<span class="num">3</span>);  <span class="cm">// partial application — b is still free</span>
+<span class="fn">triple</span>(<span class="num">4</span>);  <span class="cm">// 12</span>
+
+<span class="cm">// RxJS pipe is literal function composition</span>
+obs$.pipe(
+  <span class="fn">filter</span>(x =&gt; x &gt; <span class="num">0</span>),
+  <span class="fn">map</span>(x =&gt; x * <span class="num">2</span>),
+  <span class="fn">take</span>(<span class="num">5</span>)
+);</pre>
+<div class="tip">RxJS <code>pipe()</code>, Angular <code>pipe</code> in templates, and <code>Array.prototype</code> chain methods (<code>.filter().map().reduce()</code>) are all functional composition in disguise.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Functors, monads & practical JS equivalents</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>These are abstract FP patterns — you already use them daily in JS without the formal names.</p>
+<table>
+<tr><th>Concept</th><th>Formal meaning</th><th>JS / TS equivalent</th><th>What <code>map</code>/<code>flatMap</code> do</th></tr>
+<tr><td><strong>Functor</strong></td><td>A container with a <code>map</code> that preserves structure</td><td><code>Array</code>, <code>Promise</code> (then), <code>Observable</code></td><td><code>map</code> transforms the inner value, returns same container type</td></tr>
+<tr><td><strong>Monad</strong></td><td>A container with <code>flatMap</code> (chain) to avoid nested wrapping</td><td><code>Array.flatMap</code>, <code>Promise.then</code> returning a Promise, RxJS <code>mergeMap/switchMap</code></td><td><code>flatMap</code> unwraps one level before re-wrapping — prevents <code>Array&lt;Array&lt;T&gt;&gt;</code> or <code>Promise&lt;Promise&lt;T&gt;&gt;</code></td></tr>
+<tr><td><strong>Maybe / Option</strong></td><td>A container that is either a value or "nothing" (avoids null)</td><td><code>null</code> checks, optional chaining <code>?.</code>, TypeScript <code>T | undefined</code></td><td>Transform only when a value exists; skip on null/undefined</td></tr>
+</table>
+<pre><span class="cm">// Array as a Functor</span>
+[<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>].<span class="fn">map</span>(x =&gt; x * <span class="num">2</span>);  <span class="cm">// [2, 4, 6]  — still an Array</span>
+
+<span class="cm">// Array as a Monad — flatMap prevents Array&lt;Array&gt;</span>
+[[<span class="num">1</span>, <span class="num">2</span>], [<span class="num">3</span>, <span class="num">4</span>]].<span class="fn">flatMap</span>(x =&gt; x);  <span class="cm">// [1, 2, 3, 4]</span>
+
+<span class="cm">// Promise as a Monad</span>
+<span class="fn">fetch</span>(<span class="str">'/api/user'</span>)
+  .<span class="fn">then</span>(res =&gt; res.<span class="fn">json</span>())   <span class="cm">// returns Promise — chain flattens it</span>
+  .<span class="fn">then</span>(user =&gt; user.name);  <span class="cm">// not Promise&lt;Promise&lt;User&gt;&gt;</span>
+
+<span class="cm">// RxJS Observable as a Monad</span>
+userId$.pipe(
+  <span class="fn">switchMap</span>(id =&gt; <span class="fn">this</span>.http.<span class="fn">get</span>(<span class="str">`/users/</span>${id}<span class="str">`</span>))  <span class="cm">// flatMap in Observable world</span>
+);</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>FP vs OOP — when to use which</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>FP</th><th>OOP</th></tr>
+<tr><td>State</td><td>Avoided or isolated; prefer immutable data</td><td>Encapsulated inside objects; mutated via methods</td></tr>
+<tr><td>Code reuse</td><td>Function composition, HOFs, currying</td><td>Inheritance, interfaces, polymorphism</td></tr>
+<tr><td>Concurrency</td><td>Easier — no shared mutable state</td><td>Harder — locks / synchronization needed</td></tr>
+<tr><td>Testability</td><td>Pure functions trivially testable in isolation</td><td>Requires mocks/stubs to isolate dependencies</td></tr>
+<tr><td>Domain modelling</td><td>Less natural for entities with rich identity</td><td>Natural fit for modelling real-world entities</td></tr>
+<tr><td>Angular fit</td><td>Pure pipes, NgRx reducers/selectors, RxJS pipelines</td><td>Services, components, DI, lifecycle hooks</td></tr>
+</table>
+<div class="tip">In Angular: use OOP for services/components (stateful, injectable); use FP style for reducers, selectors, pipes, and data transformation — isolate side effects to effects/resolvers.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>FP patterns in TypeScript & Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// 1. Pure pipe — no side effects, pure transform</span>
+@Pipe({ name: <span class="str">'formatPrice'</span>, pure: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">FormatPricePipe</span> <span class="kw">implements</span> <span class="cls">PipeTransform</span> {
+  transform(value: <span class="kw">number</span>, currency = <span class="str">'USD'</span>): <span class="kw">string</span> {
+    <span class="kw">return new</span> Intl.NumberFormat(<span class="str">'en-US'</span>, { style: <span class="str">'currency'</span>, currency }).<span class="fn">format</span>(value);
+  }
+}
+
+<span class="cm">// 2. NgRx reducer — pure function: (state, action) → new state</span>
+<span class="kw">const</span> cartReducer = <span class="fn">createReducer</span>(initialState,
+  <span class="fn">on</span>(addItem, (state, { item }) =&gt; ({
+    ...state,
+    items: [...state.items, item]  <span class="cm">// immutable update</span>
+  }))
+);
+
+<span class="cm">// 3. Selector as memoized pure function</span>
+<span class="kw">const</span> selectTotal = <span class="fn">createSelector</span>(
+  selectItems,
+  items =&gt; items.<span class="fn">reduce</span>((sum, i) =&gt; sum + i.price, <span class="num">0</span>)
+);
+
+<span class="cm">// 4. Typed pipe() helper for data transformation</span>
+<span class="kw">const</span> getActiveUserNames = <span class="fn">pipe</span>(
+  (users: User[]) =&gt; users.<span class="fn">filter</span>(u =&gt; u.active),
+  (users: User[]) =&gt; users.<span class="fn">map</span>(u =&gt; u.name)
+);</pre>
+<div class="warn-box">Angular's change detection relies on object identity for <code>OnPush</code>. Always return <strong>new</strong> references from reducers and selectors — never mutate in place. This is FP immutability in practice.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Recursion & tail-call optimization</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Recursion</strong> replaces explicit loops in FP — a function calls itself with a smaller sub-problem. Pure FP languages rely heavily on it.</p>
+<p><strong>Tail-call optimization (TCO)</strong>: if the recursive call is the <em>last</em> operation, the engine can reuse the current stack frame instead of pushing a new one — avoiding stack overflow. ES6 mandates TCO in strict mode (V8 dropped it; prefer iteration or trampolines for deep recursion in JS).</p>
+<pre><span class="cm">// Non-tail-recursive — stack grows O(n)</span>
+<span class="kw">function</span> <span class="fn">factorial</span>(n: <span class="kw">number</span>): <span class="kw">number</span> {
+  <span class="kw">return</span> n &lt;= <span class="num">1</span> ? <span class="num">1</span> : n * <span class="fn">factorial</span>(n - <span class="num">1</span>);
+}
+
+<span class="cm">// Tail-recursive (accumulator pattern)</span>
+<span class="kw">function</span> <span class="fn">factTCO</span>(n: <span class="kw">number</span>, acc = <span class="num">1</span>): <span class="kw">number</span> {
+  <span class="kw">return</span> n &lt;= <span class="num">1</span> ? acc : <span class="fn">factTCO</span>(n - <span class="num">1</span>, n * acc);
+}
+
+<span class="cm">// Safe deep recursion in JS — trampoline pattern</span>
+<span class="kw">function</span> <span class="fn">trampoline</span>&lt;T&gt;(fn: (...args: <span class="kw">any</span>[]) =&gt; T | (() =&gt; T)) {
+  <span class="kw">return</span> <span class="kw">function</span>(...args: <span class="kw">any</span>[]) {
+    <span class="kw">let</span> result: <span class="kw">any</span> = <span class="fn">fn</span>(...args);
+    <span class="kw">while</span> (<span class="kw">typeof</span> result === <span class="str">'function'</span>) result = <span class="fn">result</span>();
+    <span class="kw">return</span> result;
+  };
+}</pre>
+</div></div>
+
+</div>
+
+<!-- ===== MFE & NX ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Micro Frontends & Nx</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Micro Frontends — concepts</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Extend microservices thinking to the frontend — each team owns an independently deployable UI slice with its own tech stack, CI/CD, and deployment.</p>
+<table>
+<tr><th>Approach</th><th>How it works</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><strong>Module Federation</strong> (Webpack 5)</td><td>Remote modules loaded at runtime via shared chunk</td><td>True independent deploy; runtime composition</td><td>Complex Webpack config; shared deps challenges</td></tr>
+<tr><td><strong>Web Components</strong></td><td>Custom elements expose framework-agnostic UI</td><td>Framework-agnostic</td><td>Limited Angular DI; styling encapsulation issues</td></tr>
+<tr><td><strong>Single-SPA</strong></td><td>Router-based micro app orchestration</td><td>Mature; multi-framework</td><td>Large bundle overhead; complex lifecycle</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>MFE communication methods</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Micro frontends are isolated by design — they communicate through well-defined contracts, not shared internals.</p>
+<table>
+<tr><th>Method</th><th>How it works</th><th>Best for</th><th>Drawbacks</th></tr>
+<tr><td><strong>Custom Events</strong></td><td><code>dispatchEvent</code> on <code>window</code>; others listen via <code>addEventListener</code></td><td>Loose coupling, any framework</td><td>No type safety; hard to trace</td></tr>
+<tr><td><strong>Shared State (shell service)</strong></td><td>Shell exposes a service/store; MFEs import it as a shared singleton</td><td>Complex shared state (auth, cart)</td><td>Tight coupling to shell; shared dep version must match</td></tr>
+<tr><td><strong>URL / Query Params</strong></td><td>State encoded in URL; MFEs read via router</td><td>Navigation state, deep links</td><td>Limited payload; not for ephemeral data</td></tr>
+<tr><td><strong>localStorage / sessionStorage</strong></td><td>Key-value storage shared across same origin</td><td>Auth tokens, simple flags</td><td>Sync issues; no reactivity; XSS risk</td></tr>
+<tr><td><strong>BroadcastChannel API</strong></td><td>Native browser channel across same-origin tabs/iframes</td><td>Cross-tab sync, auth logout</td><td>Same origin only; no history</td></tr>
+<tr><td><strong>Web Component props/events</strong></td><td>Attributes/properties as input; custom events as output</td><td>Framework-agnostic MFEs</td><td>Complex objects need serialization</td></tr>
+</table>
+<pre><span class="cm">// 1. Custom Event — emitter MFE</span>
+window.dispatchEvent(<span class="kw">new</span> CustomEvent(<span class="str">'mfe:cart:updated'</span>, {
+  detail: { itemCount: <span class="num">3</span> }, bubbles: <span class="kw">true</span>
+}));
+
+<span class="cm">// 1. Custom Event — listener MFE</span>
+window.addEventListener(<span class="str">'mfe:cart:updated'</span>, (e: CustomEvent) =&gt; {
+  <span class="kw">this</span>.cartCount = e.detail.itemCount;
+});
+
+<span class="cm">// 2. BroadcastChannel — logout across tabs</span>
+<span class="kw">const</span> channel = <span class="kw">new</span> BroadcastChannel(<span class="str">'auth'</span>);
+channel.postMessage({ type: <span class="str">'logout'</span> });
+channel.onmessage = (e) =&gt; { <span class="kw">if</span> (e.data.type === <span class="str">'logout'</span>) router.navigate([<span class="str">'/login'</span>]); };
+
+<span class="cm">// 3. Shared singleton service via Module Federation</span>
+<span class="cm">// webpack.config — mark as singleton shared dep</span>
+shared: { <span class="str">'@myorg/auth-state'</span>: { singleton: <span class="kw">true</span>, strictVersion: <span class="kw">true</span> } }</pre>
+<div class="tip">Rule of thumb: use <strong>Custom Events</strong> for simple notifications, <strong>shared singleton</strong> for complex reactive state, <strong>URL</strong> for navigation-driven state. Avoid direct imports between MFEs — that breaks independent deployability.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Module Federation with Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Shell app webpack.config.js</span>
+<span class="kw">new</span> ModuleFederationPlugin({
+  remotes: {
+    checkout: <span class="str">'checkout@http://localhost:3001/remoteEntry.js'</span>,
+    catalog:  <span class="str">'catalog@http://localhost:3002/remoteEntry.js'</span>
+  },
+  shared: { <span class="str">'@angular/core'</span>: { singleton: <span class="kw">true</span>, strictVersion: <span class="kw">true</span> } }
+});
+
+<span class="cm">// Checkout app webpack.config.js (remote)</span>
+<span class="kw">new</span> ModuleFederationPlugin({
+  name: <span class="str">'checkout'</span>,
+  filename: <span class="str">'remoteEntry.js'</span>,
+  exposes: { <span class="str">'./CheckoutModule'</span>: <span class="str">'./src/app/checkout/checkout.module.ts'</span> }
+});
+
+<span class="cm">// Lazy load remote in shell routing</span>
+{
+  path: <span class="str">'checkout'</span>,
+  loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'checkout/CheckoutModule'</span>)
+    .then(m =&gt; m.CheckoutModule)
+}</pre>
+<div class="tip">Use <code>@angular-architects/module-federation</code> package to simplify setup. Key challenge: shared state between MFEs — use custom events, <code>localStorage</code>, or a shared service in the shell.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Nx — monorepo tooling</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Nx is a smart build system + monorepo tool that helps manage multiple apps and shared libraries in one repo.</p>
+<pre><span class="cm">// Workspace structure</span>
+<span class="cm">// apps/</span>
+<span class="cm">//   shell/          ← main Angular app</span>
+<span class="cm">//   admin/          ← admin MFE</span>
+<span class="cm">//   checkout/       ← checkout MFE</span>
+<span class="cm">// libs/</span>
+<span class="cm">//   shared/ui/      ← shared UI components</span>
+<span class="cm">//   shared/data/    ← shared state/services</span>
+<span class="cm">//   feature/auth/   ← auth feature lib</span>
+
+<span class="cm">// Key commands</span>
+<span class="cm">// nx serve shell</span>
+<span class="cm">// nx build checkout --prod</span>
+<span class="cm">// nx test shared-ui</span>
+<span class="cm">// nx affected --target=test    ← only run tests for changed code</span>
+<span class="cm">// nx graph                      ← visualize dependencies</span></pre>
+<table>
+<tr><th>Nx Feature</th><th>What it does</th></tr>
+<tr><td>Computation cache</td><td>Cache build/test results; skip if unchanged</td></tr>
+<tr><td>Affected commands</td><td>Only build/test code affected by a change</td></tr>
+<tr><td>Enforce boundaries</td><td>Lint rules to prevent libs from depending on apps</td></tr>
+<tr><td>Generators</td><td>Scaffold apps, libs, components consistently</td></tr>
+<tr><td>Distributed caching</td><td>Share cache across CI machines (Nx Cloud)</td></tr>
+</table>
+<pre><span class="cm">// nx.json — enforce lib boundaries</span>
+{
+  <span class="str">"@nx/enforce-module-boundaries"</span>: [{
+    <span class="str">"sourceTag"</span>: <span class="str">"scope:shell"</span>,
+    <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"scope:shared"</span>]
+  }]
+}</pre>
+</div></div>
+</div>
