@@ -226,6 +226,14 @@ mark.hl{background:rgba(108,143,255,.28);color:#fff;border-radius:2px;padding:0 
 
 <div class="nav-cat">Graphics</div>
 <a class="nav-item" href=""><span class="nav-num"></span>D3 / SVG / Canvas / WebGL</a>
+
+<div class="nav-cat">Node.js</div>
+<a class="nav-item" href=""><span class="nav-num"></span>Node.js Event Loop & I/O</a>
+<a class="nav-item" href=""><span class="nav-num"></span>Modules: CJS vs ESM</a>
+<a class="nav-item" href=""><span class="nav-num"></span>Streams & Buffers</a>
+<a class="nav-item" href=""><span class="nav-num"></span>HTTP & Express</a>
+<a class="nav-item" href=""><span class="nav-num"></span>Cluster & Worker Threads</a>
+<a class="nav-item" href=""><span class="nav-num"></span>npm, Packages & Security</a>
 </nav>
 
 <main class="main">
@@ -2438,6 +2446,297 @@ docker rm container_id</pre>
 <tr><td>PixiJS</td><td>WebGL abstraction</td><td>Games, animated UIs, 2D engine</td><td>Not for 3D</td></tr>
 </table>
 <div class="tip">&lt;1k elements → SVG; 1k–100k → Canvas; 100k+ or 3D → WebGL/PixiJS. Use D3's <code>.join()</code> API (v5+) over manual enter/exit.</div>
+</div></div>
+</div>
+
+
+<!-- ===== NODE.JS EVENT LOOP & I/O ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Node.js Event Loop &amp; I/O <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>libuv, phases & the Node event loop</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Node.js runs JS on V8 and delegates async I/O to <strong>libuv</strong>, which uses OS-level mechanisms (epoll, kqueue, IOCP). The event loop has <strong>six phases</strong> executed in order per tick:</p>
+<table>
+<tr><th>Phase</th><th>What runs here</th></tr>
+<tr><td>timers</td><td><code>setTimeout</code> / <code>setInterval</code> callbacks whose delay has expired</td></tr>
+<tr><td>pending callbacks</td><td>I/O errors deferred from the previous tick</td></tr>
+<tr><td>idle / prepare</td><td>Internal libuv use</td></tr>
+<tr><td>poll</td><td>New I/O events; blocks here if queue empty (up to timer deadline)</td></tr>
+<tr><td>check</td><td><code>setImmediate</code> callbacks</td></tr>
+<tr><td>close callbacks</td><td><code>socket.on('close', …)</code></td></tr>
+</table>
+<p>Between every phase transition, Node drains <strong>process.nextTick queue</strong> then <strong>Promise microtasks</strong> (same as browser microtasks).</p>
+<pre><span class="fn">setTimeout</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'timeout'</span>), <span class="num">0</span>);
+<span class="fn">setImmediate</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'immediate'</span>));
+process.<span class="fn">nextTick</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'nextTick'</span>));
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'promise'</span>));
+<span class="cm">// nextTick → promise → timeout → immediate
+// (timeout vs immediate order is non-deterministic outside I/O)</span></pre>
+<div class="warn-box"><code>process.nextTick</code> fires before Promises and can starve the event loop if called recursively. Prefer <code>queueMicrotask()</code> for user-land microtasks.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Non-blocking I/O patterns</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Node achieves concurrency without threads by offloading I/O to the OS and using callbacks/promises when work completes.</p>
+<pre><span class="kw">import</span> fs <span class="kw">from</span> <span class="str">'node:fs/promises'</span>;
+
+<span class="cm">// Parallel reads — don't await sequentially!</span>
+<span class="kw">const</span> [a, b] = <span class="kw">await</span> Promise.<span class="fn">all</span>([
+  fs.<span class="fn">readFile</span>(<span class="str">'a.txt'</span>, <span class="str">'utf8'</span>),
+  fs.<span class="fn">readFile</span>(<span class="str">'b.txt'</span>, <span class="str">'utf8'</span>),
+]);
+
+<span class="cm">// Streaming large files instead of loading into memory</span>
+<span class="kw">import</span> { createReadStream } <span class="kw">from</span> <span class="str">'node:fs'</span>;
+<span class="fn">createReadStream</span>(<span class="str">'huge.csv'</span>).<span class="fn">pipe</span>(processStream).<span class="fn">pipe</span>(res);</pre>
+<div class="tip">CPU-bound work (image processing, crypto, compression) blocks the event loop — offload it to a <code>Worker</code> thread or child process.</div>
+</div></div>
+</div>
+
+<!-- ===== MODULES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Modules: CommonJS vs ESM <span class="badge b-key">Know Both</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>CJS vs ESM differences</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>CommonJS (CJS)</th><th>ES Modules (ESM)</th></tr>
+<tr><td>Syntax</td><td><code>require()</code> / <code>module.exports</code></td><td><code>import</code> / <code>export</code></td></tr>
+<tr><td>Loading</td><td>Synchronous, dynamic</td><td>Static (analyzed at parse time)</td></tr>
+<tr><td>Top-level await</td><td>No</td><td>Yes</td></tr>
+<tr><td>Tree-shaking</td><td>No</td><td>Yes (bundlers)</td></tr>
+<tr><td>File extension</td><td><code>.js</code> / <code>.cjs</code></td><td><code>.mjs</code> or <code>"type":"module"</code></td></tr>
+<tr><td><code>__dirname</code></td><td>Available</td><td>Use <code>import.meta.url</code></td></tr>
+</table>
+<pre><span class="cm">// CJS</span>
+<span class="kw">const</span> path = <span class="fn">require</span>(<span class="str">'path'</span>);
+module.exports = { <span class="fn">add</span> };
+
+<span class="cm">// ESM</span>
+<span class="kw">import</span> path <span class="kw">from</span> <span class="str">'node:path'</span>;
+<span class="kw">export</span> { add };
+
+<span class="cm">// ESM __dirname equivalent</span>
+<span class="kw">import</span> { fileURLToPath } <span class="kw">from</span> <span class="str">'node:url'</span>;
+<span class="kw">const</span> __dirname = path.<span class="fn">dirname</span>(<span class="fn">fileURLToPath</span>(<span class="kw">import</span>.meta.url));</pre>
+<div class="warn-box">You cannot <code>require()</code> an ESM-only package from CJS. Dual-publish packages ship both formats in <code>package.json</code> <code>"exports"</code> field.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>package.json exports field & conditional exports</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>{
+  <span class="str">"name"</span>: <span class="str">"my-lib"</span>,
+  <span class="str">"type"</span>: <span class="str">"module"</span>,
+  <span class="str">"exports"</span>: {
+    <span class="str">"."</span>: {
+      <span class="str">"import"</span>: <span class="str">"./dist/index.mjs"</span>,
+      <span class="str">"require"</span>: <span class="str">"./dist/index.cjs"</span>,
+      <span class="str">"types"</span>:   <span class="str">"./dist/index.d.ts"</span>
+    },
+    <span class="str">"./utils"</span>: <span class="str">"./dist/utils.mjs"</span>
+  }
+}</pre>
+<p>The <code>"exports"</code> field replaces <code>"main"</code> and <code>"module"</code>. Deep imports not listed are blocked — good for encapsulation.</p>
+</div></div>
+</div>
+
+<!-- ===== STREAMS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Streams &amp; Buffers <span class="badge b-grn">Performance</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Stream types & back-pressure</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Streams process data in chunks, avoiding loading entire files into memory. Node has four stream types:</p>
+<table>
+<tr><th>Type</th><th>Example</th><th>Key methods</th></tr>
+<tr><td>Readable</td><td><code>fs.createReadStream()</code>, <code>req</code></td><td><code>pipe()</code>, <code>read()</code>, <code>'data'</code> event</td></tr>
+<tr><td>Writable</td><td><code>fs.createWriteStream()</code>, <code>res</code></td><td><code>write()</code>, <code>end()</code></td></tr>
+<tr><td>Duplex</td><td>TCP sockets</td><td>Both readable and writable</td></tr>
+<tr><td>Transform</td><td><code>zlib.createGzip()</code></td><td>Modifies data passing through</td></tr>
+</table>
+<pre><span class="kw">import</span> { pipeline } <span class="kw">from</span> <span class="str">'node:stream/promises'</span>;
+<span class="kw">import</span> { createReadStream, createWriteStream } <span class="kw">from</span> <span class="str">'node:fs'</span>;
+<span class="kw">import</span> { createGzip } <span class="kw">from</span> <span class="str">'node:zlib'</span>;
+
+<span class="cm">// pipeline handles back-pressure and cleanup automatically</span>
+<span class="kw">await</span> <span class="fn">pipeline</span>(
+  <span class="fn">createReadStream</span>(<span class="str">'input.log'</span>),
+  <span class="fn">createGzip</span>(),
+  <span class="fn">createWriteStream</span>(<span class="str">'input.log.gz'</span>)
+);</pre>
+<div class="warn-box"><strong>Back-pressure</strong>: when a writable can't keep up, <code>write()</code> returns <code>false</code>. Pause the readable until <code>'drain'</code> fires. <code>pipeline()</code> handles this automatically — use it over raw <code>.pipe()</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Buffers & encoding</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Buffer = fixed-size chunk of raw memory (uint8)</span>
+<span class="kw">const</span> buf = Buffer.<span class="fn">from</span>(<span class="str">'hello'</span>, <span class="str">'utf8'</span>);
+buf.<span class="fn">toString</span>(<span class="str">'hex'</span>);   <span class="cm">// '68656c6c6f'</span>
+buf.<span class="fn">toString</span>(<span class="str">'base64'</span>); <span class="cm">// 'aGVsbG8='</span>
+
+Buffer.<span class="fn">alloc</span>(<span class="num">10</span>);       <span class="cm">// zero-filled safe allocation</span>
+Buffer.<span class="fn">allocUnsafe</span>(<span class="num">10</span>); <span class="cm">// faster but may contain old data</span>
+
+<span class="cm">// Convert stream chunks to string safely</span>
+<span class="kw">const</span> chunks = [];
+stream.<span class="fn">on</span>(<span class="str">'data'</span>, c =&gt; chunks.<span class="fn">push</span>(c));
+stream.<span class="fn">on</span>(<span class="str">'end'</span>, () =&gt; { <span class="kw">const</span> result = Buffer.<span class="fn">concat</span>(chunks).<span class="fn">toString</span>(); });</pre>
+<div class="tip">Always specify encoding when calling <code>toString()</code>. Default is UTF-8. Use <code>TextDecoder</code> for incremental decoding of multi-byte chars split across chunks.</div>
+</div></div>
+</div>
+
+<!-- ===== HTTP & EXPRESS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">HTTP &amp; Express <span class="badge b-hot">Practical</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Raw http module vs Express</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Raw Node HTTP</span>
+<span class="kw">import</span> http <span class="kw">from</span> <span class="str">'node:http'</span>;
+http.<span class="fn">createServer</span>((req, res) =&gt; {
+  res.<span class="fn">writeHead</span>(<span class="num">200</span>, { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> });
+  res.<span class="fn">end</span>(JSON.<span class="fn">stringify</span>({ ok: <span class="kw">true</span> }));
+}).<span class="fn">listen</span>(<span class="num">3000</span>);
+
+<span class="cm">// Express equivalent</span>
+<span class="kw">import</span> express <span class="kw">from</span> <span class="str">'express'</span>;
+<span class="kw">const</span> app = <span class="fn">express</span>();
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+app.<span class="fn">get</span>(<span class="str">'/users/:id'</span>, <span class="kw">async</span> (req, res, next) =&gt; {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> user = <span class="kw">await</span> db.<span class="fn">findById</span>(req.params.id);
+    <span class="kw">if</span> (!user) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">json</span>({ error: <span class="str">'Not found'</span> });
+    res.<span class="fn">json</span>(user);
+  } <span class="kw">catch</span>(e) { <span class="fn">next</span>(e); }
+});
+
+<span class="cm">// Error-handling middleware (4 args)</span>
+app.<span class="fn">use</span>((err, req, res, next) =&gt; {
+  res.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({ error: err.message });
+});</pre>
+<div class="warn-box">Always call <code>next(err)</code> in async route handlers — uncaught promise rejections won't reach the error middleware otherwise. Express 5 handles this automatically.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Middleware chain & common patterns</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Middleware = (req, res, next) => void</span>
+
+<span class="cm">// Auth middleware</span>
+<span class="kw">function</span> <span class="fn">auth</span>(req, res, next) {
+  <span class="kw">const</span> token = req.headers.authorization?.split(<span class="str">' '</span>)[<span class="num">1</span>];
+  <span class="kw">if</span> (!token) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ error: <span class="str">'Unauthorized'</span> });
+  req.user = <span class="fn">verifyToken</span>(token);
+  <span class="fn">next</span>();
+}
+
+<span class="cm">// Router grouping</span>
+<span class="kw">const</span> router = express.<span class="fn">Router</span>();
+router.<span class="fn">use</span>(auth);
+router.<span class="fn">get</span>(<span class="str">'/'</span>, listUsers);
+router.<span class="fn">post</span>(<span class="str">'/'</span>, createUser);
+app.<span class="fn">use</span>(<span class="str">'/api/users'</span>, router);
+
+<span class="cm">// Rate limiting (express-rate-limit)</span>
+<span class="kw">import</span> rateLimit <span class="kw">from</span> <span class="str">'express-rate-limit'</span>;
+app.<span class="fn">use</span>(<span class="fn">rateLimit</span>({ windowMs: <span class="num">15</span>*<span class="num">60</span>*<span class="num">1000</span>, max: <span class="num">100</span> }));</pre>
+<div class="tip">Middleware order matters. Place <code>express.json()</code>, CORS, and rate-limit before routes. Place the error handler last.</div>
+</div></div>
+</div>
+
+<!-- ===== CLUSTER & WORKER THREADS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Cluster &amp; Worker Threads <span class="badge b-grn">Scalability</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Cluster vs Worker Threads vs child_process</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>API</th><th>Use case</th><th>Memory</th><th>Communication</th></tr>
+<tr><td><code>cluster</code></td><td>Scale HTTP servers across CPU cores</td><td>Separate processes</td><td>IPC messages</td></tr>
+<tr><td><code>worker_threads</code></td><td>CPU-bound JS work (crypto, parsing)</td><td>Shared <code>ArrayBuffer</code></td><td><code>postMessage</code> / <code>SharedArrayBuffer</code></td></tr>
+<tr><td><code>child_process</code></td><td>Run external programs / shell commands</td><td>Separate processes</td><td>stdin/stdout/IPC</td></tr>
+</table>
+<pre><span class="cm">// Cluster — primary forks one worker per CPU core</span>
+<span class="kw">import</span> cluster <span class="kw">from</span> <span class="str">'node:cluster'</span>;
+<span class="kw">import</span> os <span class="kw">from</span> <span class="str">'node:os'</span>;
+
+<span class="kw">if</span> (cluster.<span class="fn">isPrimary</span>) {
+  os.<span class="fn">cpus</span>().<span class="fn">forEach</span>(() =&gt; cluster.<span class="fn">fork</span>());
+  cluster.<span class="fn">on</span>(<span class="str">'exit'</span>, (w) =&gt; { <span class="fn">console</span>.log(<span class="str">`Worker </span>${w.process.pid}<span class="str"> died`</span>); cluster.<span class="fn">fork</span>(); });
+} <span class="kw">else</span> {
+  <span class="cm">// each worker runs the HTTP server independently</span>
+  <span class="fn">startServer</span>();
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Worker Threads for CPU-bound tasks</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// worker.js</span>
+<span class="kw">import</span> { workerData, parentPort } <span class="kw">from</span> <span class="str">'node:worker_threads'</span>;
+<span class="kw">const</span> result = <span class="fn">heavyCompute</span>(workerData);
+parentPort.<span class="fn">postMessage</span>(result);
+
+<span class="cm">// main.js</span>
+<span class="kw">import</span> { Worker } <span class="kw">from</span> <span class="str">'node:worker_threads'</span>;
+
+<span class="kw">function</span> <span class="fn">runWorker</span>(data) {
+  <span class="kw">return new</span> <span class="cls">Promise</span>((resolve, reject) =&gt; {
+    <span class="kw">const</span> w = <span class="kw">new</span> <span class="cls">Worker</span>(<span class="str">'./worker.js'</span>, { workerData: data });
+    w.<span class="fn">on</span>(<span class="str">'message'</span>, resolve);
+    w.<span class="fn">on</span>(<span class="str">'error'</span>, reject);
+  });
+}
+
+<span class="cm">// Transferable objects — zero-copy buffer transfer</span>
+<span class="kw">const</span> buf = <span class="kw">new</span> <span class="cls">SharedArrayBuffer</span>(<span class="num">1024</span>);
+w.<span class="fn">postMessage</span>({ buf }, [buf]); <span class="cm">// transfer ownership, not copy</span></pre>
+<div class="tip">Use a worker pool library (e.g., <code>piscina</code>) instead of manually managing workers. Spawning workers per-request is expensive.</div>
+</div></div>
+</div>
+
+<!-- ===== NPM ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">npm, Packages &amp; Security <span class="badge b-key">Ops</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>npm essentials & lock files</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm"># Dependency management</span>
+npm install                  <span class="cm"># install from package-lock.json</span>
+npm ci                       <span class="cm"># clean install — faster, strict, CI-safe</span>
+npm install pkg --save-exact <span class="cm"># pin exact version</span>
+npm outdated                 <span class="cm"># show stale deps</span>
+npm update                   <span class="cm"># update within semver range</span>
+
+<span class="cm"># Auditing</span>
+npm audit                    <span class="cm"># report known vulnerabilities</span>
+npm audit fix                <span class="cm"># auto-fix compatible updates</span>
+npm audit fix --force        <span class="cm"># may introduce breaking changes</span>
+
+<span class="cm"># Workspace monorepo</span>
+npm install --workspace=packages/app</pre>
+<table>
+<tr><th>Range</th><th>Meaning</th><th>Example</th></tr>
+<tr><td><code>^1.2.3</code></td><td>Compatible (minor+patch)</td><td>≥1.2.3 &lt;2.0.0</td></tr>
+<tr><td><code>~1.2.3</code></td><td>Patch only</td><td>≥1.2.3 &lt;1.3.0</td></tr>
+<tr><td><code>1.2.3</code></td><td>Exact</td><td>1.2.3 only</td></tr>
+</table>
+<div class="warn-box">Always commit <code>package-lock.json</code>. Use <code>npm ci</code> in CI pipelines — it fails fast if lock file is out of sync with <code>package.json</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Security best practices</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong>Supply chain</strong>: pin dependencies, use <code>npm audit</code> in CI, consider <code>socket.dev</code> for behavioral analysis</li>
+<li><strong>Secrets</strong>: never commit <code>.env</code>; use environment variables injected at runtime</li>
+<li><strong>Prototype pollution</strong>: validate/sanitize untrusted JSON before merging into objects; use <code>Object.create(null)</code> for plain maps</li>
+<li><strong>Path traversal</strong>: always use <code>path.resolve()</code> and validate that resolved path is within expected root</li>
+<li><strong>eval / child_process</strong>: never pass unsanitized user input to <code>eval</code>, <code>exec</code>, or <code>Function()</code></li>
+<li><strong>HTTPS</strong>: enforce TLS, set security headers (<code>helmet</code>), implement CORS allowlist</li>
+</ul>
+<pre><span class="cm">// Path traversal prevention</span>
+<span class="kw">const</span> root = path.<span class="fn">resolve</span>(<span class="str">'./public'</span>);
+<span class="kw">const</span> target = path.<span class="fn">resolve</span>(root, userInput);
+<span class="kw">if</span> (!target.<span class="fn">startsWith</span>(root + path.sep)) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Forbidden'</span>);
+
+<span class="cm">// helmet — set security headers in one line</span>
+<span class="kw">import</span> helmet <span class="kw">from</span> <span class="str">'helmet'</span>;
+app.<span class="fn">use</span>(<span class="fn">helmet</span>());</pre>
+<div class="tip">Run Node as a non-root user in containers. Set <code>--max-old-space-size</code> to prevent OOM from consuming all host memory.</div>
 </div></div>
 </div>
 
