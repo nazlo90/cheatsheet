@@ -1,0 +1,148 @@
+<!-- ===== STORAGE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Storage APIs</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>localStorage vs sessionStorage vs Cookies vs IndexedDB</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Browser storage APIs</strong> let you persist data client-side. The right choice depends on data size, required lifetime, and whether it needs to be sent to the server.</p>
+<table>
+<tr><th></th><th>localStorage</th><th>sessionStorage</th><th>Cookie</th><th>IndexedDB</th></tr>
+<tr><td>Capacity</td><td>~5–10 MB</td><td>~5 MB</td><td>~4 KB</td><td>GBs</td></tr>
+<tr><td>Persists</td><td>Until cleared</td><td>Tab lifetime</td><td>Expiry date</td><td>Until cleared</td></tr>
+<tr><td>Scope</td><td>Same origin</td><td>Same tab</td><td>Same origin + server</td><td>Same origin</td></tr>
+<tr><td>Sent to server</td><td>No</td><td>No</td><td>Yes (header)</td><td>No</td></tr>
+<tr><td>Async</td><td>No (blocking)</td><td>No</td><td>No</td><td>Yes</td></tr>
+</table>
+<div class="warn-box">Never store auth tokens in localStorage — XSS vulnerable. Use <code>httpOnly</code> cookies for sensitive auth data.</div>
+</div></div>
+</div>
+
+<!-- ===== WEBSOCKETS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">WebSockets <span class="badge b-grn">Real-time</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket vs HTTP vs SSE</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>WebSocket</strong> is a protocol providing full-duplex, persistent communication over a single TCP connection — unlike HTTP's one-request-one-response model.</p>
+<table>
+<tr><th></th><th>HTTP</th><th>WebSocket</th><th>SSE</th></tr>
+<tr><td>Connection</td><td>New per request</td><td>Persistent, full-duplex</td><td>Persistent, one-way (server→client)</td></tr>
+<tr><td>Direction</td><td>Request/Response</td><td>Bidirectional</td><td>Server push only</td></tr>
+<tr><td>Overhead</td><td>High (headers)</td><td>Low (frames)</td><td>Low</td></tr>
+<tr><td>Use case</td><td>Standard API calls</td><td>Chat, live games, trading</td><td>Notifications, live feeds</td></tr>
+<tr><td>Auto-reconnect</td><td>N/A</td><td>Manual</td><td>Built-in</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket API & lifecycle</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Connection lifecycle</span>
+<span class="kw">const</span> ws = <span class="kw">new</span> WebSocket(<span class="str">'wss://api.example.com/ws'</span>);
+
+ws.onopen    = () =&gt; ws.send(JSON.stringify({ type: <span class="str">'auth'</span>, token }));
+ws.onmessage = (e) =&gt; { <span class="kw">const</span> data = JSON.parse(e.data); handle(data); };
+ws.onclose   = (e) =&gt; <span class="fn">console</span>.log(<span class="str">`Closed: ${e.code} ${e.reason}`</span>);
+ws.onerror   = (e) =&gt; <span class="fn">console</span>.error(<span class="str">'WS Error'</span>, e);
+
+ws.send(<span class="str">'text'</span>);
+ws.send(JSON.stringify({ type: <span class="str">'message'</span>, body: <span class="str">'hello'</span> }));
+ws.close(<span class="num">1000</span>, <span class="str">'Normal closure'</span>);
+
+<span class="cm">// ReadyState</span>
+<span class="cm">// CONNECTING=0, OPEN=1, CLOSING=2, CLOSED=3</span>
+ws.readyState === WebSocket.OPEN;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Auto-reconnect pattern + RxJS WebSocket</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Reconnect with exponential backoff</span>
+<span class="kw">class</span> <span class="cls">ReconnectingWS</span> {
+  <span class="kw">private</span> ws: WebSocket | null = null;
+  <span class="kw">private</span> retries = <span class="num">0</span>;
+
+  connect() {
+    <span class="kw">this</span>.ws = <span class="kw">new</span> WebSocket(<span class="kw">this</span>.url);
+    <span class="kw">this</span>.ws.onclose = () =&gt; {
+      <span class="kw">const</span> delay = Math.min(<span class="num">1000</span> * <span class="num">2</span> ** <span class="kw">this</span>.retries++, <span class="num">30000</span>);
+      setTimeout(() =&gt; <span class="kw">this</span>.connect(), delay);
+    };
+  }
+}
+
+<span class="cm">// RxJS webSocket</span>
+<span class="kw">import</span> { webSocket } <span class="kw">from</span> <span class="str">'rxjs/webSocket'</span>;
+<span class="kw">const</span> subject = webSocket(<span class="str">'wss://api.example.com/ws'</span>);
+subject.subscribe(msg =&gt; handle(msg));
+subject.next({ type: <span class="str">'subscribe'</span>, channel: <span class="str">'prices'</span> });
+subject.pipe(
+  retryWhen(errors =&gt; errors.pipe(delay(<span class="num">2000</span>)))
+).subscribe();</pre>
+<div class="tip">In Angular, always close WebSocket on <code>ngOnDestroy</code>. Use <code>shareReplay(1)</code> to share a single connection across multiple components.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Common close codes</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Code</th><th>Meaning</th></tr>
+<tr><td>1000</td><td>Normal closure</td></tr>
+<tr><td>1001</td><td>Going away (page navigation)</td></tr>
+<tr><td>1006</td><td>Abnormal closure (no close frame)</td></tr>
+<tr><td>1011</td><td>Server error</td></tr>
+<tr><td>4xxx</td><td>Application-specific (custom)</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== SERVICE WORKERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Service Workers</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Concept, lifecycle & caching strategies</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Separate thread acting as network proxy. HTTPS only. Enables offline, background sync, push notifications.</p>
+<p><strong>Lifecycle:</strong> Installing → Waiting → Activating → Activated → Redundant</p>
+<pre>navigator.serviceWorker.register(<span class="str">'/sw.js'</span>);
+self.addEventListener(<span class="str">'install'</span>, e =&gt; e.waitUntil(caches.open(<span class="str">'v1'</span>).then(c =&gt; c.addAll([<span class="str">'/'</span>]))));
+self.addEventListener(<span class="str">'fetch'</span>, e =&gt; e.respondWith(
+  caches.match(e.request).then(cached =&gt; cached || fetch(e.request))
+));</pre>
+<table>
+<tr><th>Strategy</th><th>Use when</th></tr>
+<tr><td>Cache first</td><td>Static assets</td></tr>
+<tr><td>Network first</td><td>API data — freshness critical</td></tr>
+<tr><td>Stale-while-revalidate</td><td>Balance: serve cache, refresh in bg</td></tr>
+<tr><td>Network only</td><td>Auth requests</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== WEB WORKERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Web Workers</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Web Workers vs Service Workers</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Web Workers</strong> run scripts in background threads, separate from the main UI thread — keeping the page responsive during heavy CPU work. No DOM access; communicate via <code>postMessage</code>.</p>
+<table>
+<tr><th></th><th>Web Worker</th><th>Service Worker</th></tr>
+<tr><td>Purpose</td><td>CPU computation</td><td>Network proxy / offline</td></tr>
+<tr><td>Lifecycle</td><td>Tied to page</td><td>Independent</td></tr>
+<tr><td>DOM</td><td>No access</td><td>No access</td></tr>
+</table>
+<pre><span class="kw">const</span> w = <span class="kw">new</span> Worker(<span class="str">'worker.js'</span>);
+w.postMessage({ data: largeArr });
+w.onmessage = e =&gt; <span class="fn">console</span>.log(e.data);
+<span class="cm">// worker.js</span>
+self.onmessage = e =&gt; self.postMessage(heavyWork(e.data.data));</pre>
+<div class="tip">Angular 18 added official Web Worker support. Use for: sorting/filtering, encryption, image processing — anything blocking 16ms+.</div>
+</div></div>
+</div>
+
+<!-- ===== HTML & CSS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">HTML & CSS Essentials</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Key questions reference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td><code>div</code> vs <code>span</code></td><td>block vs inline. Can't put block inside inline.</td></tr>
+<tr><td><code>*ngIf</code> vs <code>[hidden]</code></td><td>ngIf removes from DOM; [hidden] = display:none (stays in DOM)</td></tr>
+<tr><td><code>async</code> vs <code>defer</code></td><td>Both non-blocking. async: execute immediately on load; defer: execute after parsing, in order</td></tr>
+<tr><td>Pseudo-class vs pseudo-element</td><td><code>:hover</code>, <code>:nth-child</code> — states; <code>::before</code>, <code>::after</code> — virtual elements</td></tr>
+<tr><td><code>box-sizing: border-box</code></td><td>width/height includes padding+border</td></tr>
+</table>
+</div></div>
+</div>

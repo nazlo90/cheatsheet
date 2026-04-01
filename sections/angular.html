@@ -1,0 +1,420 @@
+<!-- ===== ANGULAR FUNDAMENTALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Fundamentals <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>AngularJS vs Angular 2+ & key building blocks</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Angular</strong> is a TypeScript-based framework for building SPAs — component-based architecture with built-in DI, routing, reactive forms, and a powerful CLI.</p>
+<table>
+<tr><th></th><th>AngularJS (1.x)</th><th>Angular (2+)</th></tr>
+<tr><td>Language</td><td>JavaScript</td><td>TypeScript</td></tr>
+<tr><td>Architecture</td><td>MVC</td><td>MVVM (Component + Template + Service)</td></tr>
+<tr><td>Building block</td><td>Directives</td><td>Components</td></tr>
+<tr><td>Change detection</td><td>Digest cycle</td><td>Zone.js + OnPush + Signals</td></tr>
+</table>
+<ul>
+<li><strong>Component</strong> — UI block. <code>@Component</code></li>
+<li><strong>Directive</strong> — modify DOM. Structural (<code>@if</code>, <code>@for</code>) or Attribute</li>
+<li><strong>Pipe</strong> — transform template values. Pure pipes are memoized.</li>
+<li><strong>Service</strong> — shared business logic via DI</li>
+<li><strong>Guard</strong> — route protection (<code>CanActivate</code>, <code>CanDeactivate</code>, <code>Resolve</code>)</li>
+<li><strong>Interceptor</strong> — HTTP middleware (auth headers, error handling, caching)</li>
+</ul>
+<div class="tip">Pure pipe vs function in template: pipe is cached — won't re-run if input didn't change. Always prefer pipes for template transformations.</div>
+</div></div>
+</div>
+
+<!-- ===== DI ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Dependency Injection <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>DI system — hierarchical injectors</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Angular has a <strong>hierarchical DI system</strong>. Each component has its own injector; if a dependency is not found, it walks up to the parent injector, then to the root injector.</p>
+<p><strong>Injector hierarchy:</strong> Platform → Root (AppModule) → Feature Module → Component → Element</p>
+<pre><span class="cm">// Singleton in root</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })   <span class="cm">// tree-shakeable</span>
+<span class="kw">class</span> <span class="cls">AuthService</span> {}
+
+<span class="cm">// Scoped to component (new instance per component)</span>
+@Component({ providers: [<span class="cls">MyService</span>] })
+<span class="kw">class</span> <span class="cls">MyComponent</span> {}
+
+<span class="cm">// InjectionToken — for non-class values</span>
+<span class="kw">const</span> API_URL = <span class="kw">new</span> InjectionToken&lt;string&gt;(<span class="str">'API_URL'</span>);
+<span class="cm">// providers: [{ provide: API_URL, useValue: 'https://...' }]</span>
+inject(API_URL); <span class="cm">// functional injection (Angular 14+)</span>
+
+<span class="cm">// @Optional — null if not found</span>
+constructor(@Optional() <span class="kw">private</span> logger?: LoggerService) {}
+
+<span class="cm">// @Self — only look in own injector</span>
+constructor(@Self() <span class="kw">private</span> svc: MyService) {}
+
+<span class="cm">// @SkipSelf — skip own, look in parent</span>
+constructor(@SkipSelf() <span class="kw">private</span> parent: MyService) {}
+
+<span class="cm">// @Host — stop at host element boundary</span>
+constructor(@Host() <span class="kw">private</span> svc: MyService) {}
+
+<span class="cm">// Factory provider</span>
+{ provide: Logger, useFactory: (http: HttpClient) =&gt; <span class="kw">new</span> RemoteLogger(http), deps: [HttpClient] }
+
+<span class="cm">// Multi-provider (interceptors, validators)</span>
+{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: <span class="kw">true</span> }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Functional inject() API (Angular 14+)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Use inject() outside constructor — in factories, guards, pipes</span>
+<span class="kw">export function</span> <span class="fn">authGuard</span>(): CanActivateFn {
+  <span class="kw">return</span> () =&gt; {
+    <span class="kw">const</span> auth = inject(AuthService);
+    <span class="kw">const</span> router = inject(Router);
+    <span class="kw">return</span> auth.isLoggedIn() || router.createUrlTree([<span class="str">'/login'</span>]);
+  };
+}
+
+<span class="cm">// inject() in class fields</span>
+<span class="kw">class</span> <span class="cls">MyComponent</span> {
+  <span class="kw">private</span> store = inject(Store);
+  users$ = <span class="kw">this</span>.store.select(selectAllUsers);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== CHANGE DETECTION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Change Detection <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Default vs OnPush + Zone.js</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Zone.js</strong> monkey-patches all async APIs and notifies Angular after async work. <strong>Default</strong>: checks whole tree. <strong>OnPush</strong>: skips subtree unless:</p>
+<ul>
+<li>An <code>@Input()</code> <em>reference</em> changes (not mutation)</li>
+<li>An event fires inside component</li>
+<li>Observable emits via <code>async</code> pipe</li>
+<li><code>markForCheck()</code> / <code>detectChanges()</code> called</li>
+</ul>
+<pre>@Component({ changeDetection: ChangeDetectionStrategy.OnPush })
+<span class="kw">class</span> <span class="cls">CardComponent</span> {
+  @Input() data!: Data;   <span class="cm">// must pass NEW reference</span>
+
+  constructor(<span class="kw">private</span> cd: ChangeDetectorRef) {}
+
+  update() {
+    <span class="kw">this</span>.cd.markForCheck();    <span class="cm">// schedule check in next cycle</span>
+    <span class="cm">// OR</span>
+    <span class="kw">this</span>.cd.detectChanges();   <span class="cm">// immediate synchronous check</span>
+  }
+  pauseCD()  { <span class="kw">this</span>.cd.detach(); }
+  resumeCD() { <span class="kw">this</span>.cd.reattach(); }</pre>
+</div></div>
+</div>
+
+<!-- ===== SIGNALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Signals (Angular 16+, stable 19) <span class="badge b-key">New</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>signal / computed / effect</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>Signal</strong> is a reactive primitive that holds a value and notifies consumers automatically when it changes — enabling fine-grained change detection without Zone.js.</p>
+<pre><span class="kw">import</span> { signal, computed, effect } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+
+<span class="cm">// Writable signal</span>
+<span class="kw">const</span> count = signal(<span class="num">0</span>);
+count.set(<span class="num">5</span>);
+count.update(v =&gt; v + <span class="num">1</span>);
+
+<span class="cm">// Computed — auto-tracks dependencies</span>
+<span class="kw">const</span> doubled = computed(() =&gt; count() * <span class="num">2</span>);
+
+<span class="cm">// Effect — runs side effects when deps change</span>
+effect(() =&gt; <span class="fn">console</span>.log(<span class="str">'count changed:'</span>, count()));
+
+<span class="cm">// In template</span>
+<span class="cm">// &lt;p&gt;{{ count() }}&lt;/p&gt;  &lt;!-- call as function --&gt;</span>
+
+<span class="cm">// Signal inputs (Angular 17.1+)</span>
+<span class="kw">import</span> { input, output, model } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">class</span> <span class="cls">MyComponent</span> {
+  name = input&lt;string&gt;(<span class="str">''</span>);        <span class="cm">// replaces @Input()</span>
+  nameChange = output&lt;string&gt;();  <span class="cm">// replaces @Output()</span>
+  value = model&lt;string&gt;(<span class="str">''</span>);      <span class="cm">// two-way binding</span>
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>toSignal / toObservable + zoneless</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { toSignal, toObservable } <span class="kw">from</span> <span class="str">'@angular/core/rxjs-interop'</span>;
+
+<span class="cm">// Observable → Signal</span>
+<span class="kw">const</span> users = toSignal(<span class="kw">this</span>.store.select(selectAllUsers), { initialValue: [] });
+
+<span class="cm">// Signal → Observable</span>
+<span class="kw">const</span> count$ = toObservable(count);
+
+<span class="cm">// Zoneless (Angular 18+ experimental)</span>
+<span class="cm">// bootstrapApplication(AppComponent, {</span>
+<span class="cm">//   providers: [provideExperimentalZonelessChangeDetection()]</span>
+<span class="cm">// });</span></pre>
+<div class="tip">Signals bypass Zone.js entirely — fine-grained reactivity, no unnecessary checks. Angular 21 plans zoneless by default. Prefer signals for new code.</div>
+</div></div>
+</div>
+
+<!-- ===== FORMS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Forms — All Types <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Template-driven vs Reactive — comparison</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Angular provides two form strategies: <strong>template-driven</strong> (HTML-centric, simple forms) and <strong>reactive</strong> (class-based, explicit model, easier to test and handle dynamic fields).</p>
+<table>
+<tr><th></th><th>Template-driven</th><th>Reactive</th></tr>
+<tr><td>Definition</td><td>In template with directives</td><td>In component class</td></tr>
+<tr><td>Data model</td><td>Implicit (NgModel)</td><td>Explicit (FormGroup/Control)</td></tr>
+<tr><td>Validation</td><td>Template directives</td><td>Validator functions</td></tr>
+<tr><td>Testability</td><td>Harder</td><td>Easy (pure TS)</td></tr>
+<tr><td>Async updates</td><td>Requires <code>ngModel</code> + <code>[(ngModel)]</code></td><td>Observables via <code>valueChanges</code></td></tr>
+<tr><td>Use when</td><td>Simple forms</td><td>Complex, dynamic, tested forms</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Reactive Forms — full example</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { FormBuilder, Validators, FormGroup, FormArray } <span class="kw">from</span> <span class="str">'@angular/forms'</span>;
+
+<span class="kw">class</span> <span class="cls">ProfileComponent</span> {
+  <span class="kw">private</span> fb = inject(FormBuilder);
+
+  form = <span class="kw">this</span>.fb.group({
+    name:  [<span class="str">''</span>, [Validators.required, Validators.minLength(<span class="num">2</span>)]],
+    email: [<span class="str">''</span>, [Validators.required, Validators.email]],
+    age:   [<span class="kw">null</span>, [Validators.min(<span class="num">18</span>), Validators.max(<span class="num">99</span>)]],
+    tags:  <span class="kw">this</span>.fb.array([]),   <span class="cm">// FormArray</span>
+    address: <span class="kw">this</span>.fb.group({    <span class="cm">// nested FormGroup</span>
+      city: [<span class="str">''</span>, Validators.required]
+    })
+  });
+
+  <span class="kw">get</span> tags() { <span class="kw">return</span> <span class="kw">this</span>.form.get(<span class="str">'tags'</span>) <span class="kw">as</span> FormArray; }
+  addTag() { <span class="kw">this</span>.tags.push(<span class="kw">this</span>.fb.control(<span class="str">''</span>)); }
+
+  ngOnInit() {
+    <span class="cm">// React to value changes</span>
+    <span class="kw">this</span>.form.get(<span class="str">'email'</span>)!.valueChanges.pipe(
+      debounceTime(<span class="num">300</span>),
+      distinctUntilChanged(),
+      switchMap(email =&gt; <span class="kw">this</span>.api.checkEmail(email))
+    ).subscribe(taken =&gt; { ... });
+
+    <span class="cm">// Programmatic updates</span>
+    <span class="kw">this</span>.form.patchValue({ name: <span class="str">'Alice'</span> });  <span class="cm">// partial</span>
+    <span class="kw">this</span>.form.setValue({ name: <span class="str">'Alice'</span>, email: <span class="str">'alice@example.com'</span>, age: <span class="num">25</span>, tags: [], address: { city: <span class="str">'Kyiv'</span> } }); <span class="cm">// full</span>
+    <span class="kw">this</span>.form.reset();
+  }
+
+  submit() {
+    <span class="kw">if</span> (<span class="kw">this</span>.form.invalid) <span class="kw">return</span>;
+    <span class="fn">console</span>.log(<span class="kw">this</span>.form.getRawValue());
+  }
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Dynamic Forms</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Build form dynamically from config</span>
+<span class="kw">interface</span> <span class="cls">FieldConfig</span> { key: string; type: string; validators?: ValidatorFn[]; }
+
+<span class="kw">function</span> <span class="fn">buildForm</span>(fields: FieldConfig[], fb: FormBuilder): FormGroup {
+  <span class="kw">return</span> fb.group(
+    fields.reduce((acc, f) =&gt; ({
+      ...acc,
+      [f.key]: [<span class="str">''</span>, f.validators ?? []]
+    }), {})
+  );
+}
+
+<span class="cm">// Add/remove controls at runtime</span>
+form.addControl(<span class="str">'phone'</span>, <span class="kw">new</span> FormControl(<span class="str">''</span>));
+form.removeControl(<span class="str">'phone'</span>);
+form.get(<span class="str">'email'</span>)!.disable();
+form.get(<span class="str">'email'</span>)!.enable();</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Custom validators & async validators</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Sync custom validator</span>
+<span class="kw">function</span> <span class="fn">noSpacesValidator</span>(control: AbstractControl): ValidationErrors | null {
+  <span class="kw">return</span> control.value?.includes(<span class="str">' '</span>)
+    ? { noSpaces: <span class="kw">true</span> }
+    : null;
+}
+
+<span class="cm">// Async validator (check unique email)</span>
+<span class="kw">function</span> <span class="fn">emailTakenValidator</span>(api: ApiService): AsyncValidatorFn {
+  <span class="kw">return</span> (control) =&gt; <span class="kw">of</span>(control.value).pipe(
+    debounceTime(<span class="num">300</span>),
+    switchMap(v =&gt; api.emailExists(v)),
+    map(exists =&gt; exists ? { emailTaken: <span class="kw">true</span> } : null)
+  );
+}
+
+<span class="cm">// Cross-field validator (group level)</span>
+<span class="kw">function</span> <span class="fn">passwordMatch</span>(group: AbstractControl): ValidationErrors | null {
+  <span class="kw">const</span> pwd = group.get(<span class="str">'password'</span>)?.value;
+  <span class="kw">const</span> confirm = group.get(<span class="str">'confirmPassword'</span>)?.value;
+  <span class="kw">return</span> pwd === confirm ? null : { mismatch: <span class="kw">true</span> };
+}
+
+<span class="cm">// Usage</span>
+fb.group({ password: [<span class="str">''</span>], confirmPassword: [<span class="str">''</span>] }, { validators: passwordMatch })</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Signal Forms (Angular 21, experimental)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Experimental API — subject to change</span>
+<span class="kw">import</span> { formGroup, formControl } <span class="kw">from</span> <span class="str">'@angular/forms/experimental'</span>;
+
+<span class="kw">const</span> form = formGroup({
+  name: formControl(<span class="str">''</span>, { validators: [Validators.required] }),
+  email: formControl(<span class="str">''</span>)
+});
+
+<span class="cm">// Values are signals — reactive without subscriptions</span>
+<span class="fn">console</span>.log(form.value());  <span class="cm">// { name: '', email: '' }</span>
+form.controls.name.set(<span class="str">'Alice'</span>);</pre>
+<div class="tip">Signal Forms are composable, type-safe, and integrate directly with Angular's signal-based change detection — no Zone.js needed.</div>
+</div></div>
+</div>
+
+<!-- ===== PERFORMANCE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Performance Manual <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Change detection optimization</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ul>
+<li><strong>OnPush everywhere</strong> — reduce CD checks drastically</li>
+<li><strong>Signals</strong> — skip Zone.js, fine-grained updates</li>
+<li><strong>Avoid function calls in templates</strong> — use pipes or computed signals instead</li>
+<li><strong>trackBy in *ngFor / track in @for</strong> — prevents full DOM re-render</li>
+<li><strong>async pipe</strong> — auto-unsubscribe + triggers CD only on emit</li>
+<li><strong>detach/reattach</strong> — manually control CD for heavy real-time components</li>
+</ul>
+<pre><span class="cm">// BAD — recalculates every CD cycle</span>
+<span class="cm">// &lt;li *ngFor="let item of items"&gt;{{ format(item) }}&lt;/li&gt;</span>
+
+<span class="cm">// GOOD — pipe is memoized</span>
+<span class="cm">// &lt;li *ngFor="let item of items; trackBy: trackById"&gt;{{ item | myFormat }}&lt;/li&gt;</span>
+
+trackById(index: number, item: Item) { <span class="kw">return</span> item.id; }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Lazy loading & code splitting</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Lazy route (standalone)</span>
+{ path: <span class="str">'admin'</span>, loadComponent: () =&gt; <span class="kw">import</span>(<span class="str">'./admin/admin.component'</span>) }
+
+<span class="cm">// Lazy feature module</span>
+{ path: <span class="str">'shop'</span>, loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'./shop/shop.routes'</span>) }
+
+<span class="cm">// Preloading strategy</span>
+RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })
+
+<span class="cm">// Defer block — Angular 17</span>
+<span class="cm">// @defer (on viewport) {</span>
+<span class="cm">//   &lt;heavy-component /&gt;</span>
+<span class="cm">// } @loading { &lt;spinner /&gt; } @placeholder { &lt;div&gt;Soon...&lt;/div&gt; }</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Bundle & runtime optimizations</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong>AOT compilation</strong> — compile templates at build time (default); smaller bundles, faster startup</li>
+<li><strong>Tree-shaking</strong> — unused code removed by ESBuild (default Angular 17+)</li>
+<li><strong>Source map explorer</strong> / <code>ng build --stats-json</code> + Webpack Bundle Analyzer</li>
+<li><strong>Angular SSR + hydration</strong> — faster First Contentful Paint</li>
+<li><strong>Image optimization</strong> — <code>NgOptimizedImage</code> directive (Angular 15+)</li>
+<li><strong>Virtual scrolling</strong> — <code>CdkVirtualScrollViewport</code> for large lists</li>
+<li><strong>Web Workers</strong> — offload heavy computation</li>
+<li><strong>HTTP caching</strong> — <code>shareReplay(1)</code> on HTTP calls</li>
+</ul>
+<pre><span class="cm">// Virtual scroll</span>
+<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height: 400px"&gt;</span>
+<span class="cm">//   &lt;div *cdkVirtualFor="let item of items"&gt;{{ item }}&lt;/div&gt;</span>
+<span class="cm">// &lt;/cdk-virtual-scroll-viewport&gt;</span>
+
+<span class="cm">// HTTP caching</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>@defer — deferred loading (Angular 17+)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Load only when visible</span>
+<span class="cm">// @defer (on viewport; prefetch on idle) {</span>
+<span class="cm">//   &lt;chart-component [data]="data" /&gt;</span>
+<span class="cm">// } @loading (minimum 150ms) {</span>
+<span class="cm">//   &lt;skeleton /&gt;</span>
+<span class="cm">// } @placeholder (minimum 500ms) {</span>
+<span class="cm">//   &lt;div class="placeholder"&gt;Chart will load soon&lt;/div&gt;</span>
+<span class="cm">// } @error {</span>
+<span class="cm">//   &lt;p&gt;Failed to load chart&lt;/p&gt;</span>
+<span class="cm">// }</span>
+
+<span class="cm">// Triggers: on idle, on viewport, on interaction, on hover, on immediate</span>
+<span class="cm">// when (condition)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== ANGULAR VERSIONS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular 15–21 Updates <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Version timeline</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Version</th><th>Key Feature</th></tr>
+<tr><td><strong>15</strong></td><td>Stable Standalone Components, Directive Composition API, NgOptimizedImage</td></tr>
+<tr><td><strong>16</strong></td><td>Signals (experimental), Zone.js optional, <code>takeUntilDestroyed</code>, required inputs</td></tr>
+<tr><td><strong>17</strong></td><td>ESBuild default, new <code>@if</code>/<code>@for</code>/<code>@switch</code> syntax, <code>@defer</code> blocks, view transitions</td></tr>
+<tr><td><strong>18</strong></td><td>Zoneless experimental, typed forms stable, Web Worker support</td></tr>
+<tr><td><strong>19</strong></td><td>Signals stable, Standalone default in new projects, <code>input()</code>/<code>output()</code>/<code>model()</code> stable</td></tr>
+<tr><td><strong>20</strong></td><td>Full Signals integration, micro frontend support, improved DX</td></tr>
+<tr><td><strong>21</strong></td><td>Zoneless by default, Signal Forms (experimental), Vitest default, Angular ARIA</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== DIRECTIVE COMP ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Directive Composition API <span class="badge b-ng">Angular 15+</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>hostDirectives — mixin-style</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>@Component({
+  selector: <span class="str">'app-button'</span>,
+  standalone: <span class="kw">true</span>,
+  hostDirectives: [
+    HighlightDirective,
+    { directive: ClickTrackDirective, inputs: [<span class="str">'trackLabel'</span>], outputs: [<span class="str">'tracked'</span>] }
+  ],
+  template: <span class="str">'&lt;ng-content /&gt;'</span>
+})
+<span class="kw">class</span> <span class="cls">ButtonComponent</span> {}</pre>
+<div class="tip">Replaces base-class inheritance. Great for: accessibility, analytics, validation, theming. Composable + tree-shakeable.</div>
+</div></div>
+</div>
+
+<!-- ===== DI & LIFECYCLE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Lifecycle Hooks & Route Guards <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Lifecycle hooks order</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ol>
+<li><code>ngOnChanges</code> — @Input changes (before init and on each change)</li>
+<li><code>ngOnInit</code> — initialized (once)</li>
+<li><code>ngDoCheck</code> — every CD cycle</li>
+<li><code>ngAfterContentInit</code> — projected content ready</li>
+<li><code>ngAfterContentChecked</code></li>
+<li><code>ngAfterViewInit</code> — view + child views ready</li>
+<li><code>ngAfterViewChecked</code></li>
+<li><code>ngOnDestroy</code> — cleanup</li>
+</ol>
+<div class="tip"><code>ngAfterContentInit</code> fires before <code>ngAfterViewInit</code> — content must be ready before view.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Route Guards</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Guard</th><th>Purpose</th></tr>
+<tr><td><code>CanActivate</code></td><td>Can user enter this route?</td></tr>
+<tr><td><code>CanDeactivate</code></td><td>Can user leave? (unsaved changes)</td></tr>
+<tr><td><code>CanLoad</code></td><td>Can module be lazy loaded?</td></tr>
+<tr><td><code>Resolve</code></td><td>Pre-fetch data before activating</td></tr>
+<tr><td><code>CanActivateChild</code></td><td>Protect child routes</td></tr>
+</table>
+</div></div>
+</div>

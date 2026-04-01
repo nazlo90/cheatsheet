@@ -1,0 +1,135 @@
+<!-- ===== TS BASICS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TypeScript Basics <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Annotations, arrays, tuples, enums, unions</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>TypeScript</strong> is a statically typed superset of JavaScript — it adds type annotations and catches type errors at compile time, then compiles to plain JS.</p>
+<pre><span class="cm">// Annotations</span>
+<span class="kw">let</span> n: number = <span class="num">10</span>;
+<span class="kw">const</span> name: string = <span class="str">"Alice"</span>;
+<span class="kw">let</span> active: boolean = <span class="kw">true</span>;
+<span class="kw">let</span> val: unknown;   <span class="cm">// must narrow before use</span>
+<span class="kw">let</span> x: any;         <span class="cm">// escapes type system — avoid</span>
+<span class="kw">function</span> <span class="fn">log</span>(msg: string): <span class="kw">void</span> {}
+
+<span class="cm">// Arrays & tuples</span>
+<span class="kw">let</span> arr: number[] = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>];
+<span class="kw">let</span> tuple: [string, number] = [<span class="str">"age"</span>, <span class="num">30</span>];
+<span class="kw">let</span> readonly_arr: <span class="kw">readonly</span> number[] = [<span class="num">1</span>, <span class="num">2</span>];
+
+<span class="cm">// Enums</span>
+<span class="kw">enum</span> Role { Admin = <span class="str">'ADMIN'</span>, User = <span class="str">'USER'</span> }  <span class="cm">// string enum</span>
+<span class="kw">const enum</span> Dir { Up, Down }  <span class="cm">// const enum — inlined at compile time</span>
+
+<span class="cm">// Union & intersection</span>
+<span class="kw">type</span> ID = string | number;
+<span class="kw">type</span> AdminUser = Admin & User;
+
+<span class="cm">// Literal types</span>
+<span class="kw">type</span> Dir = <span class="str">"left"</span> | <span class="str">"right"</span> | <span class="str">"up"</span> | <span class="str">"down"</span>;
+
+<span class="cm">// Functions</span>
+<span class="kw">type</span> Fn = (a: number, b: number) =&gt; number;
+<span class="kw">function</span> <span class="fn">greet</span>(name: string, greeting?: string): string {
+  <span class="kw">return</span> <span class="str">`${greeting ?? <span class="str">'Hello'</span>}, ${name}`</span>;
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>unknown vs any</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Both accept any value, but <code>unknown</code> is the <em>type-safe</em> counterpart — you must narrow it before use, while <code>any</code> silently disables all type checking.</p>
+<table>
+<tr><th></th><th>unknown</th><th>any</th></tr>
+<tr><td>Accepts any value</td><td>Yes ✓</td><td>Yes ✓</td></tr>
+<tr><td>Assignable to other types</td><td>No — must narrow first</td><td>Yes — bypasses checks</td></tr>
+<tr><td>Property/method access</td><td>Error until narrowed</td><td>Always allowed</td></tr>
+<tr><td>Type safety</td><td>Preserved ✓</td><td>Disabled ✗</td></tr>
+<tr><td>Use case</td><td>External data, API responses</td><td>Migration, quick escape hatch</td></tr>
+</table>
+<pre><span class="kw">let</span> a: unknown = <span class="fn">fetchData</span>();
+a.toFixed();            <span class="cm">// ✗ Error — not narrowed yet</span>
+<span class="kw">if</span> (<span class="kw">typeof</span> a === <span class="str">'number'</span>) a.toFixed(); <span class="cm">// ✓ narrowed</span>
+
+<span class="kw">let</span> b: any = <span class="fn">fetchData</span>();
+b.toFixed();            <span class="cm">// ✓ no error — but runtime may explode</span>
+b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</span>
+
+<span class="cm">// Prefer unknown for function params accepting arbitrary input</span>
+<span class="kw">function</span> <span class="fn">parse</span>(val: unknown): string {
+  <span class="kw">if</span> (<span class="kw">typeof</span> val === <span class="str">'string'</span>) <span class="kw">return</span> val;
+  <span class="kw">return</span> String(val);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== TYPE vs INTERFACE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">type vs interface <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Key differences</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Both <code>interface</code> and <code>type</code> describe object shapes — but <code>interface</code> supports declaration merging and is preferred for class contracts, while <code>type</code> is more flexible for unions, mapped types, and aliases.</p>
+<table>
+<tr><th>Feature</th><th>interface</th><th>type</th></tr>
+<tr><td>Declaration merging</td><td>Yes ✓</td><td>No ✗</td></tr>
+<tr><td>Extending</td><td><code>extends</code></td><td><code>&amp;</code> intersection</td></tr>
+<tr><td>Union types</td><td>No ✗</td><td>Yes ✓</td></tr>
+<tr><td>Mapped/conditional types</td><td>No ✗</td><td>Yes ✓</td></tr>
+<tr><td>Primitive aliases</td><td>No ✗</td><td>Yes ✓</td></tr>
+</table>
+<div class="tip">Use <code>interface</code> for public API shapes & class contracts. Use <code>type</code> for unions, mapped types, complex generics.</div>
+</div></div>
+</div>
+
+<!-- ===== ADVANCED TS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Advanced TypeScript <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Utility types — full table</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Utility</th><th>Effect</th></tr>
+<tr><td><code>Partial&lt;T&gt;</code></td><td>All properties optional</td></tr>
+<tr><td><code>Required&lt;T&gt;</code></td><td>All required</td></tr>
+<tr><td><code>Readonly&lt;T&gt;</code></td><td>All read-only</td></tr>
+<tr><td><code>Pick&lt;T,K&gt;</code></td><td>Keep only K keys</td></tr>
+<tr><td><code>Omit&lt;T,K&gt;</code></td><td>Remove K keys</td></tr>
+<tr><td><code>Record&lt;K,V&gt;</code></td><td>Map type</td></tr>
+<tr><td><code>Exclude&lt;T,U&gt;</code></td><td>Remove from T assignable to U</td></tr>
+<tr><td><code>Extract&lt;T,U&gt;</code></td><td>Keep from T assignable to U</td></tr>
+<tr><td><code>NonNullable&lt;T&gt;</code></td><td>Remove null/undefined</td></tr>
+<tr><td><code>ReturnType&lt;T&gt;</code></td><td>Function return type</td></tr>
+<tr><td><code>Parameters&lt;T&gt;</code></td><td>Function params tuple</td></tr>
+<tr><td><code>InstanceType&lt;T&gt;</code></td><td>Class instance type</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Generics, mapped, conditional, infer</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Generic with constraint</span>
+<span class="kw">function</span> <span class="fn">getProperty</span>&lt;T, K <span class="kw">extends keyof</span> T&gt;(obj: T, key: K): T[K] {
+  <span class="kw">return</span> obj[key];
+}
+
+<span class="cm">// Mapped type</span>
+<span class="kw">type</span> Nullable&lt;T&gt; = { [K <span class="kw">in keyof</span> T]: T[K] | null };
+<span class="kw">type</span> Mutable&lt;T&gt; = { <span class="op">-readonly</span> [K <span class="kw">in keyof</span> T]: T[K] };   <span class="cm">// remove readonly</span>
+<span class="kw">type</span> Optional&lt;T&gt; = { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: T[K] };           <span class="cm">// add ?</span>
+
+<span class="cm">// Conditional + infer</span>
+<span class="kw">type</span> UnwrapPromise&lt;T&gt; = T <span class="kw">extends</span> Promise&lt;<span class="kw">infer</span> R&gt; ? R : T;
+<span class="kw">type</span> IsArray&lt;T&gt; = T <span class="kw">extends</span> any[] ? <span class="str">'yes'</span> : <span class="str">'no'</span>;
+
+<span class="cm">// Template literal types</span>
+<span class="kw">type</span> EventName&lt;T <span class="kw">extends</span> string&gt; = <span class="str">`on${Capitalize&lt;T&gt;}`</span>;
+
+<span class="cm">// Discriminated union + narrowing</span>
+<span class="kw">type</span> Shape = { kind: <span class="str">'circle'</span>; r: number } | { kind: <span class="str">'rect'</span>; w: number; h: number };
+<span class="kw">function</span> area(s: Shape): number {
+  <span class="kw">switch</span> (s.kind) {
+    <span class="kw">case</span> <span class="str">'circle'</span>: <span class="kw">return</span> Math.PI * s.r ** <span class="num">2</span>;
+    <span class="kw">case</span> <span class="str">'rect'</span>:   <span class="kw">return</span> s.w * s.h;
+  }
+}
+
+<span class="cm">// Deep partial (recursive)</span>
+<span class="kw">type</span> DeepPartial&lt;T&gt; = T <span class="kw">extends</span> object
+  ? { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: DeepPartial&lt;T[K]&gt; } : T;</pre>
+</div></div>
+</div>
