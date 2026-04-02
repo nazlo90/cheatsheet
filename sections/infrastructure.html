@@ -138,6 +138,120 @@ deploy_staging:
 </div></div>
 </div>
 
+<!-- ===== MONITORING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Monitoring <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Three pillars: Metrics · Logs · Traces</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Observability</strong> = ability to understand system state from its outputs. Three complementary signals:</p>
+<table>
+<tr><th>Pillar</th><th>What it answers</th><th>Examples</th></tr>
+<tr><td><strong>Metrics</strong></td><td>Is the system healthy? (numbers over time)</td><td>LCP, error rate, memory usage, API latency</td></tr>
+<tr><td><strong>Logs</strong></td><td>What happened? (events with context)</td><td>JS errors, user actions, API responses</td></tr>
+<tr><td><strong>Traces</strong></td><td>Where did time go? (request lifecycle)</td><td>Click → API call → DB → render timeline</td></tr>
+</table>
+<table>
+<tr><th>Monitoring type</th><th>Description</th><th>Tools</th></tr>
+<tr><td><strong>RUM</strong> (Real User Monitoring)</td><td>Data from real users' browsers in production</td><td>Sentry, DataDog RUM, New Relic Browser</td></tr>
+<tr><td><strong>Synthetic</strong></td><td>Scripted tests from controlled environments (no real users needed)</td><td>Playwright, Checkly, Lighthouse CI</td></tr>
+<tr><td><strong>Error Tracking</strong></td><td>Capture, group, alert on JS exceptions</td><td>Sentry, Bugsnag, Rollbar</td></tr>
+<tr><td><strong>APM</strong> (App Performance)</td><td>Backend + frontend correlation</td><td>DataDog, New Relic, Dynatrace</td></tr>
+</table>
+<div class="tip">RUM tells you what real users experience. Synthetic tests run 24/7 before users hit issues. Use both.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core Web Vitals — the metrics that matter</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Google's user-centric performance metrics. Affect SEO ranking and user experience.</p>
+<table>
+<tr><th>Metric</th><th>Measures</th><th>Good</th><th>Poor</th></tr>
+<tr><td><strong>LCP</strong> — Largest Contentful Paint</td><td>Loading — when main content is visible</td><td>&lt; 2.5s</td><td>&gt; 4s</td></tr>
+<tr><td><strong>INP</strong> — Interaction to Next Paint</td><td>Responsiveness — UI reacts to input</td><td>&lt; 200ms</td><td>&gt; 500ms</td></tr>
+<tr><td><strong>CLS</strong> — Cumulative Layout Shift</td><td>Visual stability — elements don't jump</td><td>&lt; 0.1</td><td>&gt; 0.25</td></tr>
+<tr><td><strong>TTFB</strong> — Time to First Byte</td><td>Server response speed</td><td>&lt; 800ms</td><td>&gt; 1.8s</td></tr>
+<tr><td><strong>FCP</strong> — First Contentful Paint</td><td>First pixel rendered</td><td>&lt; 1.8s</td><td>&gt; 3s</td></tr>
+</table>
+<pre><span class="cm">// Measure Core Web Vitals in code</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+onLCP(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+onINP(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+onCLS(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+
+<span class="cm">// Also available via PerformanceObserver (native browser API)</span>
+<span class="kw">new</span> PerformanceObserver((list) =&gt; {
+  list.getEntries().forEach(entry =&gt; <span class="fn">console</span>.log(entry));
+}).observe({ type: <span class="str">'largest-contentful-paint'</span>, buffered: <span class="kw">true</span> });</pre>
+<div class="tip">INP replaced FID as a Core Web Vital in 2024. FID measured only the first interaction; INP measures all interactions throughout the page lifetime.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Error tracking — Sentry in Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// main.ts — initialize before bootstrapApplication</span>
+<span class="kw">import</span> * as Sentry <span class="kw">from</span> <span class="str">'@sentry/angular'</span>;
+
+Sentry.init({
+  dsn: <span class="str">'https://...@sentry.io/...'</span>,
+  environment: <span class="str">'production'</span>,
+  release: <span class="str">'my-app@1.2.3'</span>,
+  integrations: [
+    Sentry.browserTracingIntegration(),   <span class="cm">// performance tracing</span>
+    Sentry.replayIntegration(),           <span class="cm">// session replay on error</span>
+  ],
+  tracesSampleRate: <span class="num">0.1</span>,    <span class="cm">// 10% of transactions</span>
+  replaysOnErrorSampleRate: <span class="num">1.0</span>,  <span class="cm">// 100% on errors</span>
+});
+
+<span class="cm">// app.config.ts — provide Angular error handler</span>
+{
+  provide: ErrorHandler,
+  useValue: Sentry.createErrorHandler({ showDialog: <span class="kw">false</span> })
+},
+{
+  provide: Sentry.TraceService,
+  deps: [Router]
+}
+
+<span class="cm">// Manual error capture with context</span>
+Sentry.withScope(scope =&gt; {
+  scope.setUser({ id: userId, email: userEmail });
+  scope.setTag(<span class="str">'feature'</span>, <span class="str">'checkout'</span>);
+  scope.setExtra(<span class="str">'cartItems'</span>, cartItems.length);
+  Sentry.captureException(error);
+});
+
+<span class="cm">// Source maps — upload at build time so Sentry shows original TS</span>
+<span class="cm">// sentry-cli releases files upload-sourcemaps ./dist</span></pre>
+<div class="tip">Without source maps, Sentry shows minified stack traces — useless. Always upload source maps to Sentry and keep them off the public server.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Performance monitoring & alerting strategy</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>What to monitor</th><th>Metric / Signal</th><th>Alert when</th></tr>
+<tr><td>JS errors</td><td>Error rate (errors / pageviews)</td><td>Rate increases &gt; baseline + 2σ</td></tr>
+<tr><td>Page load</td><td>LCP p75 (75th percentile)</td><td>&gt; 2.5s</td></tr>
+<tr><td>API calls</td><td>HTTP 4xx / 5xx rate, latency p95</td><td>5xx &gt; 1%, latency &gt; SLA</td></tr>
+<tr><td>User flow</td><td>Funnel drop-off, rage clicks</td><td>Checkout completion drops &gt; 5%</td></tr>
+<tr><td>Memory leaks</td><td>JS heap size over session</td><td>Heap grows monotonically</td></tr>
+</table>
+<pre><span class="cm">// Custom performance mark — measure a specific user flow</span>
+performance.mark(<span class="str">'checkout-start'</span>);
+<span class="cm">// ... do stuff</span>
+performance.mark(<span class="str">'checkout-end'</span>);
+performance.measure(<span class="str">'checkout-duration'</span>, <span class="str">'checkout-start'</span>, <span class="str">'checkout-end'</span>);
+
+<span class="kw">const</span> [measure] = performance.getEntriesByName(<span class="str">'checkout-duration'</span>);
+sendMetric({ name: <span class="str">'checkout.duration'</span>, value: measure.duration });
+
+<span class="cm">// Angular-specific: track CD performance with profiler (dev only)</span>
+<span class="cm">// import { enableProdMode } from '@angular/core';</span>
+<span class="cm">// Use Angular DevTools "Profiler" tab in Chrome</span></pre>
+<ul>
+<li><strong>p50 vs p95 vs p99</strong> — always monitor percentiles, not averages. A slow p99 affects 1% of users but may signal a real problem.</li>
+<li><strong>Alerting fatigue</strong> — alert on symptoms (user impact), not causes. "Error rate up 3x" &gt; "CPU at 80%".</li>
+<li><strong>Runbooks</strong> — every alert should link to a runbook: what it means, what to check, how to fix.</li>
+</ul>
+</div></div>
+</div>
+
 <!-- ===== DOCKER ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Docker <span class="badge b-grn">DevOps</span></div></div>

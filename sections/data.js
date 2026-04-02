@@ -1013,6 +1013,106 @@ constructor(@Host() <span class="kw">private</span> svc: MyService) {}
 </div></div>
 </div>
 
+<!-- ===== RxJS vs SIGNALS CD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Change Detection: RxJS vs Signals <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>How CD is triggered — two paradigms</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>The core question: <em>how does Angular know something changed and which views to update?</em></p>
+<table>
+<tr><th></th><th>RxJS + Zone.js</th><th>Signals (Angular 16+)</th></tr>
+<tr><td>CD trigger</td><td>Zone.js patches async APIs → notifies Angular after every task</td><td>Signal mutation → Angular marks only views that read that signal</td></tr>
+<tr><td>Granularity</td><td>Component subtree (coarse)</td><td>Template expression (fine-grained)</td></tr>
+<tr><td>Zone.js required</td><td>Yes</td><td>No (zoneless supported)</td></tr>
+<tr><td>Template syntax</td><td><code>{{ users$ | async }}</code></td><td><code>{{ users() }}</code> — call as function</td></tr>
+<tr><td>How async pipe works</td><td>Subscribes + calls <code>markForCheck()</code> on emit</td><td>N/A — <code>toSignal(obs$)</code> bridges interop</td></tr>
+<tr><td>Manual trigger</td><td><code>markForCheck()</code> / <code>detectChanges()</code></td><td>No manual trigger — reactive automatically</td></tr>
+<tr><td>Performance ceiling</td><td>OnPush reduces checks, still component-level</td><td>Only the exact binding re-evaluates</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Code comparison — same feature, two approaches</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// ─── RxJS / Zone.js approach ───────────────────────────────</span>
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: <span class="str">\`
+    &lt;div *ngFor="let u of users$ | async"&gt;{{ u.name }}&lt;/div&gt;
+    &lt;span&gt;{{ count$ | async }}&lt;/span&gt;
+  \`</span>
+})
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users$ = <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));
+  count$ = <span class="kw">this</span>.users$.pipe(map(u =&gt; u.length));
+  <span class="cm">// async pipe: subscribes + calls markForCheck() on each emit</span>
+  <span class="cm">// Zone.js: fires CD after HTTP, setTimeout, events...</span>
+  <span class="cm">// with OnPush: only checks THIS subtree, not whole tree</span>
+}
+
+<span class="cm">// ─── Signals approach ──────────────────────────────────────</span>
+@Component({
+  template: <span class="str">\`
+    &lt;div *ngFor="let u of users()"&gt;{{ u.name }}&lt;/div&gt;
+    &lt;span&gt;{{ count() }}&lt;/span&gt;
+  \`</span>
+})
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users = signal&lt;User[]&gt;([]);
+  count = computed(() =&gt; <span class="kw">this</span>.users().length);  <span class="cm">// auto-tracks users</span>
+
+  constructor(<span class="kw">private</span> http: HttpClient) {}
+
+  ngOnInit() {
+    <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>).subscribe(u =&gt; <span class="kw">this</span>.users.set(u));
+    <span class="cm">// OR: users = toSignal(this.http.get(...), { initialValue: [] });</span>
+  }
+  <span class="cm">// Angular tracks which template expressions read users()</span>
+  <span class="cm">// On users.set() → only those bindings re-evaluate, nothing else</span>
+  <span class="cm">// No Zone.js, no markForCheck() needed</span>
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>RxJS interop — toSignal / toObservable</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { toSignal, toObservable } <span class="kw">from</span> <span class="str">'@angular/core/rxjs-interop'</span>;
+
+<span class="cm">// Observable → Signal (subscribes automatically, completes on destroy)</span>
+<span class="kw">class</span> <span class="cls">SearchComponent</span> {
+  query = signal(<span class="str">''</span>);
+
+  <span class="cm">// Signal → Observable → apply RxJS operators → back to Signal</span>
+  results = toSignal(
+    toObservable(<span class="kw">this</span>.query).pipe(
+      debounceTime(<span class="num">300</span>),
+      distinctUntilChanged(),
+      switchMap(q =&gt; <span class="kw">this</span>.http.get(<span class="str">\`/search?q=\${q}\`</span>))
+    ),
+    { initialValue: [] }
+  );
+  <span class="cm">// template: &lt;li *ngFor="let r of results()"&gt;{{ r.name }}&lt;/li&gt;</span>
+  <span class="cm">// Best of both worlds: RxJS operators + signals in template</span>
+}
+
+<span class="cm">// Rule of thumb:</span>
+<span class="cm">// - Use RxJS for complex async flows (debounce, retry, combine streams)</span>
+<span class="cm">// - Use Signals for UI state, derived values, template bindings</span>
+<span class="cm">// - Bridge with toSignal() at the boundary</span></pre>
+<div class="tip">Migration path: keep RxJS for business logic, wrap with <code>toSignal()</code> at the component boundary. Over time, replace simple BehaviorSubject state with signals.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>When to use each</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Scenario</th><th>Use</th><th>Why</th></tr>
+<tr><td>HTTP requests with operators (debounce, retry, switchMap)</td><td>RxJS</td><td>Streams are naturally Observable</td></tr>
+<tr><td>UI state (open/closed, selected tab, form value)</td><td>Signals</td><td>Simpler, no subscription management</td></tr>
+<tr><td>Derived/computed values</td><td><code>computed()</code></td><td>Auto-tracks deps, memoized</td></tr>
+<tr><td>Combining multiple async streams</td><td>RxJS <code>combineLatest</code></td><td>Signal equivalent is verbose</td></tr>
+<tr><td>Template bindings</td><td>Signals</td><td>No async pipe needed, fine-grained CD</td></tr>
+<tr><td>Side effects on state change</td><td><code>effect()</code></td><td>Runs when any dependency signal changes</td></tr>
+<tr><td>Legacy codebase</td><td>RxJS + OnPush</td><td>Incrementally adopt signals via toSignal()</td></tr>
+<tr><td>Zoneless app</td><td>Signals</td><td>Only signals trigger CD without Zone.js</td></tr>
+</table>
+</div></div>
+</div>
+
 <!-- ===== SIGNALS ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Signals (Angular 16+, stable 19) <span class="badge b-key">New</span></div></div>
@@ -2067,6 +2167,120 @@ deploy_staging:
   { <span class="str">"type"</span>: <span class="str">"initial"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"500kb"</span>, <span class="str">"maximumError"</span>: <span class="str">"1mb"</span> },
   { <span class="str">"type"</span>: <span class="str">"anyComponentStyle"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"2kb"</span> }
 ]</pre>
+</div></div>
+</div>
+
+<!-- ===== MONITORING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Monitoring <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Three pillars: Metrics · Logs · Traces</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Observability</strong> = ability to understand system state from its outputs. Three complementary signals:</p>
+<table>
+<tr><th>Pillar</th><th>What it answers</th><th>Examples</th></tr>
+<tr><td><strong>Metrics</strong></td><td>Is the system healthy? (numbers over time)</td><td>LCP, error rate, memory usage, API latency</td></tr>
+<tr><td><strong>Logs</strong></td><td>What happened? (events with context)</td><td>JS errors, user actions, API responses</td></tr>
+<tr><td><strong>Traces</strong></td><td>Where did time go? (request lifecycle)</td><td>Click → API call → DB → render timeline</td></tr>
+</table>
+<table>
+<tr><th>Monitoring type</th><th>Description</th><th>Tools</th></tr>
+<tr><td><strong>RUM</strong> (Real User Monitoring)</td><td>Data from real users' browsers in production</td><td>Sentry, DataDog RUM, New Relic Browser</td></tr>
+<tr><td><strong>Synthetic</strong></td><td>Scripted tests from controlled environments (no real users needed)</td><td>Playwright, Checkly, Lighthouse CI</td></tr>
+<tr><td><strong>Error Tracking</strong></td><td>Capture, group, alert on JS exceptions</td><td>Sentry, Bugsnag, Rollbar</td></tr>
+<tr><td><strong>APM</strong> (App Performance)</td><td>Backend + frontend correlation</td><td>DataDog, New Relic, Dynatrace</td></tr>
+</table>
+<div class="tip">RUM tells you what real users experience. Synthetic tests run 24/7 before users hit issues. Use both.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core Web Vitals — the metrics that matter</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Google's user-centric performance metrics. Affect SEO ranking and user experience.</p>
+<table>
+<tr><th>Metric</th><th>Measures</th><th>Good</th><th>Poor</th></tr>
+<tr><td><strong>LCP</strong> — Largest Contentful Paint</td><td>Loading — when main content is visible</td><td>&lt; 2.5s</td><td>&gt; 4s</td></tr>
+<tr><td><strong>INP</strong> — Interaction to Next Paint</td><td>Responsiveness — UI reacts to input</td><td>&lt; 200ms</td><td>&gt; 500ms</td></tr>
+<tr><td><strong>CLS</strong> — Cumulative Layout Shift</td><td>Visual stability — elements don't jump</td><td>&lt; 0.1</td><td>&gt; 0.25</td></tr>
+<tr><td><strong>TTFB</strong> — Time to First Byte</td><td>Server response speed</td><td>&lt; 800ms</td><td>&gt; 1.8s</td></tr>
+<tr><td><strong>FCP</strong> — First Contentful Paint</td><td>First pixel rendered</td><td>&lt; 1.8s</td><td>&gt; 3s</td></tr>
+</table>
+<pre><span class="cm">// Measure Core Web Vitals in code</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+onLCP(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+onINP(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+onCLS(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+
+<span class="cm">// Also available via PerformanceObserver (native browser API)</span>
+<span class="kw">new</span> PerformanceObserver((list) =&gt; {
+  list.getEntries().forEach(entry =&gt; <span class="fn">console</span>.log(entry));
+}).observe({ type: <span class="str">'largest-contentful-paint'</span>, buffered: <span class="kw">true</span> });</pre>
+<div class="tip">INP replaced FID as a Core Web Vital in 2024. FID measured only the first interaction; INP measures all interactions throughout the page lifetime.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Error tracking — Sentry in Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// main.ts — initialize before bootstrapApplication</span>
+<span class="kw">import</span> * as Sentry <span class="kw">from</span> <span class="str">'@sentry/angular'</span>;
+
+Sentry.init({
+  dsn: <span class="str">'https://...@sentry.io/...'</span>,
+  environment: <span class="str">'production'</span>,
+  release: <span class="str">'my-app@1.2.3'</span>,
+  integrations: [
+    Sentry.browserTracingIntegration(),   <span class="cm">// performance tracing</span>
+    Sentry.replayIntegration(),           <span class="cm">// session replay on error</span>
+  ],
+  tracesSampleRate: <span class="num">0.1</span>,    <span class="cm">// 10% of transactions</span>
+  replaysOnErrorSampleRate: <span class="num">1.0</span>,  <span class="cm">// 100% on errors</span>
+});
+
+<span class="cm">// app.config.ts — provide Angular error handler</span>
+{
+  provide: ErrorHandler,
+  useValue: Sentry.createErrorHandler({ showDialog: <span class="kw">false</span> })
+},
+{
+  provide: Sentry.TraceService,
+  deps: [Router]
+}
+
+<span class="cm">// Manual error capture with context</span>
+Sentry.withScope(scope =&gt; {
+  scope.setUser({ id: userId, email: userEmail });
+  scope.setTag(<span class="str">'feature'</span>, <span class="str">'checkout'</span>);
+  scope.setExtra(<span class="str">'cartItems'</span>, cartItems.length);
+  Sentry.captureException(error);
+});
+
+<span class="cm">// Source maps — upload at build time so Sentry shows original TS</span>
+<span class="cm">// sentry-cli releases files upload-sourcemaps ./dist</span></pre>
+<div class="tip">Without source maps, Sentry shows minified stack traces — useless. Always upload source maps to Sentry and keep them off the public server.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Performance monitoring & alerting strategy</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>What to monitor</th><th>Metric / Signal</th><th>Alert when</th></tr>
+<tr><td>JS errors</td><td>Error rate (errors / pageviews)</td><td>Rate increases &gt; baseline + 2σ</td></tr>
+<tr><td>Page load</td><td>LCP p75 (75th percentile)</td><td>&gt; 2.5s</td></tr>
+<tr><td>API calls</td><td>HTTP 4xx / 5xx rate, latency p95</td><td>5xx &gt; 1%, latency &gt; SLA</td></tr>
+<tr><td>User flow</td><td>Funnel drop-off, rage clicks</td><td>Checkout completion drops &gt; 5%</td></tr>
+<tr><td>Memory leaks</td><td>JS heap size over session</td><td>Heap grows monotonically</td></tr>
+</table>
+<pre><span class="cm">// Custom performance mark — measure a specific user flow</span>
+performance.mark(<span class="str">'checkout-start'</span>);
+<span class="cm">// ... do stuff</span>
+performance.mark(<span class="str">'checkout-end'</span>);
+performance.measure(<span class="str">'checkout-duration'</span>, <span class="str">'checkout-start'</span>, <span class="str">'checkout-end'</span>);
+
+<span class="kw">const</span> [measure] = performance.getEntriesByName(<span class="str">'checkout-duration'</span>);
+sendMetric({ name: <span class="str">'checkout.duration'</span>, value: measure.duration });
+
+<span class="cm">// Angular-specific: track CD performance with profiler (dev only)</span>
+<span class="cm">// import { enableProdMode } from '@angular/core';</span>
+<span class="cm">// Use Angular DevTools "Profiler" tab in Chrome</span></pre>
+<ul>
+<li><strong>p50 vs p95 vs p99</strong> — always monitor percentiles, not averages. A slow p99 affects 1% of users but may signal a real problem.</li>
+<li><strong>Alerting fatigue</strong> — alert on symptoms (user impact), not causes. "Error rate up 3x" &gt; "CPU at 80%".</li>
+<li><strong>Runbooks</strong> — every alert should link to a runbook: what it means, what to check, how to fix.</li>
+</ul>
 </div></div>
 </div>
 
