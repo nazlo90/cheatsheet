@@ -150,7 +150,7 @@ function navClick(e) {
 let _searchTimer, _savedState = new Map();
 function clearSearch() {
   const inp = document.getElementById('searchInput');
-  if (!inp.value) return;
+  if (!inp.value && !document.querySelector('.section.s-hide')) return;
   inp.value = '';
   document.getElementById('searchClear').style.display = 'none';
   document.getElementById('searchKbd').style.display = '';
@@ -191,7 +191,7 @@ function runSearch(q) {
   const countEl = document.getElementById('searchCount');
 
   if (!q) { clearSearch(); return; }
-  clearBtn.style.display = '';
+  clearBtn.style.display = 'inline';
   kbdEl.style.display = 'none';
 
   // save current open state
