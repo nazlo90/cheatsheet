@@ -1,6 +1,7 @@
 const CATS = [
   { id: 'javascript',       label: 'JavaScript Core'   },
   { id: 'typescript',       label: 'TypeScript'         },
+  { id: 'browser',          label: 'How Browsers Work'  },
   { id: 'web-apis',         label: 'Web APIs & Browser' },
   { id: 'rxjs',             label: 'RxJS'               },
   { id: 'angular',          label: 'Angular'            },

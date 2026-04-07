@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const cats = [
-  'javascript', 'typescript', 'web-apis', 'rxjs', 'angular',
+  'javascript', 'typescript', 'browser', 'web-apis', 'rxjs', 'angular',
   'state-management', 'oop-architecture', 'testing',
   'infrastructure', 'graphics', 'nodejs', 'nestjs', 'graphql',
 ];

@@ -1,0 +1,206 @@
+<!-- ===== NAVIGATION PHASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Navigation <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>DNS → TCP → TLS → First Byte</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>When a user navigates to a URL, the browser goes through several network steps before any HTML is received. Understanding this pipeline is key to diagnosing and optimizing load performance.</p>
+<table>
+<tr><th>Step</th><th>What happens</th><th>Cost</th></tr>
+<tr><td><strong>DNS Lookup</strong></td><td>Resolves hostname to IP address (e.g. <code>example.com</code> → <code>93.184.216.34</code>)</td><td>Cached after first lookup; mobile adds significant latency per unique hostname</td></tr>
+<tr><td><strong>TCP Handshake</strong></td><td>SYN → SYN-ACK → ACK establishes connection and negotiates parameters</td><td>3 messages = 3 round trips</td></tr>
+<tr><td><strong>TLS Negotiation</strong></td><td>Determines cipher, verifies certificate, establishes encrypted channel</td><td>5 more round trips — 8 total before any data</td></tr>
+<tr><td><strong>HTTP GET</strong></td><td>Browser sends request; server responds with first packet</td><td>First chunk ≈ 14 KB (TCP slow start limit)</td></tr>
+</table>
+<div class="warn-box"><strong>Mobile penalty:</strong> each unique hostname (fonts, scripts, CDNs, ads) requires its own DNS lookup — minimising the number of distinct domains reduces latency.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>TCP Slow Start &amp; TTFB</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Time to First Byte (TTFB)</strong> measures the gap between the user's request and the arrival of the first data packet — a key early indicator of server and network performance.</p>
+<p><strong>TCP Slow Start / Congestion Control</strong> governs how fast data can flow:</p>
+<ul>
+<li>Congestion Window (CWND) starts at 1–10 MSS (≈ 1500 bytes per segment on Ethernet)</li>
+<li>Each ACK received → CWND doubles (exponential increase)</li>
+<li>Packet loss / no ACK → CWND halves (exponential decrease)</li>
+<li>Result: first 14 KB arrives in one round trip; subsequent data grows gradually</li>
+</ul>
+<div class="warn-box">Put the most critical above-the-fold content in the first <strong>14 KB</strong> of the HTML response to leverage the first TCP window and enable an early First Contentful Paint.</div>
+</div></div>
+</div>
+
+<!-- ===== PARSING PHASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Parsing</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>DOM &amp; CSSOM construction</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>As HTML arrives, the browser's HTML parser tokenises it and builds the <strong>DOM tree</strong>. In parallel, CSS is parsed into a separate <strong>CSSOM tree</strong> (CSS Object Model). Both trees are required before rendering can begin.</p>
+<table>
+<tr><th></th><th>DOM</th><th>CSSOM</th></tr>
+<tr><td>Input</td><td>HTML bytes</td><td>CSS bytes</td></tr>
+<tr><td>Output</td><td>Node tree representing content &amp; hierarchy</td><td>Rule tree with computed styles</td></tr>
+<tr><td>Blocking?</td><td>Blocked by synchronous <code>&lt;script&gt;</code></td><td>Blocks rendering (not parsing)</td></tr>
+<tr><td>Speed</td><td>Incremental</td><td>Very fast — rarely a bottleneck</td></tr>
+</table>
+<pre><span class="cm">/* CSSOM applies cascade: general → specific */</span>
+body { font-size: 16px; }
+h1   { font-size: 2em; }   <span class="cm">/* inherits body, overrides size */</span>
+h1.hero { color: red; }   <span class="cm">/* more specific — applied last */</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>JavaScript parsing &amp; render blocking</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>A <code>&lt;script&gt;</code> tag without <code>async</code> or <code>defer</code> <strong>blocks both HTML parsing and rendering</strong>. The browser must fetch, parse, compile, and execute the script before resuming.</p>
+<table>
+<tr><th>Attribute</th><th>Download</th><th>Execution</th><th>Blocks parser?</th></tr>
+<tr><td>(none)</td><td>Synchronous</td><td>Immediately</td><td>Yes</td></tr>
+<tr><td><code>async</code></td><td>Parallel</td><td>As soon as ready</td><td>At execution only</td></tr>
+<tr><td><code>defer</code></td><td>Parallel</td><td>After DOM parsed</td><td>No</td></tr>
+</table>
+<pre><span class="cm">&lt;!-- Blocks parsing: --&gt;</span>
+&lt;script src="heavy.js"&gt;&lt;/script&gt;
+
+<span class="cm">&lt;!-- Non-blocking: --&gt;</span>
+&lt;script src="analytics.js" async&gt;&lt;/script&gt;
+&lt;script src="app.js" defer&gt;&lt;/script&gt;</pre>
+<div class="warn-box">CSS also indirectly blocks script execution — the browser will not run a <code>&lt;script&gt;</code> until the CSSOM is ready, because scripts may query computed styles.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Preload scanner</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>While the main thread is blocked (e.g. executing a script), a secondary <strong>preload scanner</strong> speculatively parses the raw HTML and dispatches early network requests for high-priority resources — CSS, scripts, fonts, images — before the main parser reaches them.</p>
+<pre><span class="cm">&lt;!-- Preload scanner will fetch styles.css and both scripts
+     even while the main parser is blocked on an earlier script --&gt;</span>
+&lt;link rel="stylesheet" href="styles.css"&gt;
+&lt;script src="app.js" async&gt;&lt;/script&gt;
+&lt;img src="hero.jpg" alt="Hero"&gt;
+&lt;script src="widget.js" async&gt;&lt;/script&gt;</pre>
+<p>The preload scanner is why moving scripts to the end of <code>&lt;body&gt;</code> or using <code>async</code>/<code>defer</code> still allows parallel resource discovery.</p>
+</div></div>
+</div>
+
+<!-- ===== RENDER PHASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Critical Rendering Path</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>6-step rendering pipeline</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>The <strong>Critical Rendering Path</strong> is the sequence of steps the browser performs to convert HTML, CSS, and JS into pixels on screen. Optimising it directly improves First Contentful Paint and interactivity.</p>
+<table>
+<tr><th>#</th><th>Step</th><th>Description</th></tr>
+<tr><td>1</td><td><strong>Style</strong></td><td>Combine DOM + CSSOM into a <em>render tree</em> — excludes <code>display:none</code> and <code>&lt;head&gt;</code> nodes; includes <code>visibility:hidden</code> (still occupies space)</td></tr>
+<tr><td>2</td><td><strong>Layout</strong></td><td>Calculate exact position and size of every node in the render tree (first run = <em>layout</em>; subsequent = <em>reflow</em>)</td></tr>
+<tr><td>3</td><td><strong>Paint</strong></td><td>Convert boxes to pixel instructions: text, colours, borders, shadows. Targets 60 FPS → ≤ 16.67 ms per frame</td></tr>
+<tr><td>4</td><td><strong>Composite</strong></td><td>When elements overlap across layers, composite them in the correct order — often GPU-accelerated</td></tr>
+</table>
+<pre><span class="cm">/* Triggering each stage costs differently */</span>
+el.style.width = <span class="str">'200px'</span>;   <span class="cm">// Layout + Paint + Composite (expensive)</span>
+el.style.color = <span class="str">'red'</span>;     <span class="cm">// Paint + Composite</span>
+el.style.transform = <span class="str">'translateX(10px)'</span>; <span class="cm">// Composite only (cheapest)</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Layers &amp; compositing</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>The browser automatically promotes certain elements to their own <strong>compositor layer</strong>, painted on the GPU. This avoids re-painting the entire page and frees the main thread.</p>
+<p><strong>Elements that get their own layer:</strong></p>
+<ul>
+<li><code>&lt;video&gt;</code>, <code>&lt;canvas&gt;</code></li>
+<li><code>opacity</code>, 3D <code>transform</code></li>
+<li><code>will-change: transform</code> (explicit hint)</li>
+<li>Elements with a <code>position: fixed</code> ancestor</li>
+</ul>
+<pre><span class="cm">/* Promote to GPU layer for smooth animation */</span>
+.animated {
+  will-change: transform;  <span class="cm">/* hint to browser */</span>
+  transform: translateZ(0); <span class="cm">/* also forces layer (hack, prefer will-change) */</span>
+}
+<span class="cm">/* Remove hint after animation ends to free memory */</span>
+el.style.willChange = <span class="str">'auto'</span>;</pre>
+<div class="warn-box">Each layer consumes GPU memory. Promoting everything is counter-productive — use layers only for elements that <em>actually</em> animate or need isolation.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Reflow &amp; repaint — what triggers them</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Reflow (Layout)</strong> is the most expensive operation — it forces the browser to recalculate positions for potentially the entire document.</p>
+<table>
+<tr><th>Trigger</th><th>Stage triggered</th></tr>
+<tr><td>Change <code>width</code>, <code>height</code>, <code>margin</code>, <code>padding</code>, <code>font-size</code></td><td>Layout → Paint → Composite</td></tr>
+<tr><td>Change <code>color</code>, <code>background</code>, <code>box-shadow</code></td><td>Paint → Composite</td></tr>
+<tr><td>Change <code>transform</code>, <code>opacity</code> (on a composited layer)</td><td>Composite only</td></tr>
+<tr><td>Read <code>offsetWidth</code>, <code>getBoundingClientRect()</code></td><td>Forces synchronous layout (layout thrashing)</td></tr>
+</table>
+<pre><span class="cm">// Layout thrashing — avoid</span>
+elements.forEach(el =&gt; {
+  <span class="kw">const</span> width = el.offsetWidth; <span class="cm">// forces layout</span>
+  el.style.width = width * <span class="num">2</span> + <span class="str">'px'</span>; <span class="cm">// invalidates layout → cycle repeats</span>
+});
+
+<span class="cm">// Correct — batch reads, then writes</span>
+<span class="kw">const</span> widths = elements.map(el =&gt; el.offsetWidth); <span class="cm">// one layout</span>
+elements.forEach((el, i) =&gt; el.style.width = widths[i] * <span class="num">2</span> + <span class="str">'px'</span>);
+
+<span class="cm">// Also: define image dimensions to prevent reflow on load</span>
+&lt;img src="photo.jpg" width="800" height="600" alt="..."&gt;</pre>
+</div></div>
+</div>
+
+<!-- ===== INTERACTIVITY ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Interactivity &amp; Performance Metrics</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Time to Interactive &amp; main thread</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Time to Interactive (TTI)</strong> measures when the page can reliably respond to user input within <strong>50 ms</strong> after First Contentful Paint. A page can look ready but still be unresponsive if the main thread is busy.</p>
+<p>Main thread blockers after <code>DOMContentLoaded</code>:</p>
+<ul>
+<li>JavaScript parsing, compilation, and execution (including deferred scripts)</li>
+<li>Long tasks (&gt; 50 ms) prevent input handling</li>
+<li>Heavy synchronous layout/reflow chains</li>
+</ul>
+<pre><span class="cm">// Break up long tasks with scheduler or setTimeout</span>
+<span class="kw">async function</span> <span class="fn">processLargeList</span>(items) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; items.length; i++) {
+    <span class="fn">processItem</span>(items[i]);
+    <span class="kw">if</span> (i % <span class="num">100</span> === <span class="num">0</span>) <span class="kw">await</span> <span class="kw">new</span> Promise(r =&gt; setTimeout(r, <span class="num">0</span>)); <span class="cm">// yield</span>
+  }
+}</pre>
+<div class="warn-box">A 2 MB JavaScript bundle on a slow connection means the user sees a rendered page but cannot interact — scrolling janks, taps are ignored. <strong>Defer and code-split non-critical JS.</strong></div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Key performance metrics</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Metric</th><th>Measures</th><th>Target</th></tr>
+<tr><td><strong>TTFB</strong></td><td>Server + network speed to first byte</td><td>&lt; 800 ms</td></tr>
+<tr><td><strong>FCP</strong> (First Contentful Paint)</td><td>First text/image rendered</td><td>&lt; 1.8 s</td></tr>
+<tr><td><strong>LCP</strong> (Largest Contentful Paint)</td><td>Largest above-fold element rendered</td><td>&lt; 2.5 s</td></tr>
+<tr><td><strong>TTI</strong> (Time to Interactive)</td><td>Page reliably responds to input</td><td>&lt; 3.8 s</td></tr>
+<tr><td><strong>TBT</strong> (Total Blocking Time)</td><td>Sum of long-task blocking time</td><td>&lt; 200 ms</td></tr>
+<tr><td><strong>CLS</strong> (Cumulative Layout Shift)</td><td>Visual stability / unexpected shifts</td><td>&lt; 0.1</td></tr>
+<tr><td><strong>Frame rate</strong></td><td>Paint + composite cycle</td><td>60 FPS = 16.67 ms/frame</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Browser rendering pipeline — full summary</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">Navigation</span>
+  └─ DNS lookup  →  TCP handshake  →  TLS negotiation
+       └─ HTTP GET  →  TTFB  →  14 KB first chunk
+
+<span class="cm">Parsing</span>
+  ├─ HTML  →  DOM tree
+  ├─ CSS   →  CSSOM tree         (blocks rendering)
+  ├─ JS    →  parse / compile    (blocks parsing if sync)
+  └─ AOM (Accessibility tree)   (mirrors DOM semantically)
+
+<span class="cm">Rendering (Critical Rendering Path)</span>
+  ├─ Style   →  Render tree  (DOM + CSSOM, visible nodes only)
+  ├─ Layout  →  box geometry  (reflow on changes)
+  ├─ Paint   →  pixel instructions per layer
+  └─ Composite  →  GPU merge, correct z-order
+
+<span class="cm">Interactivity</span>
+  └─ TTI: main thread idle, responds to input &lt; 50 ms</pre>
+<p><strong>Optimisation checklist:</strong></p>
+<ul>
+<li>Consolidate domains to reduce DNS lookups</li>
+<li>Fit critical content in first 14 KB of HTML</li>
+<li>Use <code>async</code>/<code>defer</code> on non-critical scripts</li>
+<li>Always set <code>width</code>/<code>height</code> on images to prevent layout shift</li>
+<li>Prefer <code>transform</code>/<code>opacity</code> animations (composite-only)</li>
+<li>Batch DOM reads before DOM writes to avoid layout thrashing</li>
+<li>Use <code>will-change</code> sparingly for GPU-accelerated layers</li>
+<li>Code-split and defer large JS bundles to improve TTI</li>
+</ul>
+</div></div>
+</div>
