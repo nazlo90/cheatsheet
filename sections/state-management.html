@@ -1,3 +1,59 @@
+<!-- ===== STATE MANAGEMENT COMPARISON ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">State Management Comparison <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NgRx vs SignalStore vs ComponentStore vs Akita vs BehaviorSubject</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>NgRx Store</th><th>NgRx SignalStore</th><th>ComponentStore</th><th>Akita</th><th>BehaviorSubject service</th></tr>
+<tr><td>API style</td><td>Actions/Reducers/Effects</td><td>Signals + methods</td><td>RxJS + updater/effect</td><td>Store class + query</td><td>Manual RxJS</td></tr>
+<tr><td>Boilerplate</td><td>High</td><td>Low</td><td>Medium</td><td>Medium</td><td>Minimal</td></tr>
+<tr><td>Scope</td><td>Global</td><td>Feature/global</td><td>Component-local</td><td>Global/feature</td><td>Service lifetime</td></tr>
+<tr><td>DevTools</td><td>Full time-travel</td><td>Basic</td><td>None</td><td>Akita DevTools</td><td>None</td></tr>
+<tr><td>Reactivity</td><td>RxJS Observables</td><td>Signals</td><td>RxJS Observables</td><td>RxJS Observables</td><td>RxJS</td></tr>
+<tr><td>Best for</td><td>Large, complex global state</td><td>Feature state, modern apps</td><td>Local component state</td><td>Entity-heavy CRUD apps</td><td>Simple shared state</td></tr>
+</table>
+<div class="tip">When does global state become a liability? When every small UI tweak (a tooltip open/close, tab selection) goes through actions and reducers — that's a sign to use component-local state (ComponentStore or Signals) instead.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ComponentStore — local, reactive state</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// ComponentStore: local state for a smart component — no global store needed</span>
+<span class="kw">import</span> { ComponentStore } <span class="kw">from</span> <span class="str">'@ngrx/component-store'</span>;
+
+<span class="kw">interface</span> <span class="cls">TodoState</span> { todos: Todo[]; loading: <span class="kw">boolean</span>; }
+
+@Injectable()
+<span class="kw">class</span> <span class="cls">TodoStore</span> <span class="kw">extends</span> ComponentStore&lt;TodoState&gt; {
+  constructor() { super({ todos: [], loading: <span class="kw">false</span> }); }
+
+  <span class="cm">// Selector — slice of state as Observable</span>
+  <span class="kw">readonly</span> todos$ = <span class="kw">this</span>.select(s =&gt; s.todos);
+  <span class="kw">readonly</span> loading$ = <span class="kw">this</span>.select(s =&gt; s.loading);
+
+  <span class="cm">// Updater — synchronous state mutation</span>
+  <span class="kw">readonly</span> addTodo = <span class="kw">this</span>.updater((state, todo: Todo) =&gt; ({
+    ...state, todos: [...state.todos, todo]
+  }));
+
+  <span class="cm">// Effect — handles async side-effects</span>
+  <span class="kw">readonly</span> loadTodos = <span class="kw">this</span>.effect&lt;<span class="kw">void</span>&gt;($ =&gt;
+    $.pipe(
+      tap(() =&gt; <span class="kw">this</span>.patchState({ loading: <span class="kw">true</span> })),
+      switchMap(() =&gt; <span class="kw">this</span>.http.get&lt;Todo[]&gt;(<span class="str">'/api/todos'</span>).pipe(
+        tap(todos =&gt; <span class="kw">this</span>.patchState({ todos, loading: <span class="kw">false</span> }))
+      ))
+    )
+  );
+}
+
+<span class="cm">// Usage: provide in component — destroyed with component</span>
+@Component({ providers: [TodoStore] })
+<span class="kw">class</span> <span class="cls">TodoComponent</span> {
+  <span class="kw">readonly</span> store = inject(TodoStore);
+  todos$ = <span class="kw">this</span>.store.todos$;
+}</pre>
+</div></div>
+</div>
+
 <!-- ===== NGRX ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">NgRx Full Guide <span class="badge b-key">State</span></div></div>

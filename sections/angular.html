@@ -426,13 +426,36 @@ RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })
 <li><strong>Web Workers</strong> — offload heavy computation</li>
 <li><strong>HTTP caching</strong> — <code>shareReplay(1)</code> on HTTP calls</li>
 </ul>
-<pre><span class="cm">// Virtual scroll</span>
-<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height: 400px"&gt;</span>
-<span class="cm">//   &lt;div *cdkVirtualFor="let item of items"&gt;{{ item }}&lt;/div&gt;</span>
+<pre><span class="cm">// HTTP caching</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Large list rendering — virtual scroll vs pagination vs infinite scroll</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>Virtual Scroll (CDK)</th><th>Pagination</th><th>Infinite Scroll</th></tr>
+<tr><td>DOM nodes</td><td>Fixed window (~10–20 rendered)</td><td>One page at a time</td><td>Grows with load</td></tr>
+<tr><td>Memory usage</td><td>Constant ✓</td><td>Constant ✓</td><td>Grows over time ✗</td></tr>
+<tr><td>UX</td><td>Seamless scroll</td><td>Explicit navigation</td><td>Seamless, exploratory</td></tr>
+<tr><td>Deep linking</td><td>Hard (position not in URL)</td><td>Easy ✓ (page in URL)</td><td>Hard</td></tr>
+<tr><td>Item height</td><td>Best with fixed height</td><td>Any</td><td>Any</td></tr>
+<tr><td>When to use</td><td>Real-time feeds, logs, fixed-height rows</td><td>Search results, tables with sorting</td><td>Social feeds, content discovery</td></tr>
+</table>
+<pre><span class="cm">// CDK Virtual Scroll — renders only visible rows</span>
+<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height:400px"&gt;</span>
+<span class="cm">//   &lt;div *cdkVirtualFor="let item of items; trackBy: trackById"&gt;</span>
+<span class="cm">//     {{ item.name }}</span>
+<span class="cm">//   &lt;/div&gt;</span>
 <span class="cm">// &lt;/cdk-virtual-scroll-viewport&gt;</span>
 
-<span class="cm">// HTTP caching</span>
-users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+<span class="cm">// Variable-height rows — use AutoSizeVirtualScrollStrategy</span>
+<span class="cm">// from @angular/cdk-experimental/scrolling (experimental)</span>
+
+<span class="cm">// Infinite scroll trigger — IntersectionObserver on sentinel element</span>
+<span class="kw">const</span> sentinel = document.querySelector(<span class="str">'#sentinel'</span>);
+<span class="kw">new</span> IntersectionObserver(([entry]) =&gt; {
+  <span class="kw">if</span> (entry.isIntersecting) <span class="kw">this</span>.loadNextPage();
+}).observe(sentinel!);</pre>
+<div class="tip">For 10k+ items: virtual scroll is the only option that keeps memory and render time constant. Pagination wins for SEO and deep-linking. Infinite scroll is UX-friendly but loses back-button position.</div>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>@defer — deferred loading (Angular 17+)</h3><span class="arrow">▶</span></div>
 <div class="cb">
@@ -449,6 +472,44 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 
 <span class="cm">// Triggers: on idle, on viewport, on interaction, on hover, on immediate</span>
 <span class="cm">// when (condition)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== IVY COMPILER ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Ivy Compiler vs View Engine <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Compilation model difference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>View Engine (pre-Angular 9)</th><th>Ivy (Angular 9+, default)</th></tr>
+<tr><td>Compilation model</td><td>Global — NgFactory files, requires full app context</td><td>Incremental — each component compiled independently</td></tr>
+<tr><td>Bundle size</td><td>Large — includes framework runtime per component</td><td>Smaller — tree-shakes unused framework parts</td></tr>
+<tr><td>Locality principle</td><td>No — compiler needs full module graph</td><td>Yes — component only needs its own metadata</td></tr>
+<tr><td>SSR</td><td>Complex, separate bundles needed</td><td>Native — same code runs on server and browser</td></tr>
+<tr><td>Debugging</td><td>Limited — compiled templates opaque</td><td><code>ng.getComponent()</code>, better stack traces</td></tr>
+<tr><td>Template type-checking</td><td>Basic</td><td>Full strict type checking (<code>strictTemplates</code>)</td></tr>
+<tr><td>Lazy loading</td><td>NgModule-based only</td><td>Standalone components — no NgModule required</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Incremental DOM — how Ivy updates the DOM</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Ivy uses an <strong>incremental DOM</strong> approach: instructions are emitted per-component and walk the DOM in-place rather than creating a virtual DOM tree. This means:</p>
+<ul>
+<li><strong>Memory</strong> — no full virtual DOM snapshot in memory; only allocates what changes</li>
+<li><strong>Tree-shaking</strong> — unused rendering instructions (e.g., <code>ɵɵlistener</code>, <code>ɵɵtext</code>) are dropped from the bundle</li>
+<li><strong>Bundle size</strong> — small apps see biggest gains; runtime scales with used features, not framework size</li>
+<li><strong>SSR</strong> — same component code renders on server via platform-server; <code>provideClientHydration()</code> reuses server DOM without full re-render</li>
+</ul>
+<pre><span class="cm">// Ivy-compiled component emits instruction sequences like:</span>
+<span class="cm">// ɵɵelementStart(0, 'div')  ɵɵtext(1)  ɵɵelementEnd()</span>
+<span class="cm">// ɵɵadvance(1); ɵɵtextInterpolate(ctx.title)</span>
+<span class="cm">// These run IN the existing DOM — no diffing algorithm needed</span>
+
+<span class="cm">// Non-destructive hydration (Angular 17+)</span>
+bootstrapApplication(AppComponent, {
+  providers: [provideClientHydration()]  <span class="cm">// reuses SSR DOM, no flicker</span>
+});</pre>
+<div class="tip">Ivy's locality enables Angular libraries to ship pre-compiled. <code>strictTemplates: true</code> in tsconfig catches template type errors at build time — use it.</div>
 </div></div>
 </div>
 
@@ -470,6 +531,57 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 </div></div>
 </div>
 
+<!-- ===== NX MONOREPO ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Nx Monorepo & Module Boundaries <span class="badge b-key">Architecture</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Library taxonomy + dependency rules</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>In an Nx monorepo, libraries are categorized by <strong>type</strong> and <strong>scope</strong> — linting rules enforce that lower-level libs never depend on higher-level ones, preventing the "big ball of mud".</p>
+<table>
+<tr><th>Library type</th><th>Contains</th><th>Can depend on</th><th>Cannot depend on</th></tr>
+<tr><td><strong>feature</strong></td><td>Smart/container components, routing</td><td>ui, data-access, util</td><td>Other app's features</td></tr>
+<tr><td><strong>ui</strong></td><td>Presentational (dumb) components</td><td>ui, util</td><td>data-access, feature</td></tr>
+<tr><td><strong>data-access</strong></td><td>Services, HTTP, state stores</td><td>util, data-access</td><td>ui, feature</td></tr>
+<tr><td><strong>util</strong></td><td>Pure functions, pipes, constants</td><td>util only</td><td>Everything else</td></tr>
+</table>
+<pre><span class="cm">// nx.json — enforce boundaries with ESLint</span>
+<span class="cm">// "@nx/enforce-module-boundaries" rule in .eslintrc.json:</span>
+{
+  <span class="str">"depConstraints"</span>: [
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:ui"</span>,          <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:ui"</span>, <span class="str">"type:util"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:feature"</span>,     <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:ui"</span>, <span class="str">"type:data-access"</span>, <span class="str">"type:util"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:data-access"</span>, <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:util"</span>, <span class="str">"type:data-access"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"scope:admin"</span>,      <span class="str">"notDependOnLibsWithTags"</span>:  [<span class="str">"scope:shop"</span>] }
+  ]
+}
+
+<span class="cm">// library tags in project.json</span>
+{ <span class="str">"tags"</span>: [<span class="str">"scope:shared"</span>, <span class="str">"type:ui"</span>] }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Nx project graph + key commands</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Typical monorepo structure</span>
+<span class="cm">// apps/</span>
+<span class="cm">//   admin-app/         ← full Angular application</span>
+<span class="cm">//   shop-app/</span>
+<span class="cm">// libs/</span>
+<span class="cm">//   shared/ui/         ← type:ui, scope:shared</span>
+<span class="cm">//   shared/util/       ← type:util, scope:shared</span>
+<span class="cm">//   admin/feature-users/  ← type:feature, scope:admin</span>
+<span class="cm">//   admin/data-access-users/ ← type:data-access, scope:admin</span>
+
+<span class="cm">// Affected commands — only rebuild/test changed code</span>
+nx affected:build    <span class="cm">// build only libs/apps affected by git diff</span>
+nx affected:test     <span class="cm">// test only affected</span>
+nx graph             <span class="cm">// open visual dependency graph in browser</span>
+nx lint my-lib       <span class="cm">// check boundary violations</span>
+
+<span class="cm">// Generate a new library</span>
+nx g @nx/angular:lib shared/ui-buttons --tags="scope:shared,type:ui"</pre>
+<div class="tip">The project graph (<code>nx graph</code>) visualizes which libs depend on what — use it in PRs to spot boundary violations. <code>nx affected</code> is the key CI benefit: 10 apps → only rebuild the 2 that changed.</div>
+</div></div>
+</div>
+
 <!-- ===== DIRECTIVE COMP ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Directive Composition API <span class="badge b-ng">Angular 15+</span></div></div>
@@ -486,6 +598,66 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 })
 <span class="kw">class</span> <span class="cls">ButtonComponent</span> {}</pre>
 <div class="tip">Replaces base-class inheritance. Great for: accessibility, analytics, validation, theming. Composable + tree-shakeable.</div>
+</div></div>
+</div>
+
+<!-- ===== VIEWCHILD / CONTENTCHILD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">ViewChild, ContentChild & ViewContainerRef <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ViewChild vs ContentChild vs ViewContainerRef</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>ViewChild</th><th>ContentChild</th><th>ViewContainerRef</th></tr>
+<tr><td>What it queries</td><td>Elements in own template</td><td>Projected content (<code>ng-content</code>)</td><td>Anchor for dynamic views</td></tr>
+<tr><td>Available from</td><td><code>ngAfterViewInit</code></td><td><code>ngAfterContentInit</code></td><td>Injected via DI or <code>@ViewChild</code></td></tr>
+<tr><td>Typical use</td><td>DOM access, child component API</td><td>Wrap content, expose projected state</td><td>Dynamic component/template creation</td></tr>
+</table>
+<pre><span class="cm">// ViewChild — access child component or DOM element</span>
+@Component({ template: <span class="str">`&lt;canvas #myCanvas&gt;&lt;/canvas&gt; &lt;app-chart #chart /&gt;`</span> })
+<span class="kw">class</span> <span class="cls">DashboardComponent</span> <span class="kw">implements</span> AfterViewInit {
+  @ViewChild(<span class="str">'myCanvas'</span>) canvas!: ElementRef&lt;HTMLCanvasElement&gt;;
+  @ViewChild(ChartComponent) chart!: ChartComponent;  <span class="cm">// by type</span>
+
+  ngAfterViewInit() {
+    <span class="cm">// canvas and chart are guaranteed to exist here</span>
+    <span class="kw">this</span>.chart.render(<span class="kw">this</span>.data);
+  }
+}
+
+<span class="cm">// ContentChild — access projected content</span>
+@Component({
+  selector: <span class="str">'app-panel'</span>,
+  template: <span class="str">`&lt;div class="panel"&gt;&lt;ng-content /&gt;&lt;/div&gt;`</span>
+})
+<span class="kw">class</span> <span class="cls">PanelComponent</span> <span class="kw">implements</span> AfterContentInit {
+  @ContentChild(PanelHeaderComponent) header?: PanelHeaderComponent;
+
+  ngAfterContentInit() {
+    <span class="cm">// projected child available here, not in ngAfterViewInit</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.header) <span class="kw">this</span>.header.highlight();
+  }
+}
+
+<span class="cm">// ViewContainerRef — create components dynamically</span>
+@Component({ template: <span class="str">`&lt;ng-template #anchor&gt;&lt;/ng-template&gt;`</span> })
+<span class="kw">class</span> <span class="cls">HostComponent</span> {
+  @ViewChild(<span class="str">'anchor'</span>, { read: ViewContainerRef }) vcr!: ViewContainerRef;
+
+  loadDialog() {
+    <span class="kw">this</span>.vcr.clear();
+    <span class="kw">const</span> ref = <span class="kw">this</span>.vcr.createComponent(DialogComponent);
+    ref.instance.title = <span class="str">'Hello'</span>;
+    ref.instance.closed.subscribe(() =&gt; ref.destroy());
+  }
+}
+
+<span class="cm">// ViewContainerRef injected directly — current host becomes anchor</span>
+@Directive({ selector: <span class="str">'[appDynamic]'</span> })
+<span class="kw">class</span> <span class="cls">DynamicDirective</span> {
+  <span class="kw">private</span> vcr = inject(ViewContainerRef);
+  create() { <span class="kw">this</span>.vcr.createComponent(TooltipComponent); }
+}</pre>
+<div class="tip"><code>ViewChildren</code> / <code>ContentChildren</code> (plural) return a <code>QueryList</code> — subscribe to <code>.changes</code> for dynamic list updates. Use <code>{ static: true }</code> on <code>@ViewChild</code> only if you need it in <code>ngOnInit</code>.</div>
 </div></div>
 </div>
 

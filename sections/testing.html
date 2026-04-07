@@ -1,3 +1,139 @@
+<!-- ===== TESTBED VS ISOLATED ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TestBed vs Isolated Unit Testing <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>When to use each approach</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>TestBed (integration-style)</th><th>Isolated unit test</th></tr>
+<tr><td>Angular module</td><td>Yes — bootstraps Angular DI + CD</td><td>No — plain TypeScript</td></tr>
+<tr><td>Speed</td><td>Slower (compilation per test)</td><td>Fast ✓</td></tr>
+<tr><td>Tests</td><td>Template rendering, DI, CD, routing</td><td>Pure logic, pipes, services</td></tr>
+<tr><td>When to use</td><td>Components with template interactions</td><td>Services, pipes, pure functions</td></tr>
+</table>
+<pre><span class="cm">// ─── TestBed — component with template ────────────────────</span>
+describe(<span class="str">'UserCardComponent'</span>, () =&gt; {
+  <span class="kw">let</span> fixture: ComponentFixture&lt;UserCardComponent&gt;;
+  <span class="kw">let</span> svc: jasmine.SpyObj&lt;UsersService&gt;;
+
+  beforeEach(<span class="kw">async</span> () =&gt; {
+    svc = jasmine.createSpyObj(<span class="str">'UsersService'</span>, [<span class="str">'getUser'</span>]);
+    <span class="kw">await</span> TestBed.configureTestingModule({
+      imports: [UserCardComponent],
+      providers: [{ provide: UsersService, useValue: svc }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UserCardComponent);
+  });
+
+  it(<span class="str">'displays user name'</span>, () =&gt; {
+    fixture.componentInstance.user = { name: <span class="str">'Alice'</span> };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector(<span class="str">'.name'</span>).textContent).toContain(<span class="str">'Alice'</span>);
+  });
+});
+
+<span class="cm">// ─── Isolated — service, no Angular overhead ──────────────</span>
+describe(<span class="str">'CartService'</span>, () =&gt; {
+  <span class="kw">let</span> service: CartService;
+
+  beforeEach(() =&gt; {
+    service = <span class="kw">new</span> CartService();  <span class="cm">// plain instantiation</span>
+  });
+
+  it(<span class="str">'calculates total'</span>, () =&gt; {
+    service.add({ price: <span class="num">10</span>, qty: <span class="num">2</span> });
+    expect(service.total()).toBe(<span class="num">20</span>);
+  });
+});</pre>
+<ul>
+<li><strong>Testing pyramid:</strong> Many unit → fewer integration → few E2E</li>
+<li><strong>AAA:</strong> Arrange → Act → Assert</li>
+<li><strong>Test behavior, not implementation</strong></li>
+<li>Use <code>HttpClientTestingModule</code> + <code>HttpTestingController</code> for HTTP</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== ASYNC TESTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Async Testing — fakeAsync & RxJS Marbles <span class="badge b-key">Testing</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>fakeAsync / tick — control time in tests</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><code>fakeAsync</code> runs the test body in a fake async zone — <code>tick(ms)</code> advances virtual time, letting you test <code>setTimeout</code>, <code>debounceTime</code>, and Promises synchronously.</p>
+<pre><span class="cm">// fakeAsync + tick — test debounced search</span>
+it(<span class="str">'debounces search input'</span>, fakeAsync(() =&gt; {
+  <span class="kw">const</span> results: string[][] = [];
+  component.searchResults$.subscribe(r =&gt; results.push(r));
+
+  component.searchControl.setValue(<span class="str">'ng'</span>);
+  tick(<span class="num">200</span>);                 <span class="cm">// not enough — debounceTime(300)</span>
+  expect(results.length).toBe(<span class="num">0</span>);
+
+  tick(<span class="num">100</span>);                 <span class="cm">// total 300ms — fires now</span>
+  expect(results.length).toBe(<span class="num">1</span>);
+  discardPeriodicTasks();   <span class="cm">// clean up any pending intervals</span>
+}));
+
+<span class="cm">// flushMicrotasks — for Promises / async/await</span>
+it(<span class="str">'resolves promise'</span>, fakeAsync(() =&gt; {
+  <span class="kw">let</span> result = <span class="str">''</span>;
+  Promise.resolve(<span class="str">'hello'</span>).then(v =&gt; result = v);
+  flushMicrotasks();
+  expect(result).toBe(<span class="str">'hello'</span>);
+}));
+
+<span class="cm">// waitForAsync — for real async (HttpClient, compileComponents)</span>
+it(<span class="str">'loads component'</span>, waitForAsync(() =&gt; {
+  fixture.detectChanges();
+  fixture.whenStable().then(() =&gt; {
+    expect(fixture.nativeElement.textContent).toContain(<span class="str">'Alice'</span>);
+  });
+}));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>RxJS Marble testing — visualize streams</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Marble syntax describes observable timelines as ASCII strings — perfect for testing complex operator chains without real timers.</p>
+<pre><span class="cm">// Marble syntax: - = 10ms frame, | = complete, # = error, letters = values</span>
+<span class="cm">// 'a--b--c|'  means: emit a, wait 20ms, emit b, wait 20ms, emit c, complete</span>
+
+<span class="kw">import</span> { TestScheduler } <span class="kw">from</span> <span class="str">'rxjs/testing'</span>;
+
+describe(<span class="str">'switchMap operator'</span>, () =&gt; {
+  <span class="kw">let</span> scheduler: TestScheduler;
+
+  beforeEach(() =&gt; {
+    scheduler = <span class="kw">new</span> TestScheduler((actual, expected) =&gt; {
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  it(<span class="str">'cancels previous inner observable'</span>, () =&gt; {
+    scheduler.run(({ cold, hot, expectObservable }) =&gt; {
+      <span class="kw">const</span> source$  = hot(<span class="str">'a--b------'</span>);            <span class="cm">// user types 'a', then 'b'</span>
+      <span class="kw">const</span> innerA$  = cold(<span class="str">'--x|'</span>);                  <span class="cm">// response for 'a'</span>
+      <span class="kw">const</span> innerB$  = cold(<span class="str">'--y|'</span>);                  <span class="cm">// response for 'b'</span>
+      <span class="kw">const</span> expected = <span class="str">'-----y----'</span>;                  <span class="cm">// 'a' cancelled, only 'b' result</span>
+
+      <span class="kw">const</span> result$ = source$.pipe(
+        switchMap(v =&gt; v === <span class="str">'a'</span> ? innerA$ : innerB$)
+      );
+
+      expectObservable(result$).toBe(expected, { y: <span class="str">'result-b'</span> });
+    });
+  });
+});</pre>
+<table>
+<tr><th>Symbol</th><th>Meaning</th></tr>
+<tr><td><code>-</code></td><td>One virtual time frame (10ms)</td></tr>
+<tr><td><code>a</code>–<code>z</code></td><td>Emitted value (mapped via values object)</td></tr>
+<tr><td><code>|</code></td><td>Complete</td></tr>
+<tr><td><code>#</code></td><td>Error</td></tr>
+<tr><td><code>^</code></td><td>Subscription point (hot observables)</td></tr>
+<tr><td><code>!</code></td><td>Unsubscription point</td></tr>
+</table>
+<div class="tip">Use <code>cold()</code> for HTTP-like observables (start fresh per subscriber). Use <code>hot()</code> for shared streams like user events. Marbles make complex timing bugs immediately visible.</div>
+</div></div>
+</div>
+
 <!-- ===== UNIT TESTING ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Unit Testing & Jasmine <span class="badge b-key">Testing</span></div></div>

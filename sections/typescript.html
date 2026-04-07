@@ -79,6 +79,50 @@ b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</sp
 </div></div>
 </div>
 
+<!-- ===== STRUCTURAL TYPING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Structural vs Nominal Typing <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Duck typing — shape over name</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>TypeScript uses <strong>structural typing</strong>: compatibility is based on the <em>shape</em> of a type (its properties), not the name or declaration. Two types with the same structure are assignable to each other even if unrelated.</p>
+<pre><span class="cm">// Structural typing — shape matches = compatible</span>
+<span class="kw">interface</span> <span class="cls">Point</span> { x: number; y: number; }
+<span class="kw">class</span> <span class="cls">Vector</span> { x = <span class="num">0</span>; y = <span class="num">0</span>; }
+
+<span class="kw">const</span> p: Point = <span class="kw">new</span> Vector();  <span class="cm">// ✓ — same shape</span>
+
+<span class="cm">// Excess property check — only on object LITERALS</span>
+<span class="kw">const</span> p2: Point = { x: <span class="num">1</span>, y: <span class="num">2</span>, z: <span class="num">3</span> };  <span class="cm">// ✗ Error — extra prop z</span>
+<span class="kw">const</span> obj = { x: <span class="num">1</span>, y: <span class="num">2</span>, z: <span class="num">3</span> };
+<span class="kw">const</span> p3: Point = obj;               <span class="cm">// ✓ — not a literal, no excess check</span>
+
+<span class="cm">// Angular service impact — structural typing means two services</span>
+<span class="cm">// with identical public APIs are interchangeable at the type level:</span>
+<span class="kw">class</span> <span class="cls">RealAuthService</span>  { isLoggedIn() { <span class="kw">return true</span>; } }
+<span class="kw">class</span> <span class="cls">MockAuthService</span>  { isLoggedIn() { <span class="kw">return false</span>; } }
+<span class="cm">// TestBed can swap them without a shared interface — structural match is enough</span>
+
+<span class="cm">// Nominal typing simulation — use branded types to prevent accidental mixing</span>
+<span class="kw">type</span> UserId  = string &amp; { <span class="kw">readonly</span> _brand: <span class="str">'UserId'</span>  };
+<span class="kw">type</span> OrderId = string &amp; { <span class="kw">readonly</span> _brand: <span class="str">'OrderId'</span> };
+
+<span class="kw">function</span> <span class="fn">asUserId</span>(id: string): UserId { <span class="kw">return</span> id <span class="kw">as</span> UserId; }
+
+<span class="kw">function</span> <span class="fn">getUser</span>(id: UserId) { <span class="cm">/* ... */</span> }
+<span class="kw">const</span> orderId = <span class="fn">asOrderId</span>(<span class="str">'abc'</span>);
+<span class="fn">getUser</span>(orderId);  <span class="cm">// ✗ Error — OrderId is not assignable to UserId</span>
+<span class="cm">// Without branding: both are string → silently accepted</span></pre>
+<table>
+<tr><th></th><th>Structural (TypeScript)</th><th>Nominal (Java, C#)</th></tr>
+<tr><td>Compatibility check</td><td>Shape of properties</td><td>Explicit class/interface name</td></tr>
+<tr><td>Two identical shapes</td><td>Always compatible ✓</td><td>Not compatible without declaration</td></tr>
+<tr><td>Testing benefit</td><td>Mock by shape — no shared interface needed</td><td>Must implement the same interface</td></tr>
+<tr><td>Risk</td><td>Accidental compatibility (UserId ↔ OrderId)</td><td>Boilerplate, rigid hierarchies</td></tr>
+</table>
+<div class="tip">Use <strong>branded types</strong> when domain correctness matters (IDs, currencies, units). Use structural typing freely for mocks and DTOs — it's a feature, not a bug.</div>
+</div></div>
+</div>
+
 <!-- ===== ADVANCED TS ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Advanced TypeScript <span class="badge b-ng">TS</span></div></div>
@@ -131,5 +175,41 @@ b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</sp
 <span class="cm">// Deep partial (recursive)</span>
 <span class="kw">type</span> DeepPartial&lt;T&gt; = T <span class="kw">extends</span> object
   ? { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: DeepPartial&lt;T[K]&gt; } : T;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Type-safe API client — mapped + conditional types in practice</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Combine mapped types, conditional types, and template literals to build an HTTP client where every endpoint's params and response are fully typed at compile time.</p>
+<pre><span class="cm">// 1. Define the API contract as a type map</span>
+<span class="kw">interface</span> <span class="cls">ApiRoutes</span> {
+  <span class="str">'/users'</span>:        { method: <span class="str">'GET'</span>;  params: { page: number };   response: User[]   };
+  <span class="str">'/users/:id'</span>:    { method: <span class="str">'GET'</span>;  params: { id: string };      response: User     };
+  <span class="str">'/users/create'</span>: { method: <span class="str">'POST'</span>; params: { body: NewUser };   response: User     };
+}
+
+<span class="cm">// 2. Extract helpers via conditional types</span>
+<span class="kw">type</span> GetRoutes  = { [K <span class="kw">in keyof</span> ApiRoutes]: ApiRoutes[K][<span class="str">'method'</span>] <span class="kw">extends</span> <span class="str">'GET'</span>  ? K : <span class="kw">never</span> }[<span class="kw">keyof</span> ApiRoutes];
+<span class="kw">type</span> PostRoutes = { [K <span class="kw">in keyof</span> ApiRoutes]: ApiRoutes[K][<span class="str">'method'</span>] <span class="kw">extends</span> <span class="str">'POST'</span> ? K : <span class="kw">never</span> }[<span class="kw">keyof</span> ApiRoutes];
+
+<span class="kw">type</span> RouteParams&lt;T <span class="kw">extends keyof</span> ApiRoutes&gt;   = ApiRoutes[T][<span class="str">'params'</span>];
+<span class="kw">type</span> RouteResponse&lt;T <span class="kw">extends keyof</span> ApiRoutes&gt; = ApiRoutes[T][<span class="str">'response'</span>];
+
+<span class="cm">// 3. Typed client function</span>
+<span class="kw">function</span> <span class="fn">apiGet</span>&lt;T <span class="kw">extends</span> GetRoutes&gt;(
+  url: T,
+  params: RouteParams&lt;T&gt;
+): Observable&lt;RouteResponse&lt;T&gt;&gt; {
+  <span class="kw">return</span> http.get&lt;RouteResponse&lt;T&gt;&gt;(url, { params: params <span class="kw">as any</span> });
+}
+
+<span class="cm">// 4. Usage — fully typed, wrong args = compile error</span>
+apiGet(<span class="str">'/users'</span>, { page: <span class="num">1</span> });         <span class="cm">// ✓ response: User[]</span>
+apiGet(<span class="str">'/users/:id'</span>, { id: <span class="str">'abc'</span> });  <span class="cm">// ✓ response: User</span>
+apiGet(<span class="str">'/users'</span>, { id: <span class="str">'abc'</span> });      <span class="cm">// ✗ Error — wrong params for /users</span>
+
+<span class="cm">// Template literal type — generate event names automatically</span>
+<span class="kw">type</span> Endpoint = <span class="kw">keyof</span> ApiRoutes;
+<span class="kw">type</span> LoadAction&lt;T <span class="kw">extends</span> string&gt; = <span class="str">`load${Capitalize&lt;T&gt;}`</span>;
+<span class="kw">type</span> UserActions = LoadAction&lt;<span class="str">'users'</span> | <span class="str">'orders'</span>&gt;;  <span class="cm">// 'loadUsers' | 'loadOrders'</span></pre>
+<div class="tip">This pattern is used by tRPC and typed fetch wrappers — the client type is derived entirely from the route map, so adding a new endpoint in one place updates the whole client automatically.</div>
 </div></div>
 </div>

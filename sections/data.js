@@ -631,6 +631,50 @@ b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</sp
 </div></div>
 </div>
 
+<!-- ===== STRUCTURAL TYPING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Structural vs Nominal Typing <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Duck typing — shape over name</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>TypeScript uses <strong>structural typing</strong>: compatibility is based on the <em>shape</em> of a type (its properties), not the name or declaration. Two types with the same structure are assignable to each other even if unrelated.</p>
+<pre><span class="cm">// Structural typing — shape matches = compatible</span>
+<span class="kw">interface</span> <span class="cls">Point</span> { x: number; y: number; }
+<span class="kw">class</span> <span class="cls">Vector</span> { x = <span class="num">0</span>; y = <span class="num">0</span>; }
+
+<span class="kw">const</span> p: Point = <span class="kw">new</span> Vector();  <span class="cm">// ✓ — same shape</span>
+
+<span class="cm">// Excess property check — only on object LITERALS</span>
+<span class="kw">const</span> p2: Point = { x: <span class="num">1</span>, y: <span class="num">2</span>, z: <span class="num">3</span> };  <span class="cm">// ✗ Error — extra prop z</span>
+<span class="kw">const</span> obj = { x: <span class="num">1</span>, y: <span class="num">2</span>, z: <span class="num">3</span> };
+<span class="kw">const</span> p3: Point = obj;               <span class="cm">// ✓ — not a literal, no excess check</span>
+
+<span class="cm">// Angular service impact — structural typing means two services</span>
+<span class="cm">// with identical public APIs are interchangeable at the type level:</span>
+<span class="kw">class</span> <span class="cls">RealAuthService</span>  { isLoggedIn() { <span class="kw">return true</span>; } }
+<span class="kw">class</span> <span class="cls">MockAuthService</span>  { isLoggedIn() { <span class="kw">return false</span>; } }
+<span class="cm">// TestBed can swap them without a shared interface — structural match is enough</span>
+
+<span class="cm">// Nominal typing simulation — use branded types to prevent accidental mixing</span>
+<span class="kw">type</span> UserId  = string &amp; { <span class="kw">readonly</span> _brand: <span class="str">'UserId'</span>  };
+<span class="kw">type</span> OrderId = string &amp; { <span class="kw">readonly</span> _brand: <span class="str">'OrderId'</span> };
+
+<span class="kw">function</span> <span class="fn">asUserId</span>(id: string): UserId { <span class="kw">return</span> id <span class="kw">as</span> UserId; }
+
+<span class="kw">function</span> <span class="fn">getUser</span>(id: UserId) { <span class="cm">/* ... */</span> }
+<span class="kw">const</span> orderId = <span class="fn">asOrderId</span>(<span class="str">'abc'</span>);
+<span class="fn">getUser</span>(orderId);  <span class="cm">// ✗ Error — OrderId is not assignable to UserId</span>
+<span class="cm">// Without branding: both are string → silently accepted</span></pre>
+<table>
+<tr><th></th><th>Structural (TypeScript)</th><th>Nominal (Java, C#)</th></tr>
+<tr><td>Compatibility check</td><td>Shape of properties</td><td>Explicit class/interface name</td></tr>
+<tr><td>Two identical shapes</td><td>Always compatible ✓</td><td>Not compatible without declaration</td></tr>
+<tr><td>Testing benefit</td><td>Mock by shape — no shared interface needed</td><td>Must implement the same interface</td></tr>
+<tr><td>Risk</td><td>Accidental compatibility (UserId ↔ OrderId)</td><td>Boilerplate, rigid hierarchies</td></tr>
+</table>
+<div class="tip">Use <strong>branded types</strong> when domain correctness matters (IDs, currencies, units). Use structural typing freely for mocks and DTOs — it's a feature, not a bug.</div>
+</div></div>
+</div>
+
 <!-- ===== ADVANCED TS ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Advanced TypeScript <span class="badge b-ng">TS</span></div></div>
@@ -683,6 +727,42 @@ b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</sp
 <span class="cm">// Deep partial (recursive)</span>
 <span class="kw">type</span> DeepPartial&lt;T&gt; = T <span class="kw">extends</span> object
   ? { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: DeepPartial&lt;T[K]&gt; } : T;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Type-safe API client — mapped + conditional types in practice</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Combine mapped types, conditional types, and template literals to build an HTTP client where every endpoint's params and response are fully typed at compile time.</p>
+<pre><span class="cm">// 1. Define the API contract as a type map</span>
+<span class="kw">interface</span> <span class="cls">ApiRoutes</span> {
+  <span class="str">'/users'</span>:        { method: <span class="str">'GET'</span>;  params: { page: number };   response: User[]   };
+  <span class="str">'/users/:id'</span>:    { method: <span class="str">'GET'</span>;  params: { id: string };      response: User     };
+  <span class="str">'/users/create'</span>: { method: <span class="str">'POST'</span>; params: { body: NewUser };   response: User     };
+}
+
+<span class="cm">// 2. Extract helpers via conditional types</span>
+<span class="kw">type</span> GetRoutes  = { [K <span class="kw">in keyof</span> ApiRoutes]: ApiRoutes[K][<span class="str">'method'</span>] <span class="kw">extends</span> <span class="str">'GET'</span>  ? K : <span class="kw">never</span> }[<span class="kw">keyof</span> ApiRoutes];
+<span class="kw">type</span> PostRoutes = { [K <span class="kw">in keyof</span> ApiRoutes]: ApiRoutes[K][<span class="str">'method'</span>] <span class="kw">extends</span> <span class="str">'POST'</span> ? K : <span class="kw">never</span> }[<span class="kw">keyof</span> ApiRoutes];
+
+<span class="kw">type</span> RouteParams&lt;T <span class="kw">extends keyof</span> ApiRoutes&gt;   = ApiRoutes[T][<span class="str">'params'</span>];
+<span class="kw">type</span> RouteResponse&lt;T <span class="kw">extends keyof</span> ApiRoutes&gt; = ApiRoutes[T][<span class="str">'response'</span>];
+
+<span class="cm">// 3. Typed client function</span>
+<span class="kw">function</span> <span class="fn">apiGet</span>&lt;T <span class="kw">extends</span> GetRoutes&gt;(
+  url: T,
+  params: RouteParams&lt;T&gt;
+): Observable&lt;RouteResponse&lt;T&gt;&gt; {
+  <span class="kw">return</span> http.get&lt;RouteResponse&lt;T&gt;&gt;(url, { params: params <span class="kw">as any</span> });
+}
+
+<span class="cm">// 4. Usage — fully typed, wrong args = compile error</span>
+apiGet(<span class="str">'/users'</span>, { page: <span class="num">1</span> });         <span class="cm">// ✓ response: User[]</span>
+apiGet(<span class="str">'/users/:id'</span>, { id: <span class="str">'abc'</span> });  <span class="cm">// ✓ response: User</span>
+apiGet(<span class="str">'/users'</span>, { id: <span class="str">'abc'</span> });      <span class="cm">// ✗ Error — wrong params for /users</span>
+
+<span class="cm">// Template literal type — generate event names automatically</span>
+<span class="kw">type</span> Endpoint = <span class="kw">keyof</span> ApiRoutes;
+<span class="kw">type</span> LoadAction&lt;T <span class="kw">extends</span> string&gt; = <span class="str">\`load\${Capitalize&lt;T&gt;}\`</span>;
+<span class="kw">type</span> UserActions = LoadAction&lt;<span class="str">'users'</span> | <span class="str">'orders'</span>&gt;;  <span class="cm">// 'loadUsers' | 'loadOrders'</span></pre>
+<div class="tip">This pattern is used by tRPC and typed fetch wrappers — the client type is derived entirely from the route map, so adding a new endpoint in one place updates the whole client automatically.</div>
 </div></div>
 </div>
 `,
@@ -881,6 +961,55 @@ files$.pipe(mergeMap(id =&gt; http.get(<span class="str">\`/file/\${id}\`</span>
 </div></div>
 </div>
 
+<!-- ===== MEMORY LEAKS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Memory Leak Prevention <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>3 patterns to prevent subscription leaks</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Every <code>subscribe()</code> that isn't cleaned up leaks memory — the callback keeps a reference to the component even after it's destroyed.</p>
+<pre><span class="cm">// ① async pipe — PREFERRED for templates (auto-unsubscribes)</span>
+@Component({ template: <span class="str">\`&lt;li *ngFor="let u of users$ | async"&gt;{{ u.name }}&lt;/li&gt;\`</span> })
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users$ = <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>);
+  <span class="cm">// No subscribe(), no cleanup needed</span>
+}
+
+<span class="cm">// ② takeUntilDestroyed (Angular 16+) — PREFERRED in class body</span>
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  <span class="kw">private</span> destroyRef = inject(DestroyRef);
+
+  ngOnInit() {
+    interval(<span class="num">1000</span>).pipe(
+      takeUntilDestroyed(<span class="kw">this</span>.destroyRef)
+    ).subscribe(tick =&gt; <span class="kw">this</span>.update(tick));
+    <span class="cm">// completes automatically when component is destroyed</span>
+  }
+}
+
+<span class="cm">// ③ Manual unsubscribe — fallback for complex cases</span>
+<span class="kw">class</span> <span class="cls">UserListComponent</span> <span class="kw">implements</span> OnDestroy {
+  <span class="kw">private</span> subs = <span class="kw">new</span> Subscription();
+
+  ngOnInit() {
+    <span class="kw">this</span>.subs.add(stream1$.subscribe(...));
+    <span class="kw">this</span>.subs.add(stream2$.subscribe(...));
+  }
+  ngOnDestroy() { <span class="kw">this</span>.subs.unsubscribe(); }  <span class="cm">// cleans all at once</span>
+}
+
+<span class="cm">// Bonus — toSignal() also auto-unsubscribes</span>
+users = toSignal(<span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>), { initialValue: [] });
+<span class="cm">// No subscribe, no cleanup — Angular manages it internally</span></pre>
+<table>
+<tr><th>Pattern</th><th>Best for</th><th>Angular version</th></tr>
+<tr><td><code>async</code> pipe</td><td>Template bindings</td><td>All</td></tr>
+<tr><td><code>takeUntilDestroyed()</code></td><td>Class subscriptions, guards, effects</td><td>16+</td></tr>
+<tr><td>Manual <code>Subscription</code></td><td>Complex teardown, multiple subs</td><td>All</td></tr>
+<tr><td><code>toSignal()</code></td><td>Bridging Observable → template</td><td>16+</td></tr>
+</table>
+</div></div>
+</div>
+
 <!-- ===== SUBJECTS ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Subjects & Hot/Cold <span class="badge b-ng">RxJS</span></div></div>
@@ -899,6 +1028,33 @@ files$.pipe(mergeMap(id =&gt; http.get(<span class="str">\`/file/\${id}\`</span>
 <tr><td><code>BehaviorSubject(v)</code></td><td>Required</td><td>Current to new subs</td><td>State — most common</td></tr>
 <tr><td><code>ReplaySubject(n)</code></td><td>None</td><td>Last n values</td><td>Caching, late subscribers</td></tr>
 <tr><td><code>AsyncSubject</code></td><td>None</td><td>Last on complete</td><td>Single result</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>shareReplay — refCount trap</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><code>shareReplay</code> multicasts and replays the last N values. The <code>refCount</code> option controls whether the source subscription is kept alive when subscriber count drops to zero.</p>
+<pre><span class="cm">// ⚠ MEMORY LEAK — refCount: false (the default before RxJS 6.6)</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(
+  shareReplay({ bufferSize: <span class="num">1</span>, refCount: <span class="kw">false</span> })
+);
+<span class="cm">// Even after all subscribers unsubscribe, the inner subscription STAYS OPEN</span>
+<span class="cm">// If provided in 'root', leaks for the life of the app — acceptable</span>
+<span class="cm">// If in a component destroyed and recreated — new source subscription each time!</span>
+
+<span class="cm">// ✓ SAFE — refCount: true (recommended)</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(
+  shareReplay({ bufferSize: <span class="num">1</span>, refCount: <span class="kw">true</span> })
+);
+<span class="cm">// Unsubscribes from source when last subscriber leaves</span>
+<span class="cm">// BUT: next subscriber triggers a new HTTP request (no true caching)</span>
+
+<span class="cm">// Rule: HTTP in a root service → refCount: false is fine (singleton)</span>
+<span class="cm">// HTTP in component-level service → refCount: true to avoid leaks</span></pre>
+<table>
+<tr><th>Operator</th><th>Buffers</th><th>refCount default</th><th>Use case</th></tr>
+<tr><td><code>share()</code></td><td>0</td><td>true</td><td>Events, WebSocket — no replay</td></tr>
+<tr><td><code>shareReplay(1)</code></td><td>1</td><td>true (RxJS 7+)</td><td>Cache latest HTTP result</td></tr>
+<tr><td><code>shareReplay({bufferSize:1, refCount:false})</code></td><td>1</td><td>false</td><td>Root-level singleton cache</td></tr>
 </table>
 </div></div>
 </div>
@@ -1331,13 +1487,36 @@ RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })
 <li><strong>Web Workers</strong> — offload heavy computation</li>
 <li><strong>HTTP caching</strong> — <code>shareReplay(1)</code> on HTTP calls</li>
 </ul>
-<pre><span class="cm">// Virtual scroll</span>
-<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height: 400px"&gt;</span>
-<span class="cm">//   &lt;div *cdkVirtualFor="let item of items"&gt;{{ item }}&lt;/div&gt;</span>
+<pre><span class="cm">// HTTP caching</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Large list rendering — virtual scroll vs pagination vs infinite scroll</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>Virtual Scroll (CDK)</th><th>Pagination</th><th>Infinite Scroll</th></tr>
+<tr><td>DOM nodes</td><td>Fixed window (~10–20 rendered)</td><td>One page at a time</td><td>Grows with load</td></tr>
+<tr><td>Memory usage</td><td>Constant ✓</td><td>Constant ✓</td><td>Grows over time ✗</td></tr>
+<tr><td>UX</td><td>Seamless scroll</td><td>Explicit navigation</td><td>Seamless, exploratory</td></tr>
+<tr><td>Deep linking</td><td>Hard (position not in URL)</td><td>Easy ✓ (page in URL)</td><td>Hard</td></tr>
+<tr><td>Item height</td><td>Best with fixed height</td><td>Any</td><td>Any</td></tr>
+<tr><td>When to use</td><td>Real-time feeds, logs, fixed-height rows</td><td>Search results, tables with sorting</td><td>Social feeds, content discovery</td></tr>
+</table>
+<pre><span class="cm">// CDK Virtual Scroll — renders only visible rows</span>
+<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height:400px"&gt;</span>
+<span class="cm">//   &lt;div *cdkVirtualFor="let item of items; trackBy: trackById"&gt;</span>
+<span class="cm">//     {{ item.name }}</span>
+<span class="cm">//   &lt;/div&gt;</span>
 <span class="cm">// &lt;/cdk-virtual-scroll-viewport&gt;</span>
 
-<span class="cm">// HTTP caching</span>
-users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+<span class="cm">// Variable-height rows — use AutoSizeVirtualScrollStrategy</span>
+<span class="cm">// from @angular/cdk-experimental/scrolling (experimental)</span>
+
+<span class="cm">// Infinite scroll trigger — IntersectionObserver on sentinel element</span>
+<span class="kw">const</span> sentinel = document.querySelector(<span class="str">'#sentinel'</span>);
+<span class="kw">new</span> IntersectionObserver(([entry]) =&gt; {
+  <span class="kw">if</span> (entry.isIntersecting) <span class="kw">this</span>.loadNextPage();
+}).observe(sentinel!);</pre>
+<div class="tip">For 10k+ items: virtual scroll is the only option that keeps memory and render time constant. Pagination wins for SEO and deep-linking. Infinite scroll is UX-friendly but loses back-button position.</div>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>@defer — deferred loading (Angular 17+)</h3><span class="arrow">▶</span></div>
 <div class="cb">
@@ -1354,6 +1533,44 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 
 <span class="cm">// Triggers: on idle, on viewport, on interaction, on hover, on immediate</span>
 <span class="cm">// when (condition)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== IVY COMPILER ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Ivy Compiler vs View Engine <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Compilation model difference</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>View Engine (pre-Angular 9)</th><th>Ivy (Angular 9+, default)</th></tr>
+<tr><td>Compilation model</td><td>Global — NgFactory files, requires full app context</td><td>Incremental — each component compiled independently</td></tr>
+<tr><td>Bundle size</td><td>Large — includes framework runtime per component</td><td>Smaller — tree-shakes unused framework parts</td></tr>
+<tr><td>Locality principle</td><td>No — compiler needs full module graph</td><td>Yes — component only needs its own metadata</td></tr>
+<tr><td>SSR</td><td>Complex, separate bundles needed</td><td>Native — same code runs on server and browser</td></tr>
+<tr><td>Debugging</td><td>Limited — compiled templates opaque</td><td><code>ng.getComponent()</code>, better stack traces</td></tr>
+<tr><td>Template type-checking</td><td>Basic</td><td>Full strict type checking (<code>strictTemplates</code>)</td></tr>
+<tr><td>Lazy loading</td><td>NgModule-based only</td><td>Standalone components — no NgModule required</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Incremental DOM — how Ivy updates the DOM</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Ivy uses an <strong>incremental DOM</strong> approach: instructions are emitted per-component and walk the DOM in-place rather than creating a virtual DOM tree. This means:</p>
+<ul>
+<li><strong>Memory</strong> — no full virtual DOM snapshot in memory; only allocates what changes</li>
+<li><strong>Tree-shaking</strong> — unused rendering instructions (e.g., <code>ɵɵlistener</code>, <code>ɵɵtext</code>) are dropped from the bundle</li>
+<li><strong>Bundle size</strong> — small apps see biggest gains; runtime scales with used features, not framework size</li>
+<li><strong>SSR</strong> — same component code renders on server via platform-server; <code>provideClientHydration()</code> reuses server DOM without full re-render</li>
+</ul>
+<pre><span class="cm">// Ivy-compiled component emits instruction sequences like:</span>
+<span class="cm">// ɵɵelementStart(0, 'div')  ɵɵtext(1)  ɵɵelementEnd()</span>
+<span class="cm">// ɵɵadvance(1); ɵɵtextInterpolate(ctx.title)</span>
+<span class="cm">// These run IN the existing DOM — no diffing algorithm needed</span>
+
+<span class="cm">// Non-destructive hydration (Angular 17+)</span>
+bootstrapApplication(AppComponent, {
+  providers: [provideClientHydration()]  <span class="cm">// reuses SSR DOM, no flicker</span>
+});</pre>
+<div class="tip">Ivy's locality enables Angular libraries to ship pre-compiled. <code>strictTemplates: true</code> in tsconfig catches template type errors at build time — use it.</div>
 </div></div>
 </div>
 
@@ -1375,6 +1592,57 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 </div></div>
 </div>
 
+<!-- ===== NX MONOREPO ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Nx Monorepo & Module Boundaries <span class="badge b-key">Architecture</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Library taxonomy + dependency rules</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>In an Nx monorepo, libraries are categorized by <strong>type</strong> and <strong>scope</strong> — linting rules enforce that lower-level libs never depend on higher-level ones, preventing the "big ball of mud".</p>
+<table>
+<tr><th>Library type</th><th>Contains</th><th>Can depend on</th><th>Cannot depend on</th></tr>
+<tr><td><strong>feature</strong></td><td>Smart/container components, routing</td><td>ui, data-access, util</td><td>Other app's features</td></tr>
+<tr><td><strong>ui</strong></td><td>Presentational (dumb) components</td><td>ui, util</td><td>data-access, feature</td></tr>
+<tr><td><strong>data-access</strong></td><td>Services, HTTP, state stores</td><td>util, data-access</td><td>ui, feature</td></tr>
+<tr><td><strong>util</strong></td><td>Pure functions, pipes, constants</td><td>util only</td><td>Everything else</td></tr>
+</table>
+<pre><span class="cm">// nx.json — enforce boundaries with ESLint</span>
+<span class="cm">// "@nx/enforce-module-boundaries" rule in .eslintrc.json:</span>
+{
+  <span class="str">"depConstraints"</span>: [
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:ui"</span>,          <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:ui"</span>, <span class="str">"type:util"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:feature"</span>,     <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:ui"</span>, <span class="str">"type:data-access"</span>, <span class="str">"type:util"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:data-access"</span>, <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:util"</span>, <span class="str">"type:data-access"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"scope:admin"</span>,      <span class="str">"notDependOnLibsWithTags"</span>:  [<span class="str">"scope:shop"</span>] }
+  ]
+}
+
+<span class="cm">// library tags in project.json</span>
+{ <span class="str">"tags"</span>: [<span class="str">"scope:shared"</span>, <span class="str">"type:ui"</span>] }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Nx project graph + key commands</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Typical monorepo structure</span>
+<span class="cm">// apps/</span>
+<span class="cm">//   admin-app/         ← full Angular application</span>
+<span class="cm">//   shop-app/</span>
+<span class="cm">// libs/</span>
+<span class="cm">//   shared/ui/         ← type:ui, scope:shared</span>
+<span class="cm">//   shared/util/       ← type:util, scope:shared</span>
+<span class="cm">//   admin/feature-users/  ← type:feature, scope:admin</span>
+<span class="cm">//   admin/data-access-users/ ← type:data-access, scope:admin</span>
+
+<span class="cm">// Affected commands — only rebuild/test changed code</span>
+nx affected:build    <span class="cm">// build only libs/apps affected by git diff</span>
+nx affected:test     <span class="cm">// test only affected</span>
+nx graph             <span class="cm">// open visual dependency graph in browser</span>
+nx lint my-lib       <span class="cm">// check boundary violations</span>
+
+<span class="cm">// Generate a new library</span>
+nx g @nx/angular:lib shared/ui-buttons --tags="scope:shared,type:ui"</pre>
+<div class="tip">The project graph (<code>nx graph</code>) visualizes which libs depend on what — use it in PRs to spot boundary violations. <code>nx affected</code> is the key CI benefit: 10 apps → only rebuild the 2 that changed.</div>
+</div></div>
+</div>
+
 <!-- ===== DIRECTIVE COMP ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Directive Composition API <span class="badge b-ng">Angular 15+</span></div></div>
@@ -1391,6 +1659,66 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 })
 <span class="kw">class</span> <span class="cls">ButtonComponent</span> {}</pre>
 <div class="tip">Replaces base-class inheritance. Great for: accessibility, analytics, validation, theming. Composable + tree-shakeable.</div>
+</div></div>
+</div>
+
+<!-- ===== VIEWCHILD / CONTENTCHILD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">ViewChild, ContentChild & ViewContainerRef <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ViewChild vs ContentChild vs ViewContainerRef</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>ViewChild</th><th>ContentChild</th><th>ViewContainerRef</th></tr>
+<tr><td>What it queries</td><td>Elements in own template</td><td>Projected content (<code>ng-content</code>)</td><td>Anchor for dynamic views</td></tr>
+<tr><td>Available from</td><td><code>ngAfterViewInit</code></td><td><code>ngAfterContentInit</code></td><td>Injected via DI or <code>@ViewChild</code></td></tr>
+<tr><td>Typical use</td><td>DOM access, child component API</td><td>Wrap content, expose projected state</td><td>Dynamic component/template creation</td></tr>
+</table>
+<pre><span class="cm">// ViewChild — access child component or DOM element</span>
+@Component({ template: <span class="str">\`&lt;canvas #myCanvas&gt;&lt;/canvas&gt; &lt;app-chart #chart /&gt;\`</span> })
+<span class="kw">class</span> <span class="cls">DashboardComponent</span> <span class="kw">implements</span> AfterViewInit {
+  @ViewChild(<span class="str">'myCanvas'</span>) canvas!: ElementRef&lt;HTMLCanvasElement&gt;;
+  @ViewChild(ChartComponent) chart!: ChartComponent;  <span class="cm">// by type</span>
+
+  ngAfterViewInit() {
+    <span class="cm">// canvas and chart are guaranteed to exist here</span>
+    <span class="kw">this</span>.chart.render(<span class="kw">this</span>.data);
+  }
+}
+
+<span class="cm">// ContentChild — access projected content</span>
+@Component({
+  selector: <span class="str">'app-panel'</span>,
+  template: <span class="str">\`&lt;div class="panel"&gt;&lt;ng-content /&gt;&lt;/div&gt;\`</span>
+})
+<span class="kw">class</span> <span class="cls">PanelComponent</span> <span class="kw">implements</span> AfterContentInit {
+  @ContentChild(PanelHeaderComponent) header?: PanelHeaderComponent;
+
+  ngAfterContentInit() {
+    <span class="cm">// projected child available here, not in ngAfterViewInit</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.header) <span class="kw">this</span>.header.highlight();
+  }
+}
+
+<span class="cm">// ViewContainerRef — create components dynamically</span>
+@Component({ template: <span class="str">\`&lt;ng-template #anchor&gt;&lt;/ng-template&gt;\`</span> })
+<span class="kw">class</span> <span class="cls">HostComponent</span> {
+  @ViewChild(<span class="str">'anchor'</span>, { read: ViewContainerRef }) vcr!: ViewContainerRef;
+
+  loadDialog() {
+    <span class="kw">this</span>.vcr.clear();
+    <span class="kw">const</span> ref = <span class="kw">this</span>.vcr.createComponent(DialogComponent);
+    ref.instance.title = <span class="str">'Hello'</span>;
+    ref.instance.closed.subscribe(() =&gt; ref.destroy());
+  }
+}
+
+<span class="cm">// ViewContainerRef injected directly — current host becomes anchor</span>
+@Directive({ selector: <span class="str">'[appDynamic]'</span> })
+<span class="kw">class</span> <span class="cls">DynamicDirective</span> {
+  <span class="kw">private</span> vcr = inject(ViewContainerRef);
+  create() { <span class="kw">this</span>.vcr.createComponent(TooltipComponent); }
+}</pre>
+<div class="tip"><code>ViewChildren</code> / <code>ContentChildren</code> (plural) return a <code>QueryList</code> — subscribe to <code>.changes</code> for dynamic list updates. Use <code>{ static: true }</code> on <code>@ViewChild</code> only if you need it in <code>ngOnInit</code>.</div>
 </div></div>
 </div>
 
@@ -1424,7 +1752,63 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 </div></div>
 </div>
 `,
-  "state-management":`<!-- ===== NGRX ===== -->
+  "state-management":`<!-- ===== STATE MANAGEMENT COMPARISON ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">State Management Comparison <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NgRx vs SignalStore vs ComponentStore vs Akita vs BehaviorSubject</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>NgRx Store</th><th>NgRx SignalStore</th><th>ComponentStore</th><th>Akita</th><th>BehaviorSubject service</th></tr>
+<tr><td>API style</td><td>Actions/Reducers/Effects</td><td>Signals + methods</td><td>RxJS + updater/effect</td><td>Store class + query</td><td>Manual RxJS</td></tr>
+<tr><td>Boilerplate</td><td>High</td><td>Low</td><td>Medium</td><td>Medium</td><td>Minimal</td></tr>
+<tr><td>Scope</td><td>Global</td><td>Feature/global</td><td>Component-local</td><td>Global/feature</td><td>Service lifetime</td></tr>
+<tr><td>DevTools</td><td>Full time-travel</td><td>Basic</td><td>None</td><td>Akita DevTools</td><td>None</td></tr>
+<tr><td>Reactivity</td><td>RxJS Observables</td><td>Signals</td><td>RxJS Observables</td><td>RxJS Observables</td><td>RxJS</td></tr>
+<tr><td>Best for</td><td>Large, complex global state</td><td>Feature state, modern apps</td><td>Local component state</td><td>Entity-heavy CRUD apps</td><td>Simple shared state</td></tr>
+</table>
+<div class="tip">When does global state become a liability? When every small UI tweak (a tooltip open/close, tab selection) goes through actions and reducers — that's a sign to use component-local state (ComponentStore or Signals) instead.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ComponentStore — local, reactive state</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// ComponentStore: local state for a smart component — no global store needed</span>
+<span class="kw">import</span> { ComponentStore } <span class="kw">from</span> <span class="str">'@ngrx/component-store'</span>;
+
+<span class="kw">interface</span> <span class="cls">TodoState</span> { todos: Todo[]; loading: <span class="kw">boolean</span>; }
+
+@Injectable()
+<span class="kw">class</span> <span class="cls">TodoStore</span> <span class="kw">extends</span> ComponentStore&lt;TodoState&gt; {
+  constructor() { super({ todos: [], loading: <span class="kw">false</span> }); }
+
+  <span class="cm">// Selector — slice of state as Observable</span>
+  <span class="kw">readonly</span> todos$ = <span class="kw">this</span>.select(s =&gt; s.todos);
+  <span class="kw">readonly</span> loading$ = <span class="kw">this</span>.select(s =&gt; s.loading);
+
+  <span class="cm">// Updater — synchronous state mutation</span>
+  <span class="kw">readonly</span> addTodo = <span class="kw">this</span>.updater((state, todo: Todo) =&gt; ({
+    ...state, todos: [...state.todos, todo]
+  }));
+
+  <span class="cm">// Effect — handles async side-effects</span>
+  <span class="kw">readonly</span> loadTodos = <span class="kw">this</span>.effect&lt;<span class="kw">void</span>&gt;($ =&gt;
+    $.pipe(
+      tap(() =&gt; <span class="kw">this</span>.patchState({ loading: <span class="kw">true</span> })),
+      switchMap(() =&gt; <span class="kw">this</span>.http.get&lt;Todo[]&gt;(<span class="str">'/api/todos'</span>).pipe(
+        tap(todos =&gt; <span class="kw">this</span>.patchState({ todos, loading: <span class="kw">false</span> }))
+      ))
+    )
+  );
+}
+
+<span class="cm">// Usage: provide in component — destroyed with component</span>
+@Component({ providers: [TodoStore] })
+<span class="kw">class</span> <span class="cls">TodoComponent</span> {
+  <span class="kw">readonly</span> store = inject(TodoStore);
+  todos$ = <span class="kw">this</span>.store.todos$;
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== NGRX ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">NgRx Full Guide <span class="badge b-key">State</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Core concepts + full example</h3><span class="arrow">▶</span></div>
@@ -1973,7 +2357,143 @@ shared: { <span class="str">'@myorg/auth-state'</span>: { singleton: <span class
 </div></div>
 </div>
 `,
-  "testing":`<!-- ===== UNIT TESTING ===== -->
+  "testing":`<!-- ===== TESTBED VS ISOLATED ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TestBed vs Isolated Unit Testing <span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>When to use each approach</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>TestBed (integration-style)</th><th>Isolated unit test</th></tr>
+<tr><td>Angular module</td><td>Yes — bootstraps Angular DI + CD</td><td>No — plain TypeScript</td></tr>
+<tr><td>Speed</td><td>Slower (compilation per test)</td><td>Fast ✓</td></tr>
+<tr><td>Tests</td><td>Template rendering, DI, CD, routing</td><td>Pure logic, pipes, services</td></tr>
+<tr><td>When to use</td><td>Components with template interactions</td><td>Services, pipes, pure functions</td></tr>
+</table>
+<pre><span class="cm">// ─── TestBed — component with template ────────────────────</span>
+describe(<span class="str">'UserCardComponent'</span>, () =&gt; {
+  <span class="kw">let</span> fixture: ComponentFixture&lt;UserCardComponent&gt;;
+  <span class="kw">let</span> svc: jasmine.SpyObj&lt;UsersService&gt;;
+
+  beforeEach(<span class="kw">async</span> () =&gt; {
+    svc = jasmine.createSpyObj(<span class="str">'UsersService'</span>, [<span class="str">'getUser'</span>]);
+    <span class="kw">await</span> TestBed.configureTestingModule({
+      imports: [UserCardComponent],
+      providers: [{ provide: UsersService, useValue: svc }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UserCardComponent);
+  });
+
+  it(<span class="str">'displays user name'</span>, () =&gt; {
+    fixture.componentInstance.user = { name: <span class="str">'Alice'</span> };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector(<span class="str">'.name'</span>).textContent).toContain(<span class="str">'Alice'</span>);
+  });
+});
+
+<span class="cm">// ─── Isolated — service, no Angular overhead ──────────────</span>
+describe(<span class="str">'CartService'</span>, () =&gt; {
+  <span class="kw">let</span> service: CartService;
+
+  beforeEach(() =&gt; {
+    service = <span class="kw">new</span> CartService();  <span class="cm">// plain instantiation</span>
+  });
+
+  it(<span class="str">'calculates total'</span>, () =&gt; {
+    service.add({ price: <span class="num">10</span>, qty: <span class="num">2</span> });
+    expect(service.total()).toBe(<span class="num">20</span>);
+  });
+});</pre>
+<ul>
+<li><strong>Testing pyramid:</strong> Many unit → fewer integration → few E2E</li>
+<li><strong>AAA:</strong> Arrange → Act → Assert</li>
+<li><strong>Test behavior, not implementation</strong></li>
+<li>Use <code>HttpClientTestingModule</code> + <code>HttpTestingController</code> for HTTP</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== ASYNC TESTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Async Testing — fakeAsync & RxJS Marbles <span class="badge b-key">Testing</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>fakeAsync / tick — control time in tests</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><code>fakeAsync</code> runs the test body in a fake async zone — <code>tick(ms)</code> advances virtual time, letting you test <code>setTimeout</code>, <code>debounceTime</code>, and Promises synchronously.</p>
+<pre><span class="cm">// fakeAsync + tick — test debounced search</span>
+it(<span class="str">'debounces search input'</span>, fakeAsync(() =&gt; {
+  <span class="kw">const</span> results: string[][] = [];
+  component.searchResults$.subscribe(r =&gt; results.push(r));
+
+  component.searchControl.setValue(<span class="str">'ng'</span>);
+  tick(<span class="num">200</span>);                 <span class="cm">// not enough — debounceTime(300)</span>
+  expect(results.length).toBe(<span class="num">0</span>);
+
+  tick(<span class="num">100</span>);                 <span class="cm">// total 300ms — fires now</span>
+  expect(results.length).toBe(<span class="num">1</span>);
+  discardPeriodicTasks();   <span class="cm">// clean up any pending intervals</span>
+}));
+
+<span class="cm">// flushMicrotasks — for Promises / async/await</span>
+it(<span class="str">'resolves promise'</span>, fakeAsync(() =&gt; {
+  <span class="kw">let</span> result = <span class="str">''</span>;
+  Promise.resolve(<span class="str">'hello'</span>).then(v =&gt; result = v);
+  flushMicrotasks();
+  expect(result).toBe(<span class="str">'hello'</span>);
+}));
+
+<span class="cm">// waitForAsync — for real async (HttpClient, compileComponents)</span>
+it(<span class="str">'loads component'</span>, waitForAsync(() =&gt; {
+  fixture.detectChanges();
+  fixture.whenStable().then(() =&gt; {
+    expect(fixture.nativeElement.textContent).toContain(<span class="str">'Alice'</span>);
+  });
+}));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>RxJS Marble testing — visualize streams</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Marble syntax describes observable timelines as ASCII strings — perfect for testing complex operator chains without real timers.</p>
+<pre><span class="cm">// Marble syntax: - = 10ms frame, | = complete, # = error, letters = values</span>
+<span class="cm">// 'a--b--c|'  means: emit a, wait 20ms, emit b, wait 20ms, emit c, complete</span>
+
+<span class="kw">import</span> { TestScheduler } <span class="kw">from</span> <span class="str">'rxjs/testing'</span>;
+
+describe(<span class="str">'switchMap operator'</span>, () =&gt; {
+  <span class="kw">let</span> scheduler: TestScheduler;
+
+  beforeEach(() =&gt; {
+    scheduler = <span class="kw">new</span> TestScheduler((actual, expected) =&gt; {
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  it(<span class="str">'cancels previous inner observable'</span>, () =&gt; {
+    scheduler.run(({ cold, hot, expectObservable }) =&gt; {
+      <span class="kw">const</span> source$  = hot(<span class="str">'a--b------'</span>);            <span class="cm">// user types 'a', then 'b'</span>
+      <span class="kw">const</span> innerA$  = cold(<span class="str">'--x|'</span>);                  <span class="cm">// response for 'a'</span>
+      <span class="kw">const</span> innerB$  = cold(<span class="str">'--y|'</span>);                  <span class="cm">// response for 'b'</span>
+      <span class="kw">const</span> expected = <span class="str">'-----y----'</span>;                  <span class="cm">// 'a' cancelled, only 'b' result</span>
+
+      <span class="kw">const</span> result$ = source$.pipe(
+        switchMap(v =&gt; v === <span class="str">'a'</span> ? innerA$ : innerB$)
+      );
+
+      expectObservable(result$).toBe(expected, { y: <span class="str">'result-b'</span> });
+    });
+  });
+});</pre>
+<table>
+<tr><th>Symbol</th><th>Meaning</th></tr>
+<tr><td><code>-</code></td><td>One virtual time frame (10ms)</td></tr>
+<tr><td><code>a</code>–<code>z</code></td><td>Emitted value (mapped via values object)</td></tr>
+<tr><td><code>|</code></td><td>Complete</td></tr>
+<tr><td><code>#</code></td><td>Error</td></tr>
+<tr><td><code>^</code></td><td>Subscription point (hot observables)</td></tr>
+<tr><td><code>!</code></td><td>Unsubscription point</td></tr>
+</table>
+<div class="tip">Use <code>cold()</code> for HTTP-like observables (start fresh per subscriber). Use <code>hot()</code> for shared streams like user events. Marbles make complex timing bugs immediately visible.</div>
+</div></div>
+</div>
+
+<!-- ===== UNIT TESTING ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Unit Testing & Jasmine <span class="badge b-key">Testing</span></div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Component & service testing</h3><span class="arrow">▶</span></div>

@@ -44,6 +44,55 @@ files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)))
 </div></div>
 </div>
 
+<!-- ===== MEMORY LEAKS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Memory Leak Prevention <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>3 patterns to prevent subscription leaks</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Every <code>subscribe()</code> that isn't cleaned up leaks memory — the callback keeps a reference to the component even after it's destroyed.</p>
+<pre><span class="cm">// ① async pipe — PREFERRED for templates (auto-unsubscribes)</span>
+@Component({ template: <span class="str">`&lt;li *ngFor="let u of users$ | async"&gt;{{ u.name }}&lt;/li&gt;`</span> })
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users$ = <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>);
+  <span class="cm">// No subscribe(), no cleanup needed</span>
+}
+
+<span class="cm">// ② takeUntilDestroyed (Angular 16+) — PREFERRED in class body</span>
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  <span class="kw">private</span> destroyRef = inject(DestroyRef);
+
+  ngOnInit() {
+    interval(<span class="num">1000</span>).pipe(
+      takeUntilDestroyed(<span class="kw">this</span>.destroyRef)
+    ).subscribe(tick =&gt; <span class="kw">this</span>.update(tick));
+    <span class="cm">// completes automatically when component is destroyed</span>
+  }
+}
+
+<span class="cm">// ③ Manual unsubscribe — fallback for complex cases</span>
+<span class="kw">class</span> <span class="cls">UserListComponent</span> <span class="kw">implements</span> OnDestroy {
+  <span class="kw">private</span> subs = <span class="kw">new</span> Subscription();
+
+  ngOnInit() {
+    <span class="kw">this</span>.subs.add(stream1$.subscribe(...));
+    <span class="kw">this</span>.subs.add(stream2$.subscribe(...));
+  }
+  ngOnDestroy() { <span class="kw">this</span>.subs.unsubscribe(); }  <span class="cm">// cleans all at once</span>
+}
+
+<span class="cm">// Bonus — toSignal() also auto-unsubscribes</span>
+users = toSignal(<span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>), { initialValue: [] });
+<span class="cm">// No subscribe, no cleanup — Angular manages it internally</span></pre>
+<table>
+<tr><th>Pattern</th><th>Best for</th><th>Angular version</th></tr>
+<tr><td><code>async</code> pipe</td><td>Template bindings</td><td>All</td></tr>
+<tr><td><code>takeUntilDestroyed()</code></td><td>Class subscriptions, guards, effects</td><td>16+</td></tr>
+<tr><td>Manual <code>Subscription</code></td><td>Complex teardown, multiple subs</td><td>All</td></tr>
+<tr><td><code>toSignal()</code></td><td>Bridging Observable → template</td><td>16+</td></tr>
+</table>
+</div></div>
+</div>
+
 <!-- ===== SUBJECTS ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Subjects & Hot/Cold <span class="badge b-ng">RxJS</span></div></div>
@@ -62,6 +111,33 @@ files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)))
 <tr><td><code>BehaviorSubject(v)</code></td><td>Required</td><td>Current to new subs</td><td>State — most common</td></tr>
 <tr><td><code>ReplaySubject(n)</code></td><td>None</td><td>Last n values</td><td>Caching, late subscribers</td></tr>
 <tr><td><code>AsyncSubject</code></td><td>None</td><td>Last on complete</td><td>Single result</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>shareReplay — refCount trap</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><code>shareReplay</code> multicasts and replays the last N values. The <code>refCount</code> option controls whether the source subscription is kept alive when subscriber count drops to zero.</p>
+<pre><span class="cm">// ⚠ MEMORY LEAK — refCount: false (the default before RxJS 6.6)</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(
+  shareReplay({ bufferSize: <span class="num">1</span>, refCount: <span class="kw">false</span> })
+);
+<span class="cm">// Even after all subscribers unsubscribe, the inner subscription STAYS OPEN</span>
+<span class="cm">// If provided in 'root', leaks for the life of the app — acceptable</span>
+<span class="cm">// If in a component destroyed and recreated — new source subscription each time!</span>
+
+<span class="cm">// ✓ SAFE — refCount: true (recommended)</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(
+  shareReplay({ bufferSize: <span class="num">1</span>, refCount: <span class="kw">true</span> })
+);
+<span class="cm">// Unsubscribes from source when last subscriber leaves</span>
+<span class="cm">// BUT: next subscriber triggers a new HTTP request (no true caching)</span>
+
+<span class="cm">// Rule: HTTP in a root service → refCount: false is fine (singleton)</span>
+<span class="cm">// HTTP in component-level service → refCount: true to avoid leaks</span></pre>
+<table>
+<tr><th>Operator</th><th>Buffers</th><th>refCount default</th><th>Use case</th></tr>
+<tr><td><code>share()</code></td><td>0</td><td>true</td><td>Events, WebSocket — no replay</td></tr>
+<tr><td><code>shareReplay(1)</code></td><td>1</td><td>true (RxJS 7+)</td><td>Cache latest HTTP result</td></tr>
+<tr><td><code>shareReplay({bufferSize:1, refCount:false})</code></td><td>1</td><td>false</td><td>Root-level singleton cache</td></tr>
 </table>
 </div></div>
 </div>
