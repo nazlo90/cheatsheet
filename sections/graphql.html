@@ -1,0 +1,377 @@
+<!-- ===== GRAPHQL FUNDAMENTALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">GraphQL Fundamentals <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Schema, Types & Operations</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>GraphQL is a query language and runtime for APIs. Clients request exactly the data they need — no over- or under-fetching.</p>
+<table>
+<tr><th>Concept</th><th>Description</th></tr>
+<tr><td>Schema</td><td>Strongly typed contract between client and server (SDL)</td></tr>
+<tr><td>Query</td><td>Read-only data fetching</td></tr>
+<tr><td>Mutation</td><td>Write operation (create / update / delete)</td></tr>
+<tr><td>Subscription</td><td>Real-time updates via WebSocket</td></tr>
+<tr><td>Resolver</td><td>Function that returns data for a field</td></tr>
+<tr><td>Scalar</td><td>Leaf types: <code>String</code>, <code>Int</code>, <code>Float</code>, <code>Boolean</code>, <code>ID</code></td></tr>
+</table>
+<pre><span class="cm"># Schema Definition Language (SDL)</span>
+<span class="kw">type</span> <span class="cls">User</span> {
+  id:        <span class="cls">ID</span>!
+  name:      <span class="cls">String</span>!
+  email:     <span class="cls">String</span>!
+  posts:     [<span class="cls">Post</span>!]!
+  createdAt: <span class="cls">String</span>
+}
+
+<span class="kw">type</span> <span class="cls">Query</span> {
+  user(id: <span class="cls">ID</span>!):  <span class="cls">User</span>
+  users:            [<span class="cls">User</span>!]!
+}
+
+<span class="kw">type</span> <span class="cls">Mutation</span> {
+  createUser(input: <span class="cls">CreateUserInput</span>!): <span class="cls">User</span>!
+  deleteUser(id: <span class="cls">ID</span>!):               <span class="cls">Boolean</span>!
+}
+
+<span class="kw">input</span> <span class="cls">CreateUserInput</span> {
+  name:  <span class="cls">String</span>!
+  email: <span class="cls">String</span>!
+}</pre>
+<div class="tip"><code>!</code> means non-nullable. <code>[Post!]!</code> means a non-nullable list of non-nullable Post objects — both the list and each element are guaranteed.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Client query syntax</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Query with fields selection</span>
+query <span class="fn">GetUser</span>($id: <span class="cls">ID</span>!) {
+  user(id: $id) {
+    id
+    name
+    posts {
+      title
+      publishedAt
+    }
+  }
+}
+
+<span class="cm"># Mutation</span>
+mutation <span class="fn">CreateUser</span>($input: <span class="cls">CreateUserInput</span>!) {
+  createUser(input: $input) {
+    id
+    name
+  }
+}
+
+<span class="cm"># Fragments — reusable field sets</span>
+fragment <span class="fn">UserFields</span> on <span class="cls">User</span> {
+  id
+  name
+  email
+}
+
+query { users { ...<span class="fn">UserFields</span> } }
+
+<span class="cm"># Aliases — query same field twice with different args</span>
+query {
+  alice: user(id: <span class="str">"1"</span>) { name }
+  bob:   user(id: <span class="str">"2"</span>) { name }
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== RESOLVERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Resolvers &amp; Context <span class="badge b-key">Runtime</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Resolver anatomy (code-first with NestJS)</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { <span class="cls">Resolver</span>, <span class="cls">Query</span>, <span class="cls">Mutation</span>, <span class="cls">Args</span>, <span class="cls">ID</span>,
+         <span class="cls">ResolveField</span>, <span class="cls">Parent</span>, <span class="cls">Context</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+<span class="kw">import</span> { <span class="cls">UsersService</span> } <span class="kw">from</span> <span class="str">'./users.service'</span>;
+<span class="kw">import</span> { <span class="cls">User</span> } <span class="kw">from</span> <span class="str">'./models/user.model'</span>;
+<span class="kw">import</span> { <span class="cls">CreateUserInput</span> } <span class="kw">from</span> <span class="str">'./dto/create-user.input'</span>;
+
+<span class="fn">@Resolver</span>(() =&gt; <span class="cls">User</span>)
+<span class="kw">export class</span> <span class="cls">UsersResolver</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> usersService: <span class="cls">UsersService</span>) {}
+
+  <span class="fn">@Query</span>(() =&gt; [<span class="cls">User</span>], { name: <span class="str">'users'</span> })
+  <span class="fn">findAll</span>() { <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findAll</span>(); }
+
+  <span class="fn">@Query</span>(() =&gt; <span class="cls">User</span>, { nullable: <span class="kw">true</span> })
+  <span class="fn">user</span>(<span class="fn">@Args</span>(<span class="str">'id'</span>, { type: () =&gt; <span class="cls">ID</span> }) id: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(id);
+  }
+
+  <span class="fn">@Mutation</span>(() =&gt; <span class="cls">User</span>)
+  <span class="fn">createUser</span>(<span class="fn">@Args</span>(<span class="str">'input'</span>) input: <span class="cls">CreateUserInput</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">create</span>(input);
+  }
+
+  <span class="cm">// Field resolver — runs for every User returned</span>
+  <span class="fn">@ResolveField</span>(<span class="str">'posts'</span>, () =&gt; [<span class="cls">Post</span>])
+  <span class="fn">getPosts</span>(<span class="fn">@Parent</span>() user: <span class="cls">User</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.postsService.<span class="fn">findByAuthor</span>(user.id);
+  }
+}</pre>
+<div class="tip">Code-first approach generates the SDL automatically from TypeScript decorators. Schema-first uses hand-written SDL and binds resolvers to it.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>ObjectType & InputType models</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { <span class="cls">ObjectType</span>, <span class="cls">Field</span>, <span class="cls">ID</span>, <span class="cls">InputType</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+<span class="kw">import</span> { <span class="cls">IsEmail</span>, <span class="cls">IsString</span> } <span class="kw">from</span> <span class="str">'class-validator'</span>;
+
+<span class="fn">@ObjectType</span>()
+<span class="kw">export class</span> <span class="cls">User</span> {
+  <span class="fn">@Field</span>(() =&gt; <span class="cls">ID</span>)
+  id: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>()
+  name: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>({ nullable: <span class="kw">true</span> })
+  bio?: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>(() =&gt; [<span class="cls">Post</span>])
+  posts: <span class="cls">Post</span>[];
+}
+
+<span class="fn">@InputType</span>()
+<span class="kw">export class</span> <span class="cls">CreateUserInput</span> {
+  <span class="fn">@Field</span>()
+  <span class="fn">@IsString</span>()
+  name: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>()
+  <span class="fn">@IsEmail</span>()
+  email: <span class="kw">string</span>;
+}</pre>
+<div class="warn-box">Nest's <code>ValidationPipe</code> works on GraphQL args too — add it globally via <code>app.useGlobalPipes</code> and <code>class-validator</code> decorators on <code>@InputType()</code> classes.</div>
+</div></div>
+</div>
+
+<!-- ===== DATALOADER & N+1 ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">DataLoader &amp; N+1 Problem <span class="badge b-grn">Performance</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>N+1 problem & DataLoader solution</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>When a list query resolves nested fields, naive resolvers fire one DB query <em>per parent</em> — the N+1 problem. DataLoader batches and caches these into a single query per request.</p>
+<pre><span class="cm">// Without DataLoader — N+1</span>
+<span class="cm">// 1 query for users, then 1 query per user for posts → N+1</span>
+<span class="fn">@ResolveField</span>(<span class="str">'posts'</span>, () =&gt; [<span class="cls">Post</span>])
+<span class="fn">getPosts</span>(<span class="fn">@Parent</span>() user: <span class="cls">User</span>) {
+  <span class="kw">return</span> <span class="kw">this</span>.db.<span class="fn">query</span>(<span class="str">'SELECT * FROM posts WHERE author_id = $1'</span>, [user.id]);
+}
+
+<span class="cm">// With DataLoader — 1 batched query</span>
+<span class="kw">import</span> <span class="cls">DataLoader</span> <span class="kw">from</span> <span class="str">'dataloader'</span>;
+
+<span class="kw">export function</span> <span class="fn">createPostsLoader</span>(db) {
+  <span class="kw">return new</span> <span class="cls">DataLoader</span>&lt;<span class="kw">string</span>, <span class="cls">Post</span>[]&gt;(<span class="kw">async</span> (authorIds) =&gt; {
+    <span class="kw">const</span> posts = <span class="kw">await</span> db.<span class="fn">query</span>(
+      <span class="str">'SELECT * FROM posts WHERE author_id = ANY($1)'</span>, [authorIds],
+    );
+    <span class="cm">// Group by author_id so DataLoader maps 1 result per key</span>
+    <span class="kw">return</span> authorIds.<span class="fn">map</span>(id =&gt; posts.<span class="fn">filter</span>(p =&gt; p.author_id === id));
+  });
+}
+
+<span class="cm">// Register per-request in GraphQL context</span>
+<span class="kw">const</span> server = <span class="kw">new</span> <span class="cls">ApolloServer</span>({
+  context: ({ req }) =&gt; ({
+    user:        req.user,
+    postsLoader: <span class="fn">createPostsLoader</span>(db),  <span class="cm">// fresh instance = fresh cache</span>
+  }),
+});
+
+<span class="cm">// In resolver</span>
+<span class="fn">@ResolveField</span>(<span class="str">'posts'</span>, () =&gt; [<span class="cls">Post</span>])
+<span class="fn">getPosts</span>(<span class="fn">@Parent</span>() user: <span class="cls">User</span>, <span class="fn">@Context</span>() ctx) {
+  <span class="kw">return</span> ctx.postsLoader.<span class="fn">load</span>(user.id);
+}</pre>
+<div class="warn-box">Always create a new DataLoader instance per request. Sharing across requests leaks data between users.</div>
+</div></div>
+</div>
+
+<!-- ===== SUBSCRIPTIONS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Subscriptions &amp; Real-time <span class="badge b-hot">Real-time</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Subscriptions with PubSub</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { <span class="cls">PubSub</span> } <span class="kw">from</span> <span class="str">'graphql-subscriptions'</span>;
+<span class="kw">import</span> { <span class="cls">Subscription</span>, <span class="cls">Resolver</span>, <span class="cls">Mutation</span>, <span class="cls">Args</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+
+<span class="kw">const</span> pubSub = <span class="kw">new</span> <span class="cls">PubSub</span>();
+
+<span class="fn">@Resolver</span>()
+<span class="kw">export class</span> <span class="cls">PostsResolver</span> {
+  <span class="fn">@Mutation</span>(() =&gt; <span class="cls">Post</span>)
+  <span class="kw">async</span> <span class="fn">createPost</span>(<span class="fn">@Args</span>(<span class="str">'input'</span>) input: <span class="cls">CreatePostInput</span>) {
+    <span class="kw">const</span> post = <span class="kw">await</span> <span class="kw">this</span>.postsService.<span class="fn">create</span>(input);
+    pubSub.<span class="fn">publish</span>(<span class="str">'POST_CREATED'</span>, { postCreated: post });
+    <span class="kw">return</span> post;
+  }
+
+  <span class="fn">@Subscription</span>(() =&gt; <span class="cls">Post</span>, {
+    <span class="cm">// Optional filter — only push to subscribers of matching authorId</span>
+    filter: (payload, variables) =&gt;
+      payload.postCreated.authorId === variables.authorId,
+  })
+  <span class="fn">postCreated</span>(<span class="fn">@Args</span>(<span class="str">'authorId'</span>) authorId: <span class="kw">string</span>) {
+    <span class="kw">return</span> pubSub.<span class="fn">asyncIterator</span>(<span class="str">'POST_CREATED'</span>);
+  }
+}</pre>
+<pre><span class="cm"># Client subscription query</span>
+subscription {
+  postCreated {
+    id
+    title
+    author { name }
+  }
+}</pre>
+<div class="tip">For production, replace in-memory <code>PubSub</code> with <code>graphql-redis-subscriptions</code> (<code>RedisPubSub</code>) so events work across multiple server instances.</div>
+</div></div>
+</div>
+
+<!-- ===== AUTHENTICATION IN GRAPHQL ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Auth &amp; Guards in GraphQL <span class="badge b-key">Security</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GqlAuthGuard & CurrentUser decorator</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// gql-auth.guard.ts — adapts HTTP guard for GraphQL context</span>
+<span class="kw">import</span> { <span class="cls">ExecutionContext</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+<span class="kw">import</span> { <span class="cls">GqlExecutionContext</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+<span class="kw">import</span> { <span class="cls">AuthGuard</span> } <span class="kw">from</span> <span class="str">'@nestjs/passport'</span>;
+
+<span class="kw">export class</span> <span class="cls">GqlAuthGuard</span> <span class="kw">extends</span> <span class="fn">AuthGuard</span>(<span class="str">'jwt'</span>) {
+  <span class="fn">getRequest</span>(context: <span class="cls">ExecutionContext</span>) {
+    <span class="kw">const</span> ctx = <span class="cls">GqlExecutionContext</span>.<span class="fn">create</span>(context);
+    <span class="kw">return</span> ctx.<span class="fn">getContext</span>().req;   <span class="cm">// extract HTTP req from GQL context</span>
+  }
+}
+
+<span class="cm">// current-user.decorator.ts</span>
+<span class="kw">import</span> { <span class="cls">createParamDecorator</span>, <span class="cls">ExecutionContext</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+
+<span class="kw">export const</span> <span class="cls">CurrentUser</span> = <span class="fn">createParamDecorator</span>(
+  (data: <span class="kw">unknown</span>, ctx: <span class="cls">ExecutionContext</span>) =&gt; {
+    <span class="kw">const</span> gqlCtx = <span class="cls">GqlExecutionContext</span>.<span class="fn">create</span>(ctx);
+    <span class="kw">return</span> gqlCtx.<span class="fn">getContext</span>().req.user;
+  },
+);
+
+<span class="cm">// Usage in resolver</span>
+<span class="fn">@UseGuards</span>(<span class="cls">GqlAuthGuard</span>)
+<span class="fn">@Query</span>(() =&gt; <span class="cls">User</span>)
+<span class="fn">me</span>(<span class="fn">@CurrentUser</span>() user: <span class="cls">User</span>) {
+  <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(user.id);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== ERROR HANDLING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">GraphQL Error Handling <span class="badge b-grn">Resilience</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GraphQL errors vs HTTP errors</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>GraphQL always returns <code>200 OK</code> at HTTP level. Errors are reported inside the <code>errors</code> array in the response body.</p>
+<pre><span class="cm">// GraphQL error response shape</span>
+{
+  <span class="str">"data"</span>: { <span class="str">"user"</span>: <span class="kw">null</span> },
+  <span class="str">"errors"</span>: [{
+    <span class="str">"message"</span>: <span class="str">"User not found"</span>,
+    <span class="str">"locations"</span>: [{ <span class="str">"line"</span>: <span class="num">2</span>, <span class="str">"column"</span>: <span class="num">3</span> }],
+    <span class="str">"path"</span>: [<span class="str">"user"</span>],
+    <span class="str">"extensions"</span>: { <span class="str">"code"</span>: <span class="str">"NOT_FOUND"</span> }
+  }]
+}
+
+<span class="cm">// Throw user-facing GraphQL errors in resolvers</span>
+<span class="kw">import</span> { <span class="cls">GraphQLError</span> } <span class="kw">from</span> <span class="str">'graphql'</span>;
+
+<span class="fn">@Query</span>(() =&gt; <span class="cls">User</span>)
+<span class="kw">async</span> <span class="fn">user</span>(<span class="fn">@Args</span>(<span class="str">'id'</span>) id: <span class="kw">string</span>) {
+  <span class="kw">const</span> found = <span class="kw">await</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(id);
+  <span class="kw">if</span> (!found) <span class="kw">throw new</span> <span class="cls">GraphQLError</span>(<span class="str">'User not found'</span>, {
+    extensions: { code: <span class="str">'NOT_FOUND'</span> },
+  });
+  <span class="kw">return</span> found;
+}
+
+<span class="cm">// NestJS HttpException is auto-translated by ApolloDriver — no extra config</span></pre>
+<div class="warn-box">Never expose raw stack traces or internal error details in the <code>extensions</code> field in production. Use <code>formatError</code> in Apollo config to sanitize.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>formatError & custom error masking</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// app.module.ts — ApolloDriver config</span>
+<span class="fn">@Module</span>({
+  imports: [
+    <span class="cls">GraphQLModule</span>.<span class="fn">forRoot</span>&lt;<span class="cls">ApolloDriverConfig</span>&gt;({
+      driver: <span class="cls">ApolloDriver</span>,
+      autoSchemaFile: <span class="kw">true</span>,
+      formatError: (error) =&gt; {
+        <span class="kw">const</span> code = error.extensions?.code;
+        <span class="cm">// Expose details only for known user-facing errors</span>
+        <span class="kw">if</span> ([<span class="str">'NOT_FOUND'</span>, <span class="str">'BAD_USER_INPUT'</span>, <span class="str">'UNAUTHENTICATED'</span>].<span class="fn">includes</span>(code)) {
+          <span class="kw">return</span> error;
+        }
+        <span class="fn">console</span>.<span class="fn">error</span>(error);  <span class="cm">// log for internal investigation</span>
+        <span class="kw">return new</span> <span class="cls">GraphQLError</span>(<span class="str">'Internal server error'</span>);
+      },
+    }),
+  ],
+})</pre>
+</div></div>
+</div>
+
+<!-- ===== PERFORMANCE & BEST PRACTICES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">GraphQL Performance &amp; Best Practices <span class="badge b-grn">Production</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Query complexity & depth limiting</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Without limits, clients can craft deeply nested or expensive queries that exhaust server resources.</p>
+<pre><span class="kw">import</span> { <span class="fn">createComplexityPlugin</span> } <span class="kw">from</span> <span class="str">'graphql-query-complexity'</span>;
+
+<span class="cm">// ApolloDriver plugins option</span>
+plugins: [
+  <span class="fn">createComplexityPlugin</span>({
+    maximumComplexity: <span class="num">100</span>,
+    estimators: [
+      <span class="fn">fieldExtensionsEstimator</span>(),   <span class="cm">// reads @complexity from resolver</span>
+      <span class="fn">simpleEstimator</span>({ defaultComplexity: <span class="num">1</span> }),
+    ],
+    onComplete: (complexity) =&gt; {
+      <span class="kw">if</span> (complexity &gt; <span class="num">100</span>) <span class="kw">throw new</span> <span class="cls">GraphQLError</span>(<span class="str">'Query too complex'</span>);
+    },
+  }),
+]
+
+<span class="cm">// Depth limiting</span>
+<span class="kw">import</span> depthLimit <span class="kw">from</span> <span class="str">'graphql-depth-limit'</span>;
+validationRules: [<span class="fn">depthLimit</span>(<span class="num">5</span>)]   <span class="cm">// max 5 levels of nesting</span></pre>
+<div class="warn-box">Set both complexity and depth limits in any public GraphQL API. Without them, a single crafted query can bring down the server.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Persisted queries & caching</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Technique</th><th>Benefit</th></tr>
+<tr><td>Persisted Queries (APQ)</td><td>Client sends hash instead of full query text — reduces bandwidth; server caches parsed AST</td></tr>
+<tr><td>Response caching</td><td>Cache resolver results by arguments (e.g., with Redis + <code>@cacheControl</code> directive)</td></tr>
+<tr><td>DataLoader</td><td>Batch + deduplicate DB calls per request tick</td></tr>
+<tr><td>Schema introspection off</td><td>Disable <code>introspection</code> in production to prevent schema enumeration</td></tr>
+</table>
+<pre><span class="cm">// Disable introspection in production</span>
+<span class="cls">GraphQLModule</span>.<span class="fn">forRoot</span>({
+  introspection: process.env.NODE_ENV !== <span class="str">'production'</span>,
+  playground:    process.env.NODE_ENV !== <span class="str">'production'</span>,
+})
+
+<span class="cm">// @cacheControl directive on SDL (schema-first)</span>
+<span class="kw">type</span> <span class="cls">User</span> @cacheControl(maxAge: <span class="num">60</span>) {
+  id:   <span class="cls">ID</span>!
+  name: <span class="cls">String</span>!
+}</pre>
+<div class="tip">Combine persisted queries with a CDN for public/anonymous queries. This brings GraphQL latency close to REST with proper HTTP caching semantics.</div>
+</div></div>
+</div>

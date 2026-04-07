@@ -10,6 +10,8 @@ const CATS = [
   { id: 'infrastructure',   label: 'Infrastructure'     },
   { id: 'graphics',         label: 'Graphics'           },
   { id: 'nodejs',           label: 'Node.js'            },
+  { id: 'nestjs',           label: 'NestJS'             },
+  { id: 'graphql',          label: 'GraphQL'            },
 ];
 const STORAGE_KEY = 'cheatsheet-cats';
 

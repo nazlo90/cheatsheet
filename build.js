@@ -8,7 +8,7 @@ const path = require('path');
 const cats = [
   'javascript', 'typescript', 'web-apis', 'rxjs', 'angular',
   'state-management', 'oop-architecture', 'testing',
-  'infrastructure', 'graphics', 'nodejs',
+  'infrastructure', 'graphics', 'nodejs', 'nestjs', 'graphql',
 ];
 
 const entries = cats.map(id => {
