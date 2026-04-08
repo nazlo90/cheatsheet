@@ -1,26 +1,26 @@
 <!-- ===== NAVIGATION PHASE ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Navigation <span class="badge b-hot">Core</span></div></div>
-<div class="card"><div class="ch" onclick="T(this)"><h3>DNS → TCP → TLS → First Byte</h3><span class="arrow">▶</span></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3><abbr title="Domain Name System">DNS</abbr> → <abbr title="Transmission Control Protocol">TCP</abbr> → <abbr title="Transport Layer Security">TLS</abbr> → First Byte</h3><span class="arrow">▶</span></div>
 <div class="cb open">
 <p>When a user navigates to a URL, the browser goes through several network steps before any HTML is received. Understanding this pipeline is key to diagnosing and optimizing load performance.</p>
 <table>
 <tr><th>Step</th><th>What happens</th><th>Cost</th></tr>
-<tr><td><strong>DNS Lookup</strong></td><td>Resolves hostname to IP address (e.g. <code>example.com</code> → <code>93.184.216.34</code>)</td><td>Cached after first lookup; mobile adds significant latency per unique hostname</td></tr>
-<tr><td><strong>TCP Handshake</strong></td><td>SYN → SYN-ACK → ACK establishes connection and negotiates parameters</td><td>3 messages = 3 round trips</td></tr>
-<tr><td><strong>TLS Negotiation</strong></td><td>Determines cipher, verifies certificate, establishes encrypted channel</td><td>5 more round trips — 8 total before any data</td></tr>
-<tr><td><strong>HTTP GET</strong></td><td>Browser sends request; server responds with first packet</td><td>First chunk ≈ 14 KB (TCP slow start limit)</td></tr>
+<tr><td><strong><abbr title="Domain Name System">DNS</abbr> Lookup</strong></td><td>Resolves hostname to <abbr title="Internet Protocol">IP</abbr> address (e.g. <code>example.com</code> → <code>93.184.216.34</code>)</td><td>Cached after first lookup; mobile adds significant latency per unique hostname</td></tr>
+<tr><td><strong><abbr title="Transmission Control Protocol">TCP</abbr> Handshake</strong></td><td><abbr title="Synchronize">SYN</abbr> → <abbr title="Synchronize-Acknowledgment">SYN-ACK</abbr> → <abbr title="Acknowledgment">ACK</abbr> establishes connection and negotiates parameters</td><td>3 messages = 3 round trips</td></tr>
+<tr><td><strong><abbr title="Transport Layer Security">TLS</abbr> Negotiation</strong></td><td>Determines cipher, verifies certificate, establishes encrypted channel</td><td>5 more round trips — 8 total before any data</td></tr>
+<tr><td><strong><abbr title="HyperText Transfer Protocol">HTTP</abbr> GET</strong></td><td>Browser sends request; server responds with first packet</td><td>First chunk ≈ 14 KB (TCP slow start limit)</td></tr>
 </table>
-<div class="warn-box"><strong>Mobile penalty:</strong> each unique hostname (fonts, scripts, CDNs, ads) requires its own DNS lookup — minimising the number of distinct domains reduces latency.</div>
+<div class="warn-box"><strong>Mobile penalty:</strong> each unique hostname (fonts, scripts, <abbr title="Content Delivery Networks">CDN</abbr>s, ads) requires its own <abbr title="Domain Name System">DNS</abbr> lookup — minimising the number of distinct domains reduces latency.</div>
 </div></div>
-<div class="card"><div class="ch" onclick="T(this)"><h3>TCP Slow Start &amp; TTFB</h3><span class="arrow">▶</span></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3><abbr title="Transmission Control Protocol">TCP</abbr> Slow Start &amp; <abbr title="Time to First Byte">TTFB</abbr></h3><span class="arrow">▶</span></div>
 <div class="cb">
 <p><strong>Time to First Byte (TTFB)</strong> measures the gap between the user's request and the arrival of the first data packet — a key early indicator of server and network performance.</p>
-<p><strong>TCP Slow Start / Congestion Control</strong> governs how fast data can flow:</p>
+<p><strong><abbr title="Transmission Control Protocol">TCP</abbr> Slow Start / Congestion Control</strong> governs how fast data can flow:</p>
 <ul>
-<li>Congestion Window (CWND) starts at 1–10 MSS (≈ 1500 bytes per segment on Ethernet)</li>
-<li>Each ACK received → CWND doubles (exponential increase)</li>
-<li>Packet loss / no ACK → CWND halves (exponential decrease)</li>
+<li>Congestion Window (<abbr title="Congestion Window">CWND</abbr>) starts at 1–10 <abbr title="Maximum Segment Size">MSS</abbr> (≈ 1500 bytes per segment on Ethernet)</li>
+<li>Each <abbr title="Acknowledgment">ACK</abbr> received → <abbr title="Congestion Window">CWND</abbr> doubles (exponential increase)</li>
+<li>Packet loss / no <abbr title="Acknowledgment">ACK</abbr> → <abbr title="Congestion Window">CWND</abbr> halves (exponential decrease)</li>
 <li>Result: first 14 KB arrives in one round trip; subsequent data grows gradually</li>
 </ul>
 <div class="warn-box">Put the most critical above-the-fold content in the first <strong>14 KB</strong> of the HTML response to leverage the first TCP window and enable an early First Contentful Paint.</div>
@@ -30,12 +30,12 @@
 <!-- ===== PARSING PHASE ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Parsing</div></div>
-<div class="card"><div class="ch" onclick="T(this)"><h3>DOM &amp; CSSOM construction</h3><span class="arrow">▶</span></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3><abbr title="Document Object Model">DOM</abbr> &amp; <abbr title="CSS Object Model">CSSOM</abbr> construction</h3><span class="arrow">▶</span></div>
 <div class="cb open">
 <p>As HTML arrives, the browser's HTML parser tokenises it and builds the <strong>DOM tree</strong>. In parallel, CSS is parsed into a separate <strong>CSSOM tree</strong> (CSS Object Model). Both trees are required before rendering can begin.</p>
 <table>
-<tr><th></th><th>DOM</th><th>CSSOM</th></tr>
-<tr><td>Input</td><td>HTML bytes</td><td>CSS bytes</td></tr>
+<tr><th></th><th><abbr title="Document Object Model">DOM</abbr></th><th><abbr title="CSS Object Model">CSSOM</abbr></th></tr>
+<tr><td>Input</td><td><abbr title="HyperText Markup Language">HTML</abbr> bytes</td><td><abbr title="Cascading Style Sheets">CSS</abbr> bytes</td></tr>
 <tr><td>Output</td><td>Node tree representing content &amp; hierarchy</td><td>Rule tree with computed styles</td></tr>
 <tr><td>Blocking?</td><td>Blocked by synchronous <code>&lt;script&gt;</code></td><td>Blocks rendering (not parsing)</td></tr>
 <tr><td>Speed</td><td>Incremental</td><td>Very fast — rarely a bottleneck</td></tr>
@@ -60,7 +60,7 @@ h1.hero { color: red; }   <span class="cm">/* more specific — applied last */<
 <span class="cm">&lt;!-- Non-blocking: --&gt;</span>
 &lt;script src="analytics.js" async&gt;&lt;/script&gt;
 &lt;script src="app.js" defer&gt;&lt;/script&gt;</pre>
-<div class="warn-box">CSS also indirectly blocks script execution — the browser will not run a <code>&lt;script&gt;</code> until the CSSOM is ready, because scripts may query computed styles.</div>
+<div class="warn-box">CSS also indirectly blocks script execution — the browser will not run a <code>&lt;script&gt;</code> until the <abbr title="CSS Object Model">CSSOM</abbr> is ready, because scripts may query computed styles.</div>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Preload scanner</h3><span class="arrow">▶</span></div>
 <div class="cb">
@@ -80,12 +80,12 @@ h1.hero { color: red; }   <span class="cm">/* more specific — applied last */<
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">How Browsers Work — Critical Rendering Path</div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>6-step rendering pipeline</h3><span class="arrow">▶</span></div>
 <div class="cb open">
-<p>The <strong>Critical Rendering Path</strong> is the sequence of steps the browser performs to convert HTML, CSS, and JS into pixels on screen. Optimising it directly improves First Contentful Paint and interactivity.</p>
+<p>The <strong>Critical Rendering Path</strong> is the sequence of steps the browser performs to convert <abbr title="HyperText Markup Language">HTML</abbr>, <abbr title="Cascading Style Sheets">CSS</abbr>, and JS into pixels on screen. Optimising it directly improves First Contentful Paint and interactivity.</p>
 <table>
 <tr><th>#</th><th>Step</th><th>Description</th></tr>
-<tr><td>1</td><td><strong>Style</strong></td><td>Combine DOM + CSSOM into a <em>render tree</em> — excludes <code>display:none</code> and <code>&lt;head&gt;</code> nodes; includes <code>visibility:hidden</code> (still occupies space)</td></tr>
+<tr><td>1</td><td><strong>Style</strong></td><td>Combine <abbr title="Document Object Model">DOM</abbr> + <abbr title="CSS Object Model">CSSOM</abbr> into a <em>render tree</em> — excludes <code>display:none</code> and <code>&lt;head&gt;</code> nodes; includes <code>visibility:hidden</code> (still occupies space)</td></tr>
 <tr><td>2</td><td><strong>Layout</strong></td><td>Calculate exact position and size of every node in the render tree (first run = <em>layout</em>; subsequent = <em>reflow</em>)</td></tr>
-<tr><td>3</td><td><strong>Paint</strong></td><td>Convert boxes to pixel instructions: text, colours, borders, shadows. Targets 60 FPS → ≤ 16.67 ms per frame</td></tr>
+<tr><td>3</td><td><strong>Paint</strong></td><td>Convert boxes to pixel instructions: text, colours, borders, shadows. Targets 60 <abbr title="Frames Per Second">FPS</abbr> → ≤ 16.67 ms per frame</td></tr>
 <tr><td>4</td><td><strong>Composite</strong></td><td>When elements overlap across layers, composite them in the correct order — often GPU-accelerated</td></tr>
 </table>
 <pre><span class="cm">/* Triggering each stage costs differently */</span>
@@ -95,7 +95,7 @@ el.style.transform = <span class="str">'translateX(10px)'</span>; <span class="c
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Layers &amp; compositing</h3><span class="arrow">▶</span></div>
 <div class="cb">
-<p>The browser automatically promotes certain elements to their own <strong>compositor layer</strong>, painted on the GPU. This avoids re-painting the entire page and frees the main thread.</p>
+<p>The browser automatically promotes certain elements to their own <strong>compositor layer</strong>, painted on the <abbr title="Graphics Processing Unit">GPU</abbr>. This avoids re-painting the entire page and frees the main thread.</p>
 <p><strong>Elements that get their own layer:</strong></p>
 <ul>
 <li><code>&lt;video&gt;</code>, <code>&lt;canvas&gt;</code></li>
@@ -110,7 +110,7 @@ el.style.transform = <span class="str">'translateX(10px)'</span>; <span class="c
 }
 <span class="cm">/* Remove hint after animation ends to free memory */</span>
 el.style.willChange = <span class="str">'auto'</span>;</pre>
-<div class="warn-box">Each layer consumes GPU memory. Promoting everything is counter-productive — use layers only for elements that <em>actually</em> animate or need isolation.</div>
+<div class="warn-box">Each layer consumes <abbr title="Graphics Processing Unit">GPU</abbr> memory. Promoting everything is counter-productive — use layers only for elements that <em>actually</em> animate or need isolation.</div>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Reflow &amp; repaint — what triggers them</h3><span class="arrow">▶</span></div>
 <div class="cb">
@@ -162,12 +162,12 @@ elements.forEach((el, i) =&gt; el.style.width = widths[i] * <span class="num">2<
 <div class="cb">
 <table>
 <tr><th>Metric</th><th>Measures</th><th>Target</th></tr>
-<tr><td><strong>TTFB</strong></td><td>Server + network speed to first byte</td><td>&lt; 800 ms</td></tr>
-<tr><td><strong>FCP</strong> (First Contentful Paint)</td><td>First text/image rendered</td><td>&lt; 1.8 s</td></tr>
-<tr><td><strong>LCP</strong> (Largest Contentful Paint)</td><td>Largest above-fold element rendered</td><td>&lt; 2.5 s</td></tr>
-<tr><td><strong>TTI</strong> (Time to Interactive)</td><td>Page reliably responds to input</td><td>&lt; 3.8 s</td></tr>
-<tr><td><strong>TBT</strong> (Total Blocking Time)</td><td>Sum of long-task blocking time</td><td>&lt; 200 ms</td></tr>
-<tr><td><strong>CLS</strong> (Cumulative Layout Shift)</td><td>Visual stability / unexpected shifts</td><td>&lt; 0.1</td></tr>
+<tr><td><strong><abbr title="Time to First Byte">TTFB</abbr></strong></td><td>Server + network speed to first byte</td><td>&lt; 800 ms</td></tr>
+<tr><td><strong><abbr title="First Contentful Paint">FCP</abbr></strong> (First Contentful Paint)</td><td>First text/image rendered</td><td>&lt; 1.8 s</td></tr>
+<tr><td><strong><abbr title="Largest Contentful Paint">LCP</abbr></strong> (Largest Contentful Paint)</td><td>Largest above-fold element rendered</td><td>&lt; 2.5 s</td></tr>
+<tr><td><strong><abbr title="Time to Interactive">TTI</abbr></strong> (Time to Interactive)</td><td>Page reliably responds to input</td><td>&lt; 3.8 s</td></tr>
+<tr><td><strong><abbr title="Total Blocking Time">TBT</abbr></strong> (Total Blocking Time)</td><td>Sum of long-task blocking time</td><td>&lt; 200 ms</td></tr>
+<tr><td><strong><abbr title="Cumulative Layout Shift">CLS</abbr></strong> (Cumulative Layout Shift)</td><td>Visual stability / unexpected shifts</td><td>&lt; 0.1</td></tr>
 <tr><td><strong>Frame rate</strong></td><td>Paint + composite cycle</td><td>60 FPS = 16.67 ms/frame</td></tr>
 </table>
 </div></div>
@@ -181,7 +181,7 @@ elements.forEach((el, i) =&gt; el.style.width = widths[i] * <span class="num">2<
   ├─ HTML  →  DOM tree
   ├─ CSS   →  CSSOM tree         (blocks rendering)
   ├─ JS    →  parse / compile    (blocks parsing if sync)
-  └─ AOM (Accessibility tree)   (mirrors DOM semantically)
+  └─ <abbr title="Accessibility Object Model">AOM</abbr> (Accessibility tree)   (mirrors <abbr title="Document Object Model">DOM</abbr> semantically)
 
 <span class="cm">Rendering (Critical Rendering Path)</span>
   ├─ Style   →  Render tree  (DOM + CSSOM, visible nodes only)
