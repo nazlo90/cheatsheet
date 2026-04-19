@@ -13,6 +13,8 @@ const CATS = [
   { id: 'nodejs',           label: 'Node.js'            },
   { id: 'nestjs',           label: 'NestJS'             },
   { id: 'graphql',          label: 'GraphQL'            },
+  { id: 'electron',         label: 'Electron'           },
+  { id: 'webrtc',           label: 'WebRTC & VoIP'      },
 ];
 const STORAGE_KEY = 'cheatsheet-cats';
 
@@ -156,18 +158,31 @@ function escapeHtml(str) {
   return str.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
-function extractSnippet(text, rx, contextLen = 70) {
+function extractSnippet(text, rx, preLen = 35, postLen = 100) {
   const clean = text.replaceAll(/\s+/g, ' ').trim();
   rx.lastIndex = 0;
   const m = rx.exec(clean);
   if (!m) { rx.lastIndex = 0; return ''; }
   rx.lastIndex = 0;
-  const start = Math.max(0, m.index - contextLen);
-  const end = Math.min(clean.length, m.index + m[0].length + contextLen);
+  const start = Math.max(0, m.index - preLen);
+  const end = Math.min(clean.length, m.index + m[0].length + postLen);
   const pre = (start > 0 ? '…' : '') + clean.slice(start, m.index);
   const mid = clean.slice(m.index, m.index + m[0].length);
   const post = clean.slice(m.index + m[0].length, end) + (end < clean.length ? '…' : '');
   return `${escapeHtml(pre)}<mark class="hl">${escapeHtml(mid)}</mark>${escapeHtml(post)}`;
+}
+
+function highlightTitle(text, rx) {
+  rx.lastIndex = 0;
+  const parts = [];
+  let last = 0, m;
+  while ((m = rx.exec(text)) !== null) {
+    parts.push(escapeHtml(text.slice(last, m.index)), `<mark class="hl">${escapeHtml(m[0])}</mark>`);
+    last = m.index + m[0].length;
+  }
+  parts.push(escapeHtml(text.slice(last)));
+  rx.lastIndex = 0;
+  return parts.join('');
 }
 
 function navigateToResult(secId, cardIdx) {
@@ -243,10 +258,10 @@ function renderSearchResults(rx) {
         `<div class="sr-cat-hdr">${escapeHtml(cat.label)}</div>` +
         cat.sections.map(s =>
           `<div class="sr-section">` +
-            `<div class="sr-section-hdr"><span class="sr-sec-num">${escapeHtml(s.secNum)}</span><span class="sr-sec-title">${escapeHtml(s.secTitle)}</span></div>` +
+            `<div class="sr-section-hdr"><span class="sr-sec-num">${escapeHtml(s.secNum)}</span><span class="sr-sec-title">${highlightTitle(s.secTitle, rx)}</span></div>` +
             s.cards.map(c =>
               `<div class="sr-item${c.cardIdx < 0 ? ' sr-item--sec' : ''}" data-sec="${s.secId}" data-card="${c.cardIdx}">` +
-                `<div class="sr-title">${c.cardIdx < 0 ? '§ ' : ''}${escapeHtml(c.cardTitle)}</div>` +
+                `<div class="sr-title">${c.cardIdx < 0 ? '§ ' : ''}${highlightTitle(c.cardTitle, rx)}</div>` +
                 `<div class="sr-snippet">${c.snippet}</div>` +
               `</div>`
             ).join('') +

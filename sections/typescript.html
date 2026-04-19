@@ -213,3 +213,105 @@ apiGet(<span class="str">'/users'</span>, { id: <span class="str">'abc'</span> }
 <div class="tip">This pattern is used by tRPC and typed fetch wrappers — the client type is derived entirely from the route map, so adding a new endpoint in one place updates the whole client automatically.</div>
 </div></div>
 </div>
+
+<!-- ===== ABSTRACT CLASSES vs INTERFACES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Abstract Classes vs Interfaces <span class="badge b-ng">TS</span><span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core differences at a glance</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Abstract classes</strong> can contain implementation (methods, fields, constructors) and enforce a contract — they sit halfway between a concrete class and an interface. <strong>Interfaces</strong> are pure shape contracts: zero runtime footprint, erased at compile time.</p>
+<table>
+<tr><th>Feature</th><th>Abstract class</th><th>Interface</th></tr>
+<tr><td>Runtime existence</td><td>Yes — compiled to JS class</td><td>No — erased at compile time</td></tr>
+<tr><td>Concrete methods / fields</td><td>Yes ✓</td><td>No ✗ (only signatures)</td></tr>
+<tr><td>Constructor logic</td><td>Yes ✓</td><td>No ✗</td></tr>
+<tr><td>Multiple inheritance</td><td>No — single <code>extends</code></td><td>Yes — multiple <code>implements</code></td></tr>
+<tr><td>Declaration merging</td><td>No ✗</td><td>Yes ✓</td></tr>
+<tr><td>Use with <code>instanceof</code></td><td>Yes ✓</td><td>No ✗</td></tr>
+<tr><td>Dependency Injection token</td><td>Yes ✓ (Angular/NestJS)</td><td>No — not a runtime value</td></tr>
+</table>
+<div class="tip">Default rule: prefer <strong>interface</strong> for pure shape contracts. Reach for <strong>abstract class</strong> when you need shared implementation, a constructor, or a runtime DI token.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Abstract class — shared implementation + contract</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Abstract class — cannot be instantiated directly</span>
+<span class="kw">abstract class</span> <span class="cls">Animal</span> {
+  <span class="cm">// Concrete field + constructor — shared by all subclasses</span>
+  <span class="kw">constructor</span>(<span class="kw">protected readonly</span> name: string) {}
+
+  <span class="cm">// Concrete method — inherited as-is</span>
+  <span class="fn">describe</span>(): string {
+    <span class="kw">return</span> <span class="str">`I am ${this.name}`</span>;
+  }
+
+  <span class="cm">// Abstract method — subclasses MUST implement</span>
+  <span class="kw">abstract</span> <span class="fn">makeSound</span>(): string;
+}
+
+<span class="kw">class</span> <span class="cls">Dog</span> <span class="kw">extends</span> <span class="cls">Animal</span> {
+  <span class="fn">makeSound</span>() { <span class="kw">return</span> <span class="str">'Woof'</span>; }
+}
+
+<span class="kw">const</span> d = <span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">'Rex'</span>);
+d.describe();   <span class="cm">// 'I am Rex' — inherited from Animal</span>
+d.makeSound();  <span class="cm">// 'Woof'</span>
+
+<span class="cm">// new Animal('x') — ✗ Error: Cannot create instance of abstract class</span>
+d <span class="kw">instanceof</span> Animal; <span class="cm">// ✓ true — runtime check works</span></pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Interface — pure shape, zero runtime cost</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Interface — type-level only, compiled away</span>
+<span class="kw">interface</span> <span class="cls">Serializable</span> {
+  <span class="fn">serialize</span>(): string;
+  <span class="fn">deserialize</span>(raw: string): <span class="kw">void</span>;
+}
+
+<span class="cm">// A class can implement multiple interfaces</span>
+<span class="kw">interface</span> <span class="cls">Loggable</span> { <span class="fn">log</span>(): <span class="kw">void</span>; }
+
+<span class="kw">class</span> <span class="cls">UserRecord</span> <span class="kw">implements</span> <span class="cls">Serializable</span>, <span class="cls">Loggable</span> {
+  <span class="fn">serialize</span>()          { <span class="kw">return</span> JSON.stringify(<span class="kw">this</span>); }
+  <span class="fn">deserialize</span>(raw)     { Object.assign(<span class="kw">this</span>, JSON.parse(raw)); }
+  <span class="fn">log</span>()                { console.log(<span class="kw">this</span>); }
+}
+
+<span class="cm">// Declaration merging — add fields to existing interface</span>
+<span class="kw">interface</span> <span class="cls">Serializable</span> { version: number; }  <span class="cm">// ✓ merged</span>
+
+<span class="cm">// instanceof with interface — ✗ doesn't work (no runtime token)</span>
+<span class="cm">// ur instanceof Serializable  — compile error</span>
+
+<span class="cm">// Use a type guard instead:</span>
+<span class="kw">function</span> <span class="fn">isSerializable</span>(v: unknown): v <span class="kw">is</span> <span class="cls">Serializable</span> {
+  <span class="kw">return</span> <span class="kw">typeof</span> (v <span class="kw">as any</span>)?.serialize === <span class="str">'function'</span>;
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>When to use which — decision guide</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Situation</th><th>Choose</th><th>Reason</th></tr>
+<tr><td>Shared base logic (logging, caching, lifecycle)</td><td>Abstract class</td><td>Concrete methods prevent copy-paste across subclasses</td></tr>
+<tr><td>DI token in Angular / NestJS</td><td>Abstract class</td><td>Interfaces are erased — inject by class reference</td></tr>
+<tr><td>Defining an API / DTO shape</td><td>Interface</td><td>Zero runtime overhead; supports declaration merging</td></tr>
+<tr><td>Multiple contracts on one class</td><td>Interface</td><td>A class can implement N interfaces, but only extend 1 class</td></tr>
+<tr><td>Third-party type augmentation</td><td>Interface</td><td>Declaration merging lets you extend existing interfaces</td></tr>
+<tr><td>Template Method pattern</td><td>Abstract class</td><td>Base class defines the algorithm skeleton; subclasses fill in steps</td></tr>
+</table>
+<pre><span class="cm">// Angular DI — abstract class as token (works at runtime)</span>
+<span class="kw">abstract class</span> <span class="cls">Logger</span> { <span class="kw">abstract</span> <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
+<span class="kw">class</span> <span class="cls">ConsoleLogger</span> <span class="kw">extends</span> <span class="cls">Logger</span> { <span class="fn">log</span>(m: string) { console.log(m); } }
+
+<span class="cm">// providers array in Angular module:</span>
+<span class="cm">// { provide: Logger, useClass: ConsoleLogger }</span>
+<span class="cm">// inject(Logger) — ✓ resolves to ConsoleLogger at runtime</span>
+
+<span class="cm">// Interface token — ✗ does NOT work</span>
+<span class="kw">interface</span> <span class="cls">ILogger</span> { <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
+<span class="cm">// { provide: ILogger, useClass: ... } — compile error: ILogger not a value</span></pre>
+<div class="tip">In Angular / NestJS: use abstract classes as DI tokens — they survive compilation, interfaces don't. The abstract class acts as both the type contract and the injection key.</div>
+</div></div>
+</div>

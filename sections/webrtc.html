@@ -1,0 +1,310 @@
+<!-- ===== WEBRTC FUNDAMENTALS ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">WebRTC Architecture <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebRTC Overview & Connection Flow</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>WebRTC</strong> (Web Real-Time Communication) enables peer-to-peer audio, video, and data directly in the browser without plugins. It uses three main APIs: <code>RTCPeerConnection</code>, <code>RTCDataChannel</code>, and <code>getUserMedia</code>.</p>
+<p><strong>Connection flow (Offer/Answer):</strong></p>
+<ol>
+  <li>Caller creates <strong>Offer</strong> (SDP) via <code>createOffer()</code></li>
+  <li>Caller sets it as local description, sends SDP to callee via signaling</li>
+  <li>Callee sets it as remote description, creates <strong>Answer</strong></li>
+  <li>Callee sets answer as local description, sends back via signaling</li>
+  <li>Both sides exchange <strong>ICE candidates</strong> through signaling</li>
+  <li>ICE connectivity checks complete — P2P media flows</li>
+</ol>
+<pre><span class="cm">// Caller side</span>
+<span class="kw">const</span> pc = <span class="kw">new</span> <span class="cls">RTCPeerConnection</span>(iceConfig);
+
+<span class="cm">// Add local tracks before creating offer</span>
+<span class="kw">const</span> stream = <span class="kw">await</span> navigator.mediaDevices.<span class="fn">getUserMedia</span>({ audio: <span class="kw">true</span>, video: <span class="kw">true</span> });
+stream.<span class="fn">getTracks</span>().forEach(track =&gt; pc.<span class="fn">addTrack</span>(track, stream));
+
+<span class="kw">const</span> offer = <span class="kw">await</span> pc.<span class="fn">createOffer</span>();
+<span class="kw">await</span> pc.<span class="fn">setLocalDescription</span>(offer);
+<span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'offer'</span>, sdp: offer.sdp });
+
+<span class="cm">// On ICE candidate gathered</span>
+pc.<span class="fn">onicecandidate</span> = ({ candidate }) =&gt; {
+  <span class="kw">if</span> (candidate) <span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'ice'</span>, candidate });
+};
+
+<span class="cm">// Receive remote tracks</span>
+pc.<span class="fn">ontrack</span> = ({ streams }) =&gt; { videoEl.srcObject = streams[<span class="num">0</span>]; };</pre>
+<pre><span class="cm">// Callee side</span>
+<span class="kw">const</span> pc = <span class="kw">new</span> <span class="cls">RTCPeerConnection</span>(iceConfig);
+<span class="kw">await</span> pc.<span class="fn">setRemoteDescription</span>(<span class="kw">new</span> <span class="cls">RTCSessionDescription</span>(offer));
+<span class="kw">const</span> answer = <span class="kw">await</span> pc.<span class="fn">createAnswer</span>();
+<span class="kw">await</span> pc.<span class="fn">setLocalDescription</span>(answer);
+<span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'answer'</span>, sdp: answer.sdp });
+
+<span class="cm">// Add received ICE candidates</span>
+<span class="kw">await</span> pc.<span class="fn">addIceCandidate</span>(<span class="kw">new</span> <span class="cls">RTCIceCandidate</span>(candidate));</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>ICE, STUN & TURN</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>ICE</strong> (Interactive Connectivity Establishment) is the framework WebRTC uses to find the best path between peers. It gathers and tests <em>ICE candidates</em> — possible network endpoints.</p>
+<table>
+<tr><th>Type</th><th>What it does</th><th>When needed</th></tr>
+<tr><td><strong>Host</strong></td><td>Direct LAN IP/port</td><td>Same network</td></tr>
+<tr><td><strong>Server Reflexive (srflx)</strong></td><td>Public IP via STUN</td><td>Behind NAT (most cases)</td></tr>
+<tr><td><strong>Relay (relay)</strong></td><td>Traffic via TURN server</td><td>Symmetric NAT / firewall</td></tr>
+</table>
+<p><strong>STUN</strong> (Session Traversal Utilities for NAT) — cheap, stateless server. Tells you your public IP:port so you can share it as a candidate.</p>
+<p><strong>TURN</strong> (Traversal Using Relays around NAT) — fallback relay server that forwards all media. Expensive but always works.</p>
+<pre><span class="kw">const</span> iceConfig = {
+  iceServers: [
+    { urls: <span class="str">'stun:stun.l.google.com:19302'</span> },
+    {
+      urls: <span class="str">'turn:turn.example.com:3478'</span>,
+      username: <span class="str">'user'</span>,
+      credential: <span class="str">'secret'</span>,
+    },
+  ],
+  iceTransportPolicy: <span class="str">'all'</span>, <span class="cm">// 'relay' forces TURN only</span>
+};</pre>
+<div class="tip">~80% of calls connect via STUN (srflx). Always deploy TURN as a fallback — symmetric NAT and corporate firewalls need it.</div>
+</div></div>
+</div>
+
+<!-- ===== SDP ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SDP — Session Description Protocol <span class="badge b-warn">Protocol</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>SDP Structure & Key Fields</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SDP</strong> is a text format (not a protocol) that describes media sessions — codecs, bandwidth, direction, ICE credentials, DTLS fingerprint. Exchanged in the WebRTC offer/answer.</p>
+<pre><span class="cm"># Session section</span>
+v=0                              <span class="cm"># version</span>
+o=- 123456 2 IN IP4 127.0.0.1   <span class="cm"># origin</span>
+s=-                              <span class="cm"># session name</span>
+t=0 0                            <span class="cm"># timing (0 0 = permanent)</span>
+
+<span class="cm"># Media section (audio)</span>
+m=audio 9 UDP/TLS/RTP/SAVPF 111  <span class="cm"># port 9 = bundled</span>
+a=rtpmap:111 opus/48000/2        <span class="cm"># Opus codec, 48kHz stereo</span>
+a=fmtp:111 minptime=10;useinbandfec=1
+a=sendrecv                        <span class="cm"># direction</span>
+a=ice-ufrag:Xd3r                  <span class="cm"># ICE credentials</span>
+a=ice-pwd:longpassword
+a=fingerprint:sha-256 AA:BB:...  <span class="cm"># DTLS cert fingerprint</span>
+a=setup:actpass</pre>
+<table>
+<tr><th>Direction attr</th><th>Meaning</th></tr>
+<tr><td><code>sendrecv</code></td><td>Send and receive (default)</td></tr>
+<tr><td><code>sendonly</code></td><td>Send only (screenshare source)</td></tr>
+<tr><td><code>recvonly</code></td><td>Receive only (viewer)</td></tr>
+<tr><td><code>inactive</code></td><td>Neither (on hold)</td></tr>
+</table>
+<div class="tip">BUNDLE groups multiple media streams over one transport — one ICE/DTLS connection, multiple m-sections. Modern WebRTC always uses it.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Codecs & Bandwidth Control</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Codec</th><th>Type</th><th>Notes</th></tr>
+<tr><td>Opus</td><td>Audio</td><td>Default for VoIP — adaptive 6–510 kbps, FEC, DTX</td></tr>
+<tr><td>G.711 (PCMU/PCMA)</td><td>Audio</td><td>Legacy PSTN codec, 64 kbps, no compression</td></tr>
+<tr><td>G.722</td><td>Audio</td><td>Wideband (7 kHz), 64 kbps</td></tr>
+<tr><td>VP8 / VP9</td><td>Video</td><td>Open, Google — good compatibility</td></tr>
+<tr><td>H.264</td><td>Video</td><td>Hardware-accelerated on mobile, patent-encumbered</td></tr>
+<tr><td>AV1</td><td>Video</td><td>Best compression, high CPU on encode</td></tr>
+</table>
+<pre><span class="cm">// Prefer Opus, remove other audio codecs</span>
+<span class="kw">function</span> <span class="fn">preferOpus</span>(sdp) {
+  <span class="kw">const</span> lines = sdp.split(<span class="str">'\r\n'</span>);
+  <span class="kw">const</span> opusLine = lines.find(l =&gt; l.includes(<span class="str">'opus/48000'</span>));
+  <span class="kw">const</span> payload = opusLine?.match(<span class="str">/a=rtpmap:(\d+)/</span>)?.[<span class="num">1</span>];
+  <span class="kw">if</span> (!payload) <span class="kw">return</span> sdp;
+  <span class="kw">return</span> sdp.replace(<span class="str">/m=audio (\d+) [^\r]+/</span>, `m=audio $1 UDP/TLS/RTP/SAVPF ${payload}`);
+}
+
+<span class="cm">// Set max bitrate via RTCRtpSender</span>
+<span class="kw">const</span> sender = pc.<span class="fn">getSenders</span>().find(s =&gt; s.track?.kind === <span class="str">'video'</span>);
+<span class="kw">const</span> params = sender.<span class="fn">getParameters</span>();
+params.encodings[<span class="num">0</span>].maxBitrate = <span class="num">1_000_000</span>; <span class="cm">// 1 Mbps</span>
+<span class="kw">await</span> sender.<span class="fn">setParameters</span>(params);</pre>
+</div></div>
+</div>
+
+<!-- ===== SIP / VoIP ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SIP & VoIP <span class="badge b-warn">Protocol</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>SIP Overview & Call Flow</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SIP</strong> (Session Initiation Protocol, RFC 3261) is a text-based signaling protocol for VoIP. It handles <em>setup, modification, and teardown</em> of sessions. Media itself runs over RTP — SIP just negotiates it.</p>
+<p><strong>Key SIP entities:</strong></p>
+<table>
+<tr><th>Entity</th><th>Role</th></tr>
+<tr><td>UA (User Agent)</td><td>Client/phone that initiates or receives calls</td></tr>
+<tr><td>Proxy Server</td><td>Routes SIP messages between UAs</td></tr>
+<tr><td>Registrar</td><td>Maps SIP URI → current IP:port (via REGISTER)</td></tr>
+<tr><td>B2BUA</td><td>Back-to-back UA — terminates and re-originates calls (Asterisk, FreeSWITCH)</td></tr>
+</table>
+<pre><span class="cm"># Basic SIP INVITE (outgoing call)</span>
+INVITE sip:bob@example.com SIP/2.0
+Via: SIP/2.0/UDP alice-pc:5060;branch=z9hG4bK776asdhds
+From: "Alice" &lt;sip:alice@example.com&gt;;tag=1928301774
+To: &lt;sip:bob@example.com&gt;
+Call-ID: a84b4c76e66710@pc33.atlanta.com
+CSeq: 314159 INVITE
+Content-Type: application/sdp
+Content-Length: [sdp length]
+
+[SDP body — codec negotiation]</pre>
+<p><strong>Basic call flow:</strong></p>
+<ol>
+  <li><code>INVITE</code> → <code>100 Trying</code> → <code>180 Ringing</code> → <code>200 OK</code> → <code>ACK</code> (3-way handshake)</li>
+  <li>RTP media flows</li>
+  <li><code>BYE</code> → <code>200 OK</code> (teardown)</li>
+</ol>
+<div class="tip">SIP uses SDP for media negotiation — the INVITE body contains an SDP offer, the 200 OK contains the SDP answer. Same offer/answer model as WebRTC.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>SIP Response Codes</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Range</th><th>Class</th><th>Examples</th></tr>
+<tr><td>1xx</td><td>Provisional</td><td>100 Trying, 180 Ringing, 183 Session Progress</td></tr>
+<tr><td>2xx</td><td>Success</td><td>200 OK</td></tr>
+<tr><td>3xx</td><td>Redirect</td><td>301 Moved Permanently, 302 Moved Temporarily</td></tr>
+<tr><td>4xx</td><td>Client Error</td><td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 486 Busy Here, 487 Request Terminated</td></tr>
+<tr><td>5xx</td><td>Server Error</td><td>500 Internal Server Error, 503 Service Unavailable</td></tr>
+<tr><td>6xx</td><td>Global Failure</td><td>603 Decline (user explicitly rejected)</td></tr>
+</table>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>RTP & RTCP</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>RTP</strong> (Real-time Transport Protocol) carries media (audio/video) over UDP. <strong>RTCP</strong> is the companion control protocol for QoS stats.</p>
+<table>
+<tr><th></th><th>RTP</th><th>RTCP</th></tr>
+<tr><td>Purpose</td><td>Media transport</td><td>QoS feedback & sync</td></tr>
+<tr><td>Port</td><td>Even (e.g. 5004)</td><td>Odd = RTP port + 1</td></tr>
+<tr><td>Transport</td><td>UDP (usually)</td><td>UDP</td></tr>
+<tr><td>Key fields</td><td>Seq#, timestamp, SSRC, payload type</td><td>SR/RR reports, SDES, BYE, APP</td></tr>
+</table>
+<p><strong>SRTP</strong> (Secure RTP) — mandatory in WebRTC, encrypts media payload and authenticates headers. Key exchange via DTLS-SRTP.</p>
+<div class="warn-box">WebRTC mandates SRTP — plain RTP is not allowed. The DTLS handshake derives the SRTP master key. Fingerprint in SDP authenticates the cert.</div>
+</div></div>
+</div>
+
+<!-- ===== JANUS ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Janus WebRTC Server <span class="badge b-hot">Server</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Janus Architecture & Plugin System</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Janus</strong> is an open-source WebRTC server gateway (by Meetecho). It acts as a <em>selective forwarding unit (SFU)</em> and B2BUA — it terminates WebRTC on one side and can bridge to SIP, RTP, recordings, etc. via plugins.</p>
+<table>
+<tr><th>Plugin</th><th>Use case</th></tr>
+<tr><td>VideoRoom</td><td>Multiparty video conferences (SFU)</td></tr>
+<tr><td>VideoCall</td><td>Simple 1:1 video call</td></tr>
+<tr><td>SIP</td><td>Bridge WebRTC ↔ SIP/PSTN</td></tr>
+<tr><td>Streaming</td><td>Broadcast RTP/RTSP streams to WebRTC viewers</td></tr>
+<tr><td>AudioBridge</td><td>Audio MCU — mixes multiple audio streams</td></tr>
+<tr><td>RecordPlay</td><td>Record and playback WebRTC sessions</td></tr>
+<tr><td>TextRoom</td><td>Text messaging over DataChannels</td></tr>
+</table>
+<p><strong>Transport layers:</strong> HTTP REST, WebSocket, RabbitMQ, MQTT — all carry the same JSON-based Janus API.</p>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Janus API Flow</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Every Janus interaction follows: <strong>create session</strong> → <strong>attach plugin handle</strong> → <strong>send plugin messages + JSEP</strong>.</p>
+<pre><span class="cm">// 1. Create Janus session</span>
+<span class="kw">const</span> janus = <span class="kw">new</span> <span class="cls">Janus</span>({
+  server: <span class="str">'wss://janus.example.com/ws'</span>,
+  success: () =&gt; {
+    <span class="cm">// 2. Attach to VideoRoom plugin</span>
+    janus.<span class="fn">attach</span>({
+      plugin: <span class="str">'janus.plugin.videoroom'</span>,
+      success: (handle) =&gt; { pluginHandle = handle; },
+      onmessage: (msg, jsep) =&gt; {
+        <span class="kw">if</span> (jsep) {
+          pluginHandle.<span class="fn">createAnswer</span>({
+            jsep,
+            tracks: [{ type: <span class="str">'audio'</span>, capture: <span class="kw">true</span> }, { type: <span class="str">'video'</span>, capture: <span class="kw">true</span> }],
+            success: (ourJsep) =&gt; pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str">'start'</span> }, jsep: ourJsep }),
+          });
+        }
+      },
+      onremotetrack: (track, mid, active) =&gt; {
+        <span class="kw">if</span> (active) {
+          <span class="kw">const</span> stream = <span class="kw">new</span> <span class="cls">MediaStream</span>([track]);
+          videoEl.srcObject = stream;
+        }
+      },
+    });
+  },
+});
+
+<span class="cm">// 3. Join a room</span>
+pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str">'join'</span>, room: <span class="num">1234</span>, ptype: <span class="str">'publisher'</span>, display: <span class="str">'Alice'</span> } });</pre>
+<div class="tip">Janus handles all ICE, DTLS, and SRTP internally. Your app only deals with JSON messages and JSEP (JSON SDP wrappers) — Janus translates to/from native WebRTC.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>MCU vs SFU vs P2P</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>P2P</th><th>SFU</th><th>MCU</th></tr>
+<tr><td>Media routing</td><td>Direct between peers</td><td>Server forwards streams selectively</td><td>Server mixes into one stream</td></tr>
+<tr><td>Client upload</td><td>N-1 streams</td><td>1 stream</td><td>1 stream</td></tr>
+<tr><td>Client download</td><td>N-1 streams</td><td>N-1 streams</td><td>1 stream</td></tr>
+<tr><td>Server CPU</td><td>None</td><td>Low (no decode)</td><td>High (decode+encode)</td></tr>
+<tr><td>Latency</td><td>Lowest</td><td>Low</td><td>Higher</td></tr>
+<tr><td>Examples</td><td>Native WebRTC</td><td>Janus VideoRoom, mediasoup, Livekit</td><td>Jitsi Videobridge MCU</td></tr>
+</table>
+<div class="tip">Janus VideoRoom is an SFU — it forwards each publisher's stream to all subscribers without re-encoding. Use AudioBridge plugin if you need MCU-style audio mixing.</div>
+</div></div>
+</div>
+
+<!-- ===== NETWORKING ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Networking Fundamentals for VoIP <span class="badge b-info">Networking</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NAT Types & Traversal</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>NAT (Network Address Translation) maps private IPs to a public IP. Different NAT behaviors affect whether peers can connect directly.</p>
+<table>
+<tr><th>NAT Type</th><th>Behaviour</th><th>P2P possible?</th></tr>
+<tr><td>Full Cone</td><td>Any external host can send to the mapped port</td><td>Yes (easy)</td></tr>
+<tr><td>Restricted Cone</td><td>Only hosts you sent to can respond</td><td>Yes (STUN)</td></tr>
+<tr><td>Port-Restricted Cone</td><td>IP + port must match</td><td>Yes (STUN)</td></tr>
+<tr><td>Symmetric</td><td>Different mapping per destination</td><td>Needs TURN</td></tr>
+</table>
+<p><strong>ICE trickle</strong> — candidates are sent to the remote peer as they are gathered rather than waiting for all of them. Speeds up connection establishment.</p>
+<div class="warn-box">Symmetric NAT (common in corporate networks) blocks STUN-only traversal. Always provision TURN servers for production.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>UDP vs TCP for Media & Key Ports</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Protocol</th><th>Transport</th><th>Why</th></tr>
+<tr><td>RTP / SRTP</td><td>UDP</td><td>Low latency — dropped packets &gt; late packets for real-time media</td></tr>
+<tr><td>RTCP</td><td>UDP (same port mux in WebRTC)</td><td>RTCP-mux collapses RTP+RTCP onto one port</td></tr>
+<tr><td>SIP</td><td>UDP or TCP or TLS (5060/5061)</td><td>5060 = cleartext, 5061 = TLS (SIPS)</td></tr>
+<tr><td>STUN</td><td>UDP 3478</td><td>Stateless, single round-trip</td></tr>
+<tr><td>TURN</td><td>UDP/TCP 3478, TLS 5349</td><td>TLS/TCP fallback for restrictive firewalls</td></tr>
+<tr><td>DTLS</td><td>UDP (over ICE)</td><td>TLS-equivalent for UDP — secures SRTP key exchange</td></tr>
+<tr><td>WebSocket (Janus)</td><td>TCP 8188 / 8989 (WSS)</td><td>Signaling only — not media</td></tr>
+</table>
+<p><strong>Media port range:</strong> typically 10000–60000 UDP — must be open on server firewalls for Janus/TURN.</p>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>QoS & Jitter, Packet Loss</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Metric</th><th>Good</th><th>Degraded</th><th>Mitigation</th></tr>
+<tr><td>Latency (one-way)</td><td>&lt;150 ms</td><td>&gt;300 ms</td><td>TURN relay close to users, reduce hops</td></tr>
+<tr><td>Jitter</td><td>&lt;30 ms</td><td>&gt;50 ms</td><td>Jitter buffer (adaptive)</td></tr>
+<tr><td>Packet loss</td><td>&lt;1%</td><td>&gt;5%</td><td>FEC (Opus inband), RTX (RTP retransmit), NACK</td></tr>
+<tr><td>Bitrate</td><td>Adaptive</td><td>Bandwidth crunch</td><td>BWE (REMB/TWCC), simulcast, SVC</td></tr>
+</table>
+<p><strong>Key WebRTC congestion control mechanisms:</strong></p>
+<ul>
+  <li><strong>REMB</strong> — Receiver Estimated Max Bitrate (older, RTCP feedback)</li>
+  <li><strong>TWCC</strong> — Transport-Wide Congestion Control (sender-side, more accurate)</li>
+  <li><strong>Simulcast</strong> — publisher sends multiple resolutions; SFU picks per subscriber</li>
+  <li><strong>SVC</strong> — Scalable Video Coding — layered encoding (VP9/AV1 support it)</li>
+</ul>
+</div></div>
+</div>

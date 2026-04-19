@@ -765,6 +765,108 @@ apiGet(<span class="str">'/users'</span>, { id: <span class="str">'abc'</span> }
 <div class="tip">This pattern is used by tRPC and typed fetch wrappers — the client type is derived entirely from the route map, so adding a new endpoint in one place updates the whole client automatically.</div>
 </div></div>
 </div>
+
+<!-- ===== ABSTRACT CLASSES vs INTERFACES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Abstract Classes vs Interfaces <span class="badge b-ng">TS</span><span class="badge b-key">Interview</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core differences at a glance</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Abstract classes</strong> can contain implementation (methods, fields, constructors) and enforce a contract — they sit halfway between a concrete class and an interface. <strong>Interfaces</strong> are pure shape contracts: zero runtime footprint, erased at compile time.</p>
+<table>
+<tr><th>Feature</th><th>Abstract class</th><th>Interface</th></tr>
+<tr><td>Runtime existence</td><td>Yes — compiled to JS class</td><td>No — erased at compile time</td></tr>
+<tr><td>Concrete methods / fields</td><td>Yes ✓</td><td>No ✗ (only signatures)</td></tr>
+<tr><td>Constructor logic</td><td>Yes ✓</td><td>No ✗</td></tr>
+<tr><td>Multiple inheritance</td><td>No — single <code>extends</code></td><td>Yes — multiple <code>implements</code></td></tr>
+<tr><td>Declaration merging</td><td>No ✗</td><td>Yes ✓</td></tr>
+<tr><td>Use with <code>instanceof</code></td><td>Yes ✓</td><td>No ✗</td></tr>
+<tr><td>Dependency Injection token</td><td>Yes ✓ (Angular/NestJS)</td><td>No — not a runtime value</td></tr>
+</table>
+<div class="tip">Default rule: prefer <strong>interface</strong> for pure shape contracts. Reach for <strong>abstract class</strong> when you need shared implementation, a constructor, or a runtime DI token.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Abstract class — shared implementation + contract</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Abstract class — cannot be instantiated directly</span>
+<span class="kw">abstract class</span> <span class="cls">Animal</span> {
+  <span class="cm">// Concrete field + constructor — shared by all subclasses</span>
+  <span class="kw">constructor</span>(<span class="kw">protected readonly</span> name: string) {}
+
+  <span class="cm">// Concrete method — inherited as-is</span>
+  <span class="fn">describe</span>(): string {
+    <span class="kw">return</span> <span class="str">\`I am \${this.name}\`</span>;
+  }
+
+  <span class="cm">// Abstract method — subclasses MUST implement</span>
+  <span class="kw">abstract</span> <span class="fn">makeSound</span>(): string;
+}
+
+<span class="kw">class</span> <span class="cls">Dog</span> <span class="kw">extends</span> <span class="cls">Animal</span> {
+  <span class="fn">makeSound</span>() { <span class="kw">return</span> <span class="str">'Woof'</span>; }
+}
+
+<span class="kw">const</span> d = <span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">'Rex'</span>);
+d.describe();   <span class="cm">// 'I am Rex' — inherited from Animal</span>
+d.makeSound();  <span class="cm">// 'Woof'</span>
+
+<span class="cm">// new Animal('x') — ✗ Error: Cannot create instance of abstract class</span>
+d <span class="kw">instanceof</span> Animal; <span class="cm">// ✓ true — runtime check works</span></pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Interface — pure shape, zero runtime cost</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Interface — type-level only, compiled away</span>
+<span class="kw">interface</span> <span class="cls">Serializable</span> {
+  <span class="fn">serialize</span>(): string;
+  <span class="fn">deserialize</span>(raw: string): <span class="kw">void</span>;
+}
+
+<span class="cm">// A class can implement multiple interfaces</span>
+<span class="kw">interface</span> <span class="cls">Loggable</span> { <span class="fn">log</span>(): <span class="kw">void</span>; }
+
+<span class="kw">class</span> <span class="cls">UserRecord</span> <span class="kw">implements</span> <span class="cls">Serializable</span>, <span class="cls">Loggable</span> {
+  <span class="fn">serialize</span>()          { <span class="kw">return</span> JSON.stringify(<span class="kw">this</span>); }
+  <span class="fn">deserialize</span>(raw)     { Object.assign(<span class="kw">this</span>, JSON.parse(raw)); }
+  <span class="fn">log</span>()                { console.log(<span class="kw">this</span>); }
+}
+
+<span class="cm">// Declaration merging — add fields to existing interface</span>
+<span class="kw">interface</span> <span class="cls">Serializable</span> { version: number; }  <span class="cm">// ✓ merged</span>
+
+<span class="cm">// instanceof with interface — ✗ doesn't work (no runtime token)</span>
+<span class="cm">// ur instanceof Serializable  — compile error</span>
+
+<span class="cm">// Use a type guard instead:</span>
+<span class="kw">function</span> <span class="fn">isSerializable</span>(v: unknown): v <span class="kw">is</span> <span class="cls">Serializable</span> {
+  <span class="kw">return</span> <span class="kw">typeof</span> (v <span class="kw">as any</span>)?.serialize === <span class="str">'function'</span>;
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>When to use which — decision guide</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Situation</th><th>Choose</th><th>Reason</th></tr>
+<tr><td>Shared base logic (logging, caching, lifecycle)</td><td>Abstract class</td><td>Concrete methods prevent copy-paste across subclasses</td></tr>
+<tr><td>DI token in Angular / NestJS</td><td>Abstract class</td><td>Interfaces are erased — inject by class reference</td></tr>
+<tr><td>Defining an API / DTO shape</td><td>Interface</td><td>Zero runtime overhead; supports declaration merging</td></tr>
+<tr><td>Multiple contracts on one class</td><td>Interface</td><td>A class can implement N interfaces, but only extend 1 class</td></tr>
+<tr><td>Third-party type augmentation</td><td>Interface</td><td>Declaration merging lets you extend existing interfaces</td></tr>
+<tr><td>Template Method pattern</td><td>Abstract class</td><td>Base class defines the algorithm skeleton; subclasses fill in steps</td></tr>
+</table>
+<pre><span class="cm">// Angular DI — abstract class as token (works at runtime)</span>
+<span class="kw">abstract class</span> <span class="cls">Logger</span> { <span class="kw">abstract</span> <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
+<span class="kw">class</span> <span class="cls">ConsoleLogger</span> <span class="kw">extends</span> <span class="cls">Logger</span> { <span class="fn">log</span>(m: string) { console.log(m); } }
+
+<span class="cm">// providers array in Angular module:</span>
+<span class="cm">// { provide: Logger, useClass: ConsoleLogger }</span>
+<span class="cm">// inject(Logger) — ✓ resolves to ConsoleLogger at runtime</span>
+
+<span class="cm">// Interface token — ✗ does NOT work</span>
+<span class="kw">interface</span> <span class="cls">ILogger</span> { <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
+<span class="cm">// { provide: ILogger, useClass: ... } — compile error: ILogger not a value</span></pre>
+<div class="tip">In Angular / NestJS: use abstract classes as DI tokens — they survive compilation, interfaces don't. The abstract class acts as both the type contract and the injection key.</div>
+</div></div>
+</div>
 `,
   "browser":`<!-- ===== NAVIGATION PHASE ===== -->
 <div class="section">
@@ -4244,6 +4346,580 @@ validationRules: [<span class="fn">depthLimit</span>(<span class="num">5</span>)
   name: <span class="cls">String</span>!
 }</pre>
 <div class="tip">Combine persisted queries with a CDN for public/anonymous queries. This brings GraphQL latency close to REST with proper HTTP caching semantics.</div>
+</div></div>
+</div>
+`,
+  "electron":`<!-- ===== ELECTRON ARCHITECTURE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Electron Architecture <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Main Process vs Renderer Process</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Electron runs two types of processes. The <strong>Main process</strong> is Node.js — it controls the app lifecycle and native OS access. Each <strong>Renderer process</strong> is a Chromium web page — it runs UI code and is sandboxed by default.</p>
+<table>
+<tr><th></th><th>Main Process</th><th>Renderer Process</th></tr>
+<tr><td>Runtime</td><td>Node.js</td><td>Chromium (browser)</td></tr>
+<tr><td>Count</td><td>One per app</td><td>One per BrowserWindow</td></tr>
+<tr><td>Node access</td><td>Full</td><td>None (sandboxed)</td></tr>
+<tr><td>DOM access</td><td>None</td><td>Full</td></tr>
+<tr><td>Entry file</td><td><code>main.js</code></td><td><code>index.html</code></td></tr>
+</table>
+<pre><span class="cm">// main.js — Main Process</span>
+<span class="kw">const</span> { <span class="cls">app</span>, <span class="cls">BrowserWindow</span> } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="fn">app</span>.whenReady().<span class="fn">then</span>(() =&gt; {
+  <span class="kw">const</span> win = <span class="kw">new</span> <span class="cls">BrowserWindow</span>({
+    width: <span class="num">1200</span>, height: <span class="num">800</span>,
+    webPreferences: {
+      preload: <span class="fn">path</span>.join(__dirname, <span class="str">'preload.js'</span>),
+      contextIsolation: <span class="kw">true</span>,   <span class="cm">// required for security</span>
+      sandbox: <span class="kw">true</span>,
+    },
+  });
+  win.<span class="fn">loadFile</span>(<span class="str">'index.html'</span>);
+});</pre>
+<div class="tip">Never set <code>nodeIntegration: true</code> in the renderer — it exposes the full Node API to potentially untrusted web content.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Preload script & contextBridge</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>The <strong>preload script</strong> runs in the renderer before any web content, with access to a limited set of Node/Electron APIs. <code>contextBridge</code> safely exposes a controlled API to the renderer.</p>
+<pre><span class="cm">// preload.js</span>
+<span class="kw">const</span> { contextBridge, ipcRenderer } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="fn">contextBridge</span>.exposeInMainWorld(<span class="str">'electronAPI'</span>, {
+  <span class="fn">openFile</span>: () =&gt; <span class="fn">ipcRenderer</span>.invoke(<span class="str">'dialog:openFile'</span>),
+  <span class="fn">onUpdate</span>: (cb) =&gt; <span class="fn">ipcRenderer</span>.on(<span class="str">'update-available'</span>, cb),
+  <span class="fn">removeUpdate</span>: () =&gt; <span class="fn">ipcRenderer</span>.removeAllListeners(<span class="str">'update-available'</span>),
+});
+
+<span class="cm">// renderer — window.electronAPI is now available</span>
+<span class="kw">const</span> filePath = <span class="kw">await</span> window.electronAPI.<span class="fn">openFile</span>();</pre>
+<div class="warn-box">Never forward the raw <code>ipcRenderer</code> object through contextBridge — that lets the renderer send arbitrary IPC channels. Expose only named, specific functions.</div>
+</div></div>
+</div>
+
+<!-- ===== IPC COMMUNICATION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">IPC Communication <span class="badge b-key">IPC</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ipcMain / ipcRenderer patterns</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Inter-process communication (IPC) is the only way for renderer and main processes to exchange data. Use <code>invoke/handle</code> for request-reply and <code>send/on</code> for fire-and-forget.</p>
+<table>
+<tr><th>Pattern</th><th>Renderer side</th><th>Main side</th><th>Use when</th></tr>
+<tr><td>Request / Reply</td><td><code>ipcRenderer.invoke()</code></td><td><code>ipcMain.handle()</code></td><td>Need a response (async)</td></tr>
+<tr><td>One-way (R→M)</td><td><code>ipcRenderer.send()</code></td><td><code>ipcMain.on()</code></td><td>Fire and forget to main</td></tr>
+<tr><td>One-way (M→R)</td><td><code>ipcRenderer.on()</code></td><td><code>win.webContents.send()</code></td><td>Push from main to renderer</td></tr>
+</table>
+<pre><span class="cm">// main.js</span>
+<span class="fn">ipcMain</span>.handle(<span class="str">'dialog:openFile'</span>, <span class="kw">async</span> () =&gt; {
+  <span class="kw">const</span> { canceled, filePaths } = <span class="kw">await</span> <span class="fn">dialog</span>.showOpenDialog({});
+  <span class="kw">if</span> (canceled) <span class="kw">return</span> <span class="kw">null</span>;
+  <span class="kw">return</span> filePaths[<span class="num">0</span>];
+});
+
+<span class="cm">// Push notification from main → renderer</span>
+<span class="fn">autoUpdater</span>.on(<span class="str">'update-available'</span>, () =&gt; {
+  win.webContents.<span class="fn">send</span>(<span class="str">'update-available'</span>);
+});</pre>
+<div class="tip">Validate all data received in <code>ipcMain.handle</code> — a compromised renderer can send arbitrary payloads.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>IPC channel naming & validation</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Use a whitelist of allowed channels in preload</span>
+<span class="kw">const</span> ALLOWED_CHANNELS = [<span class="str">'app:getVersion'</span>, <span class="str">'file:read'</span>, <span class="str">'file:write'</span>];
+
+<span class="fn">contextBridge</span>.exposeInMainWorld(<span class="str">'ipc'</span>, {
+  <span class="fn">invoke</span>: (channel, ...args) =&gt; {
+    <span class="kw">if</span> (!ALLOWED_CHANNELS.<span class="fn">includes</span>(channel)) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Blocked channel'</span>);
+    <span class="kw">return</span> <span class="fn">ipcRenderer</span>.invoke(channel, ...args);
+  },
+});
+
+<span class="cm">// main.js — always validate args</span>
+<span class="fn">ipcMain</span>.handle(<span class="str">'file:read'</span>, <span class="kw">async</span> (event, filePath) =&gt; {
+  <span class="kw">if</span> (<span class="kw">typeof</span> filePath !== <span class="str">'string'</span>) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Invalid path'</span>);
+  <span class="kw">const</span> safe = <span class="fn">path</span>.resolve(filePath);
+  <span class="kw">if</span> (!safe.<span class="fn">startsWith</span>(ALLOWED_DIR)) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Path traversal denied'</span>);
+  <span class="kw">return</span> <span class="fn">fs</span>.promises.readFile(safe, <span class="str">'utf8'</span>);
+});</pre>
+</div></div>
+</div>
+
+<!-- ===== APP LIFECYCLE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">App Lifecycle & Windows <span class="badge b-key">Lifecycle</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>app lifecycle events</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Event</th><th>When it fires</th><th>Common use</th></tr>
+<tr><td><code>ready</code></td><td>Electron initialized</td><td>Create windows, register shortcuts</td></tr>
+<tr><td><code>window-all-closed</code></td><td>All windows closed</td><td>Quit on Windows/Linux (<code>app.quit()</code>)</td></tr>
+<tr><td><code>activate</code></td><td>Dock icon clicked (macOS)</td><td>Re-create window if none open</td></tr>
+<tr><td><code>before-quit</code></td><td>Before quitting</td><td>Cleanup, save state</td></tr>
+<tr><td><code>will-quit</code></td><td>All windows closed, quitting</td><td>Final cleanup</td></tr>
+<tr><td><code>quit</code></td><td>App about to exit</td><td>Last-resort cleanup</td></tr>
+</table>
+<pre><span class="fn">app</span>.whenReady().<span class="fn">then</span>(<span class="fn">createWindow</span>);
+
+<span class="fn">app</span>.on(<span class="str">'window-all-closed'</span>, () =&gt; {
+  <span class="kw">if</span> (process.platform !== <span class="str">'darwin'</span>) <span class="fn">app</span>.quit();
+});
+
+<span class="fn">app</span>.on(<span class="str">'activate'</span>, () =&gt; {
+  <span class="kw">if</span> (<span class="cls">BrowserWindow</span>.getAllWindows().length === <span class="num">0</span>) <span class="fn">createWindow</span>();
+});</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>BrowserWindow options</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">const</span> win = <span class="kw">new</span> <span class="cls">BrowserWindow</span>({
+  width: <span class="num">1200</span>, height: <span class="num">800</span>,
+  minWidth: <span class="num">600</span>, minHeight: <span class="num">400</span>,
+  frame: <span class="kw">false</span>,          <span class="cm">// frameless (custom titlebar)</span>
+  titleBarStyle: <span class="str">'hidden'</span>,  <span class="cm">// macOS traffic lights only</span>
+  show: <span class="kw">false</span>,           <span class="cm">// wait until ready-to-show</span>
+  backgroundColor: <span class="str">'#1a1a1a'</span>,
+  webPreferences: {
+    preload: <span class="fn">path</span>.join(__dirname, <span class="str">'preload.js'</span>),
+    contextIsolation: <span class="kw">true</span>,
+    sandbox: <span class="kw">true</span>,
+    spellcheck: <span class="kw">false</span>,
+  },
+});
+
+win.once(<span class="str">'ready-to-show'</span>, () =&gt; win.<span class="fn">show</span>());  <span class="cm">// avoid white flash</span>
+win.<span class="fn">loadFile</span>(<span class="str">'index.html'</span>);</pre>
+<div class="tip">Always set <code>show: false</code> and reveal on <code>ready-to-show</code> to prevent a white flash on startup.</div>
+</div></div>
+</div>
+
+<!-- ===== NATIVE APIS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Native APIs <span class="badge b-key">Native</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Dialogs, menus & system tray</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Dialog</span>
+<span class="kw">const</span> { dialog, Menu, Tray, nativeImage } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="kw">const</span> { filePaths } = <span class="kw">await</span> <span class="fn">dialog</span>.showOpenDialog(win, {
+  title: <span class="str">'Open File'</span>,
+  filters: [{ name: <span class="str">'JSON'</span>, extensions: [<span class="str">'json'</span>] }],
+  properties: [<span class="str">'openFile'</span>],
+});
+
+<span class="cm">// Application Menu</span>
+<span class="kw">const</span> menu = <span class="cls">Menu</span>.buildFromTemplate([
+  { label: <span class="str">'File'</span>, submenu: [
+    { label: <span class="str">'Open'</span>, accelerator: <span class="str">'CmdOrCtrl+O'</span>, <span class="fn">click</span>: openFile },
+    { type: <span class="str">'separator'</span> },
+    { role: <span class="str">'quit'</span> },
+  ]},
+]);
+<span class="cls">Menu</span>.setApplicationMenu(menu);
+
+<span class="cm">// System Tray</span>
+<span class="kw">const</span> tray = <span class="kw">new</span> <span class="cls">Tray</span>(<span class="fn">nativeImage</span>.createFromPath(<span class="str">'icon.png'</span>));
+tray.setContextMenu(<span class="cls">Menu</span>.buildFromTemplate([
+  { label: <span class="str">'Show'</span>, <span class="fn">click</span>: () =&gt; win.<span class="fn">show</span>() },
+  { label: <span class="str">'Quit'</span>, <span class="fn">click</span>: () =&gt; <span class="fn">app</span>.quit() },
+]));</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Notifications & shell</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">const</span> { Notification, shell, clipboard } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="cm">// OS notification</span>
+<span class="kw">new</span> <span class="cls">Notification</span>({ title: <span class="str">'Done'</span>, body: <span class="str">'Export complete'</span> }).<span class="fn">show</span>();
+
+<span class="cm">// Open URL in default browser (safer than loadURL)</span>
+<span class="kw">await</span> <span class="fn">shell</span>.openExternal(<span class="str">'https://example.com'</span>);
+
+<span class="cm">// Open file in OS default app</span>
+<span class="kw">await</span> <span class="fn">shell</span>.openPath(<span class="str">'/path/to/file.pdf'</span>);
+
+<span class="cm">// Clipboard</span>
+<span class="fn">clipboard</span>.writeText(<span class="str">'copied!'</span>);
+<span class="kw">const</span> text = <span class="fn">clipboard</span>.readText();</pre>
+<div class="warn-box">Use <code>shell.openExternal</code> only with validated URLs — passing untrusted user input can execute arbitrary programs (e.g. <code>file://</code> paths).</div>
+</div></div>
+</div>
+
+<!-- ===== PACKAGING & DISTRIBUTION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Packaging & Distribution <span class="badge b-key">Build</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>electron-builder config</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>electron-builder</strong> is the standard tool for packaging Electron apps. It produces platform-native installers (.dmg, .exe, .AppImage) and handles code signing.</p>
+<pre><span class="cm">// package.json</span>
+{
+  <span class="str">"build"</span>: {
+    <span class="str">"appId"</span>: <span class="str">"com.company.myapp"</span>,
+    <span class="str">"productName"</span>: <span class="str">"MyApp"</span>,
+    <span class="str">"directories"</span>: { <span class="str">"output"</span>: <span class="str">"dist"</span> },
+    <span class="str">"files"</span>: [<span class="str">"dist/**"</span>, <span class="str">"main.js"</span>, <span class="str">"preload.js"</span>],
+    <span class="str">"mac"</span>: {
+      <span class="str">"category"</span>: <span class="str">"public.app-category.productivity"</span>,
+      <span class="str">"hardenedRuntime"</span>: <span class="kw">true</span>,
+      <span class="str">"entitlements"</span>: <span class="str">"entitlements.mac.plist"</span>
+    },
+    <span class="str">"win"</span>: { <span class="str">"target"</span>: [<span class="str">"nsis"</span>] },
+    <span class="str">"linux"</span>: { <span class="str">"target"</span>: [<span class="str">"AppImage"</span>, <span class="str">"deb"</span>] },
+    <span class="str">"publish"</span>: { <span class="str">"provider"</span>: <span class="str">"github"</span> }
+  }
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Auto-updates with electron-updater</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">const</span> { autoUpdater } = <span class="fn">require</span>(<span class="str">'electron-updater'</span>);
+
+<span class="fn">autoUpdater</span>.checkForUpdatesAndNotify();
+
+<span class="cm">// Or manual flow</span>
+<span class="fn">autoUpdater</span>.on(<span class="str">'update-available'</span>, () =&gt; {
+  win.webContents.<span class="fn">send</span>(<span class="str">'update-available'</span>);
+});
+<span class="fn">autoUpdater</span>.on(<span class="str">'update-downloaded'</span>, () =&gt; {
+  win.webContents.<span class="fn">send</span>(<span class="str">'update-downloaded'</span>);
+});
+
+<span class="cm">// Triggered from renderer via IPC</span>
+<span class="fn">ipcMain</span>.on(<span class="str">'install-update'</span>, () =&gt; <span class="fn">autoUpdater</span>.quitAndInstall());</pre>
+<div class="tip">Set <code>"publish": { "provider": "github" }</code> in electron-builder config and push a GitHub Release — electron-updater detects it automatically.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Security checklist</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td><code>contextIsolation: true</code></td><td>Prevents renderer from accessing Node globals</td></tr>
+<tr><td><code>sandbox: true</code></td><td>OS-level process isolation for renderer</td></tr>
+<tr><td><code>nodeIntegration: false</code> (default)</td><td>No Node in renderer — use preload/IPC</td></tr>
+<tr><td>Validate all IPC args in main</td><td>Compromised renderer can send anything</td></tr>
+<tr><td>Use <code>shell.openExternal</code> only for trusted URLs</td><td>Prevents arbitrary code execution</td></tr>
+<tr><td>CSP header via <code>ses.webRequest</code></td><td>Mitigates XSS in renderer</td></tr>
+<tr><td>Code sign all builds</td><td>Required for macOS Gatekeeper / Windows SmartScreen</td></tr>
+</table>
+<pre><span class="cm">// Set CSP in main process</span>
+session.defaultSession.webRequest.onHeadersReceived((details, cb) =&gt; {
+  cb({ responseHeaders: {
+    ...details.responseHeaders,
+    <span class="str">'Content-Security-Policy'</span>: [<span class="str">"default-src 'self'"</span>],
+  }});
+});</pre>
+</div></div>
+</div>
+`,
+  "webrtc":`<!-- ===== WEBRTC FUNDAMENTALS ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">WebRTC Architecture <span class="badge b-hot">Core</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebRTC Overview & Connection Flow</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>WebRTC</strong> (Web Real-Time Communication) enables peer-to-peer audio, video, and data directly in the browser without plugins. It uses three main APIs: <code>RTCPeerConnection</code>, <code>RTCDataChannel</code>, and <code>getUserMedia</code>.</p>
+<p><strong>Connection flow (Offer/Answer):</strong></p>
+<ol>
+  <li>Caller creates <strong>Offer</strong> (SDP) via <code>createOffer()</code></li>
+  <li>Caller sets it as local description, sends SDP to callee via signaling</li>
+  <li>Callee sets it as remote description, creates <strong>Answer</strong></li>
+  <li>Callee sets answer as local description, sends back via signaling</li>
+  <li>Both sides exchange <strong>ICE candidates</strong> through signaling</li>
+  <li>ICE connectivity checks complete — P2P media flows</li>
+</ol>
+<pre><span class="cm">// Caller side</span>
+<span class="kw">const</span> pc = <span class="kw">new</span> <span class="cls">RTCPeerConnection</span>(iceConfig);
+
+<span class="cm">// Add local tracks before creating offer</span>
+<span class="kw">const</span> stream = <span class="kw">await</span> navigator.mediaDevices.<span class="fn">getUserMedia</span>({ audio: <span class="kw">true</span>, video: <span class="kw">true</span> });
+stream.<span class="fn">getTracks</span>().forEach(track =&gt; pc.<span class="fn">addTrack</span>(track, stream));
+
+<span class="kw">const</span> offer = <span class="kw">await</span> pc.<span class="fn">createOffer</span>();
+<span class="kw">await</span> pc.<span class="fn">setLocalDescription</span>(offer);
+<span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'offer'</span>, sdp: offer.sdp });
+
+<span class="cm">// On ICE candidate gathered</span>
+pc.<span class="fn">onicecandidate</span> = ({ candidate }) =&gt; {
+  <span class="kw">if</span> (candidate) <span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'ice'</span>, candidate });
+};
+
+<span class="cm">// Receive remote tracks</span>
+pc.<span class="fn">ontrack</span> = ({ streams }) =&gt; { videoEl.srcObject = streams[<span class="num">0</span>]; };</pre>
+<pre><span class="cm">// Callee side</span>
+<span class="kw">const</span> pc = <span class="kw">new</span> <span class="cls">RTCPeerConnection</span>(iceConfig);
+<span class="kw">await</span> pc.<span class="fn">setRemoteDescription</span>(<span class="kw">new</span> <span class="cls">RTCSessionDescription</span>(offer));
+<span class="kw">const</span> answer = <span class="kw">await</span> pc.<span class="fn">createAnswer</span>();
+<span class="kw">await</span> pc.<span class="fn">setLocalDescription</span>(answer);
+<span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'answer'</span>, sdp: answer.sdp });
+
+<span class="cm">// Add received ICE candidates</span>
+<span class="kw">await</span> pc.<span class="fn">addIceCandidate</span>(<span class="kw">new</span> <span class="cls">RTCIceCandidate</span>(candidate));</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>ICE, STUN & TURN</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>ICE</strong> (Interactive Connectivity Establishment) is the framework WebRTC uses to find the best path between peers. It gathers and tests <em>ICE candidates</em> — possible network endpoints.</p>
+<table>
+<tr><th>Type</th><th>What it does</th><th>When needed</th></tr>
+<tr><td><strong>Host</strong></td><td>Direct LAN IP/port</td><td>Same network</td></tr>
+<tr><td><strong>Server Reflexive (srflx)</strong></td><td>Public IP via STUN</td><td>Behind NAT (most cases)</td></tr>
+<tr><td><strong>Relay (relay)</strong></td><td>Traffic via TURN server</td><td>Symmetric NAT / firewall</td></tr>
+</table>
+<p><strong>STUN</strong> (Session Traversal Utilities for NAT) — cheap, stateless server. Tells you your public IP:port so you can share it as a candidate.</p>
+<p><strong>TURN</strong> (Traversal Using Relays around NAT) — fallback relay server that forwards all media. Expensive but always works.</p>
+<pre><span class="kw">const</span> iceConfig = {
+  iceServers: [
+    { urls: <span class="str">'stun:stun.l.google.com:19302'</span> },
+    {
+      urls: <span class="str">'turn:turn.example.com:3478'</span>,
+      username: <span class="str">'user'</span>,
+      credential: <span class="str">'secret'</span>,
+    },
+  ],
+  iceTransportPolicy: <span class="str">'all'</span>, <span class="cm">// 'relay' forces TURN only</span>
+};</pre>
+<div class="tip">~80% of calls connect via STUN (srflx). Always deploy TURN as a fallback — symmetric NAT and corporate firewalls need it.</div>
+</div></div>
+</div>
+
+<!-- ===== SDP ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SDP — Session Description Protocol <span class="badge b-warn">Protocol</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>SDP Structure & Key Fields</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SDP</strong> is a text format (not a protocol) that describes media sessions — codecs, bandwidth, direction, ICE credentials, DTLS fingerprint. Exchanged in the WebRTC offer/answer.</p>
+<pre><span class="cm"># Session section</span>
+v=0                              <span class="cm"># version</span>
+o=- 123456 2 IN IP4 127.0.0.1   <span class="cm"># origin</span>
+s=-                              <span class="cm"># session name</span>
+t=0 0                            <span class="cm"># timing (0 0 = permanent)</span>
+
+<span class="cm"># Media section (audio)</span>
+m=audio 9 UDP/TLS/RTP/SAVPF 111  <span class="cm"># port 9 = bundled</span>
+a=rtpmap:111 opus/48000/2        <span class="cm"># Opus codec, 48kHz stereo</span>
+a=fmtp:111 minptime=10;useinbandfec=1
+a=sendrecv                        <span class="cm"># direction</span>
+a=ice-ufrag:Xd3r                  <span class="cm"># ICE credentials</span>
+a=ice-pwd:longpassword
+a=fingerprint:sha-256 AA:BB:...  <span class="cm"># DTLS cert fingerprint</span>
+a=setup:actpass</pre>
+<table>
+<tr><th>Direction attr</th><th>Meaning</th></tr>
+<tr><td><code>sendrecv</code></td><td>Send and receive (default)</td></tr>
+<tr><td><code>sendonly</code></td><td>Send only (screenshare source)</td></tr>
+<tr><td><code>recvonly</code></td><td>Receive only (viewer)</td></tr>
+<tr><td><code>inactive</code></td><td>Neither (on hold)</td></tr>
+</table>
+<div class="tip">BUNDLE groups multiple media streams over one transport — one ICE/DTLS connection, multiple m-sections. Modern WebRTC always uses it.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Codecs & Bandwidth Control</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Codec</th><th>Type</th><th>Notes</th></tr>
+<tr><td>Opus</td><td>Audio</td><td>Default for VoIP — adaptive 6–510 kbps, FEC, DTX</td></tr>
+<tr><td>G.711 (PCMU/PCMA)</td><td>Audio</td><td>Legacy PSTN codec, 64 kbps, no compression</td></tr>
+<tr><td>G.722</td><td>Audio</td><td>Wideband (7 kHz), 64 kbps</td></tr>
+<tr><td>VP8 / VP9</td><td>Video</td><td>Open, Google — good compatibility</td></tr>
+<tr><td>H.264</td><td>Video</td><td>Hardware-accelerated on mobile, patent-encumbered</td></tr>
+<tr><td>AV1</td><td>Video</td><td>Best compression, high CPU on encode</td></tr>
+</table>
+<pre><span class="cm">// Prefer Opus, remove other audio codecs</span>
+<span class="kw">function</span> <span class="fn">preferOpus</span>(sdp) {
+  <span class="kw">const</span> lines = sdp.split(<span class="str">'\\r\\n'</span>);
+  <span class="kw">const</span> opusLine = lines.find(l =&gt; l.includes(<span class="str">'opus/48000'</span>));
+  <span class="kw">const</span> payload = opusLine?.match(<span class="str">/a=rtpmap:(\\d+)/</span>)?.[<span class="num">1</span>];
+  <span class="kw">if</span> (!payload) <span class="kw">return</span> sdp;
+  <span class="kw">return</span> sdp.replace(<span class="str">/m=audio (\\d+) [^\\r]+/</span>, \`m=audio $1 UDP/TLS/RTP/SAVPF \${payload}\`);
+}
+
+<span class="cm">// Set max bitrate via RTCRtpSender</span>
+<span class="kw">const</span> sender = pc.<span class="fn">getSenders</span>().find(s =&gt; s.track?.kind === <span class="str">'video'</span>);
+<span class="kw">const</span> params = sender.<span class="fn">getParameters</span>();
+params.encodings[<span class="num">0</span>].maxBitrate = <span class="num">1_000_000</span>; <span class="cm">// 1 Mbps</span>
+<span class="kw">await</span> sender.<span class="fn">setParameters</span>(params);</pre>
+</div></div>
+</div>
+
+<!-- ===== SIP / VoIP ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SIP & VoIP <span class="badge b-warn">Protocol</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>SIP Overview & Call Flow</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SIP</strong> (Session Initiation Protocol, RFC 3261) is a text-based signaling protocol for VoIP. It handles <em>setup, modification, and teardown</em> of sessions. Media itself runs over RTP — SIP just negotiates it.</p>
+<p><strong>Key SIP entities:</strong></p>
+<table>
+<tr><th>Entity</th><th>Role</th></tr>
+<tr><td>UA (User Agent)</td><td>Client/phone that initiates or receives calls</td></tr>
+<tr><td>Proxy Server</td><td>Routes SIP messages between UAs</td></tr>
+<tr><td>Registrar</td><td>Maps SIP URI → current IP:port (via REGISTER)</td></tr>
+<tr><td>B2BUA</td><td>Back-to-back UA — terminates and re-originates calls (Asterisk, FreeSWITCH)</td></tr>
+</table>
+<pre><span class="cm"># Basic SIP INVITE (outgoing call)</span>
+INVITE sip:bob@example.com SIP/2.0
+Via: SIP/2.0/UDP alice-pc:5060;branch=z9hG4bK776asdhds
+From: "Alice" &lt;sip:alice@example.com&gt;;tag=1928301774
+To: &lt;sip:bob@example.com&gt;
+Call-ID: a84b4c76e66710@pc33.atlanta.com
+CSeq: 314159 INVITE
+Content-Type: application/sdp
+Content-Length: [sdp length]
+
+[SDP body — codec negotiation]</pre>
+<p><strong>Basic call flow:</strong></p>
+<ol>
+  <li><code>INVITE</code> → <code>100 Trying</code> → <code>180 Ringing</code> → <code>200 OK</code> → <code>ACK</code> (3-way handshake)</li>
+  <li>RTP media flows</li>
+  <li><code>BYE</code> → <code>200 OK</code> (teardown)</li>
+</ol>
+<div class="tip">SIP uses SDP for media negotiation — the INVITE body contains an SDP offer, the 200 OK contains the SDP answer. Same offer/answer model as WebRTC.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>SIP Response Codes</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Range</th><th>Class</th><th>Examples</th></tr>
+<tr><td>1xx</td><td>Provisional</td><td>100 Trying, 180 Ringing, 183 Session Progress</td></tr>
+<tr><td>2xx</td><td>Success</td><td>200 OK</td></tr>
+<tr><td>3xx</td><td>Redirect</td><td>301 Moved Permanently, 302 Moved Temporarily</td></tr>
+<tr><td>4xx</td><td>Client Error</td><td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 486 Busy Here, 487 Request Terminated</td></tr>
+<tr><td>5xx</td><td>Server Error</td><td>500 Internal Server Error, 503 Service Unavailable</td></tr>
+<tr><td>6xx</td><td>Global Failure</td><td>603 Decline (user explicitly rejected)</td></tr>
+</table>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>RTP & RTCP</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>RTP</strong> (Real-time Transport Protocol) carries media (audio/video) over UDP. <strong>RTCP</strong> is the companion control protocol for QoS stats.</p>
+<table>
+<tr><th></th><th>RTP</th><th>RTCP</th></tr>
+<tr><td>Purpose</td><td>Media transport</td><td>QoS feedback & sync</td></tr>
+<tr><td>Port</td><td>Even (e.g. 5004)</td><td>Odd = RTP port + 1</td></tr>
+<tr><td>Transport</td><td>UDP (usually)</td><td>UDP</td></tr>
+<tr><td>Key fields</td><td>Seq#, timestamp, SSRC, payload type</td><td>SR/RR reports, SDES, BYE, APP</td></tr>
+</table>
+<p><strong>SRTP</strong> (Secure RTP) — mandatory in WebRTC, encrypts media payload and authenticates headers. Key exchange via DTLS-SRTP.</p>
+<div class="warn-box">WebRTC mandates SRTP — plain RTP is not allowed. The DTLS handshake derives the SRTP master key. Fingerprint in SDP authenticates the cert.</div>
+</div></div>
+</div>
+
+<!-- ===== JANUS ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Janus WebRTC Server <span class="badge b-hot">Server</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Janus Architecture & Plugin System</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Janus</strong> is an open-source WebRTC server gateway (by Meetecho). It acts as a <em>selective forwarding unit (SFU)</em> and B2BUA — it terminates WebRTC on one side and can bridge to SIP, RTP, recordings, etc. via plugins.</p>
+<table>
+<tr><th>Plugin</th><th>Use case</th></tr>
+<tr><td>VideoRoom</td><td>Multiparty video conferences (SFU)</td></tr>
+<tr><td>VideoCall</td><td>Simple 1:1 video call</td></tr>
+<tr><td>SIP</td><td>Bridge WebRTC ↔ SIP/PSTN</td></tr>
+<tr><td>Streaming</td><td>Broadcast RTP/RTSP streams to WebRTC viewers</td></tr>
+<tr><td>AudioBridge</td><td>Audio MCU — mixes multiple audio streams</td></tr>
+<tr><td>RecordPlay</td><td>Record and playback WebRTC sessions</td></tr>
+<tr><td>TextRoom</td><td>Text messaging over DataChannels</td></tr>
+</table>
+<p><strong>Transport layers:</strong> HTTP REST, WebSocket, RabbitMQ, MQTT — all carry the same JSON-based Janus API.</p>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Janus API Flow</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Every Janus interaction follows: <strong>create session</strong> → <strong>attach plugin handle</strong> → <strong>send plugin messages + JSEP</strong>.</p>
+<pre><span class="cm">// 1. Create Janus session</span>
+<span class="kw">const</span> janus = <span class="kw">new</span> <span class="cls">Janus</span>({
+  server: <span class="str">'wss://janus.example.com/ws'</span>,
+  success: () =&gt; {
+    <span class="cm">// 2. Attach to VideoRoom plugin</span>
+    janus.<span class="fn">attach</span>({
+      plugin: <span class="str">'janus.plugin.videoroom'</span>,
+      success: (handle) =&gt; { pluginHandle = handle; },
+      onmessage: (msg, jsep) =&gt; {
+        <span class="kw">if</span> (jsep) {
+          pluginHandle.<span class="fn">createAnswer</span>({
+            jsep,
+            tracks: [{ type: <span class="str">'audio'</span>, capture: <span class="kw">true</span> }, { type: <span class="str">'video'</span>, capture: <span class="kw">true</span> }],
+            success: (ourJsep) =&gt; pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str">'start'</span> }, jsep: ourJsep }),
+          });
+        }
+      },
+      onremotetrack: (track, mid, active) =&gt; {
+        <span class="kw">if</span> (active) {
+          <span class="kw">const</span> stream = <span class="kw">new</span> <span class="cls">MediaStream</span>([track]);
+          videoEl.srcObject = stream;
+        }
+      },
+    });
+  },
+});
+
+<span class="cm">// 3. Join a room</span>
+pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str">'join'</span>, room: <span class="num">1234</span>, ptype: <span class="str">'publisher'</span>, display: <span class="str">'Alice'</span> } });</pre>
+<div class="tip">Janus handles all ICE, DTLS, and SRTP internally. Your app only deals with JSON messages and JSEP (JSON SDP wrappers) — Janus translates to/from native WebRTC.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>MCU vs SFU vs P2P</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>P2P</th><th>SFU</th><th>MCU</th></tr>
+<tr><td>Media routing</td><td>Direct between peers</td><td>Server forwards streams selectively</td><td>Server mixes into one stream</td></tr>
+<tr><td>Client upload</td><td>N-1 streams</td><td>1 stream</td><td>1 stream</td></tr>
+<tr><td>Client download</td><td>N-1 streams</td><td>N-1 streams</td><td>1 stream</td></tr>
+<tr><td>Server CPU</td><td>None</td><td>Low (no decode)</td><td>High (decode+encode)</td></tr>
+<tr><td>Latency</td><td>Lowest</td><td>Low</td><td>Higher</td></tr>
+<tr><td>Examples</td><td>Native WebRTC</td><td>Janus VideoRoom, mediasoup, Livekit</td><td>Jitsi Videobridge MCU</td></tr>
+</table>
+<div class="tip">Janus VideoRoom is an SFU — it forwards each publisher's stream to all subscribers without re-encoding. Use AudioBridge plugin if you need MCU-style audio mixing.</div>
+</div></div>
+</div>
+
+<!-- ===== NETWORKING ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Networking Fundamentals for VoIP <span class="badge b-info">Networking</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NAT Types & Traversal</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>NAT (Network Address Translation) maps private IPs to a public IP. Different NAT behaviors affect whether peers can connect directly.</p>
+<table>
+<tr><th>NAT Type</th><th>Behaviour</th><th>P2P possible?</th></tr>
+<tr><td>Full Cone</td><td>Any external host can send to the mapped port</td><td>Yes (easy)</td></tr>
+<tr><td>Restricted Cone</td><td>Only hosts you sent to can respond</td><td>Yes (STUN)</td></tr>
+<tr><td>Port-Restricted Cone</td><td>IP + port must match</td><td>Yes (STUN)</td></tr>
+<tr><td>Symmetric</td><td>Different mapping per destination</td><td>Needs TURN</td></tr>
+</table>
+<p><strong>ICE trickle</strong> — candidates are sent to the remote peer as they are gathered rather than waiting for all of them. Speeds up connection establishment.</p>
+<div class="warn-box">Symmetric NAT (common in corporate networks) blocks STUN-only traversal. Always provision TURN servers for production.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>UDP vs TCP for Media & Key Ports</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Protocol</th><th>Transport</th><th>Why</th></tr>
+<tr><td>RTP / SRTP</td><td>UDP</td><td>Low latency — dropped packets &gt; late packets for real-time media</td></tr>
+<tr><td>RTCP</td><td>UDP (same port mux in WebRTC)</td><td>RTCP-mux collapses RTP+RTCP onto one port</td></tr>
+<tr><td>SIP</td><td>UDP or TCP or TLS (5060/5061)</td><td>5060 = cleartext, 5061 = TLS (SIPS)</td></tr>
+<tr><td>STUN</td><td>UDP 3478</td><td>Stateless, single round-trip</td></tr>
+<tr><td>TURN</td><td>UDP/TCP 3478, TLS 5349</td><td>TLS/TCP fallback for restrictive firewalls</td></tr>
+<tr><td>DTLS</td><td>UDP (over ICE)</td><td>TLS-equivalent for UDP — secures SRTP key exchange</td></tr>
+<tr><td>WebSocket (Janus)</td><td>TCP 8188 / 8989 (WSS)</td><td>Signaling only — not media</td></tr>
+</table>
+<p><strong>Media port range:</strong> typically 10000–60000 UDP — must be open on server firewalls for Janus/TURN.</p>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>QoS & Jitter, Packet Loss</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Metric</th><th>Good</th><th>Degraded</th><th>Mitigation</th></tr>
+<tr><td>Latency (one-way)</td><td>&lt;150 ms</td><td>&gt;300 ms</td><td>TURN relay close to users, reduce hops</td></tr>
+<tr><td>Jitter</td><td>&lt;30 ms</td><td>&gt;50 ms</td><td>Jitter buffer (adaptive)</td></tr>
+<tr><td>Packet loss</td><td>&lt;1%</td><td>&gt;5%</td><td>FEC (Opus inband), RTX (RTP retransmit), NACK</td></tr>
+<tr><td>Bitrate</td><td>Adaptive</td><td>Bandwidth crunch</td><td>BWE (REMB/TWCC), simulcast, SVC</td></tr>
+</table>
+<p><strong>Key WebRTC congestion control mechanisms:</strong></p>
+<ul>
+  <li><strong>REMB</strong> — Receiver Estimated Max Bitrate (older, RTCP feedback)</li>
+  <li><strong>TWCC</strong> — Transport-Wide Congestion Control (sender-side, more accurate)</li>
+  <li><strong>Simulcast</strong> — publisher sends multiple resolutions; SFU picks per subscriber</li>
+  <li><strong>SVC</strong> — Scalable Video Coding — layered encoding (VP9/AV1 support it)</li>
+</ul>
 </div></div>
 </div>
 `
