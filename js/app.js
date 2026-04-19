@@ -151,13 +151,131 @@ function navClick(e) {
 
 // ── SEARCH ──
 let _searchTimer, _savedState = new Map();
+
+function escapeHtml(str) {
+  return str.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+
+function extractSnippet(text, rx, contextLen = 70) {
+  const clean = text.replaceAll(/\s+/g, ' ').trim();
+  rx.lastIndex = 0;
+  const m = rx.exec(clean);
+  if (!m) { rx.lastIndex = 0; return ''; }
+  rx.lastIndex = 0;
+  const start = Math.max(0, m.index - contextLen);
+  const end = Math.min(clean.length, m.index + m[0].length + contextLen);
+  const pre = (start > 0 ? '…' : '') + clean.slice(start, m.index);
+  const mid = clean.slice(m.index, m.index + m[0].length);
+  const post = clean.slice(m.index + m[0].length, end) + (end < clean.length ? '…' : '');
+  return `${escapeHtml(pre)}<mark class="hl">${escapeHtml(mid)}</mark>${escapeHtml(post)}`;
+}
+
+function navigateToResult(secId, cardIdx) {
+  const sec = document.getElementById(secId);
+  if (!sec) return;
+  if (globalThis.innerWidth <= 768) closeMenu();
+  if (cardIdx < 0) {
+    sec.scrollIntoView({ behavior: 'instant', block: 'start' });
+    setActive(secId);
+    return;
+  }
+  const card = sec.querySelectorAll('.card')[cardIdx];
+  if (!card) return;
+  const cb = card.querySelector('.cb');
+  const arr = card.querySelector('.arrow');
+  if (cb) cb.classList.add('open');
+  if (arr) arr.classList.add('open');
+  card.scrollIntoView({ behavior: 'instant', block: 'start' });
+  setActive(secId);
+}
+
+function renderSearchResults(rx) {
+  const resultsEl = document.getElementById('searchResults');
+  const navEl = document.getElementById('navList');
+
+  // Build category → sections → cards tree
+  const catMap = new Map();
+  document.querySelectorAll('.section:not(.s-hide)').forEach(sec => {
+    const catId = sec.dataset.cat || '';
+    const catLabel = CATS.find(c => c.id === catId)?.label || catId;
+    const secTitleEl = sec.querySelector('.sec-title');
+    const _titleClone = secTitleEl?.cloneNode(true);
+    _titleClone?.querySelectorAll('.badge').forEach(b => b.remove());
+    const secTitle = _titleClone?.textContent.trim() || '';
+    const secNum = sec.querySelector('.sec-num')?.textContent.trim() || '';
+    const cards = [];
+
+    // section title match → sentinel card entry (cardIdx -1 = scroll to section)
+    rx.lastIndex = 0;
+    if (secTitleEl && rx.test(secTitleEl.textContent)) {
+      rx.lastIndex = 0;
+      cards.push({ cardIdx: -1, cardTitle: secTitle, snippet: extractSnippet(secTitleEl.textContent, rx) });
+    }
+
+    sec.querySelectorAll('.card').forEach((card, cardIdx) => {
+      const cb = card.querySelector('.cb');
+      const ch = card.querySelector('.ch');
+      if (!cb) return;
+      rx.lastIndex = 0;
+      const bodyMatch = rx.test(cb.textContent);
+      rx.lastIndex = 0;
+      const headMatch = ch ? rx.test(ch.textContent) : false;
+      rx.lastIndex = 0;
+      if (bodyMatch || headMatch) {
+        const cardTitle = card.querySelector('.ch h3')?.textContent.trim() || '';
+        const snippet = bodyMatch
+          ? extractSnippet(cb.textContent, rx)
+          : extractSnippet(ch?.textContent || '', rx);
+        cards.push({ cardIdx, cardTitle, snippet });
+      }
+    });
+
+    if (!cards.length) return;
+    if (!catMap.has(catId)) catMap.set(catId, { label: catLabel, sections: [] });
+    catMap.get(catId).sections.push({ secId: sec.id, secNum, secTitle, cards });
+  });
+
+  const cats = [...catMap.values()];
+
+  if (cats.length) {
+    resultsEl.innerHTML = cats.map(cat =>
+      `<div class="sr-cat">` +
+        `<div class="sr-cat-hdr">${escapeHtml(cat.label)}</div>` +
+        cat.sections.map(s =>
+          `<div class="sr-section">` +
+            `<div class="sr-section-hdr"><span class="sr-sec-num">${escapeHtml(s.secNum)}</span><span class="sr-sec-title">${escapeHtml(s.secTitle)}</span></div>` +
+            s.cards.map(c =>
+              `<div class="sr-item${c.cardIdx < 0 ? ' sr-item--sec' : ''}" data-sec="${s.secId}" data-card="${c.cardIdx}">` +
+                `<div class="sr-title">${c.cardIdx < 0 ? '§ ' : ''}${escapeHtml(c.cardTitle)}</div>` +
+                `<div class="sr-snippet">${c.snippet}</div>` +
+              `</div>`
+            ).join('') +
+          `</div>`
+        ).join('') +
+      `</div>`
+    ).join('');
+    resultsEl.querySelectorAll('.sr-item').forEach(item =>
+      item.addEventListener('click', () => navigateToResult(item.dataset.sec, +item.dataset.card))
+    );
+  } else {
+    resultsEl.innerHTML = '<div class="sr-empty">No matches found</div>';
+  }
+
+  resultsEl.style.display = 'block';
+  navEl.style.display = 'none';
+}
+
 function clearSearch() {
   const inp = document.getElementById('searchInput');
-  if (!inp.value && !document.querySelector('.section.s-hide')) return;
+  const resultsEl = document.getElementById('searchResults');
+  const navEl = document.getElementById('navList');
+  if (!inp.value && resultsEl.style.display === 'none' && navEl.style.display !== 'none') return;
   inp.value = '';
   document.getElementById('searchClear').style.display = 'none';
   document.getElementById('searchKbd').style.display = '';
   document.getElementById('searchCount').style.display = 'none';
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('navList').style.display = '';
   document.querySelectorAll('.section.s-hide').forEach(s => s.classList.remove('s-hide'));
   document.querySelectorAll('.nav-item.s-hide,.nav-cat.s-hide').forEach(el => el.classList.remove('s-hide'));
   // restore marks
@@ -220,18 +338,25 @@ function runSearch(q) {
     sec.classList.remove('s-hide');
     matchedSecs++;
 
+    const secTitleEl = sec.querySelector('.sec-title');
+    if (secTitleEl) { rx.lastIndex = 0; if (rx.test(secTitleEl.textContent)) { rx.lastIndex = 0; highlightNode(secTitleEl, rx); } }
+
     sec.querySelectorAll('.card').forEach(card => {
       const cb = card.querySelector('.cb');
       const ch = card.querySelector('.ch');
       const arr = ch?.querySelector('.arrow');
       if (!cb) return;
-      if (rx.test(cb.textContent)) {
-        rx.lastIndex = 0;
+      rx.lastIndex = 0;
+      const bodyMatch = rx.test(cb.textContent);
+      rx.lastIndex = 0;
+      const headMatch = ch ? rx.test(ch.textContent) : false;
+      rx.lastIndex = 0;
+      if (bodyMatch || headMatch) {
         cb.classList.add('open');
         if (arr) arr.classList.add('open');
-        highlightNode(cb, rx);
+        if (bodyMatch) highlightNode(cb, rx);
+        if (headMatch) highlightNode(ch, rx);
       } else {
-        rx.lastIndex = 0;
         cb.classList.remove('open');
         if (arr) arr.classList.remove('open');
       }
@@ -256,6 +381,9 @@ function runSearch(q) {
 
   countEl.textContent = `${matchedSecs} section${matchedSecs !== 1 ? 's' : ''} matched`;
   countEl.style.display = 'block';
+
+  rx.lastIndex = 0;
+  renderSearchResults(rx);
 }
 
 function highlightNode(node, rx) {
