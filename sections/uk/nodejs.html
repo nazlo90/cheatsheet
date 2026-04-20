@@ -1,0 +1,289 @@
+<!-- ===== NODE.JS EVENT LOOP & I/O ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Node.js Event Loop &amp; I/O <span class="badge b-hot">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>libuv, фази та event loop Node</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Node.js запускає JS на V8 і делегує асинхронний I/O до <strong>libuv</strong>, який використовує механізми ОС (epoll, kqueue, IOCP). Event loop має <strong>шість фаз</strong>, що виконуються по порядку за кожен тік:</p>
+<table>
+<tr><th>Фаза</th><th>Що тут виконується</th></tr>
+<tr><td>timers</td><td>Коллбеки <code>setTimeout</code> / <code>setInterval</code>, чий час вийшов</td></tr>
+<tr><td>pending callbacks</td><td>Помилки I/O, відкладені з попереднього тіку</td></tr>
+<tr><td>idle / prepare</td><td>Внутрішнє використання libuv</td></tr>
+<tr><td>poll</td><td>Нові I/O-події; блокується тут якщо черга порожня (до дедлайну таймера)</td></tr>
+<tr><td>check</td><td>Коллбеки <code>setImmediate</code></td></tr>
+<tr><td>close callbacks</td><td><code>socket.on('close', …)</code></td></tr>
+</table>
+<p>Між кожним переходом фаз Node спочатку спустошує <strong>чергу process.nextTick</strong>, потім <strong>мікрозавдання Promise</strong> (так само як мікрозавдання браузера).</p>
+<pre><span class="fn">setTimeout</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'timeout'</span>), <span class="num">0</span>);
+<span class="fn">setImmediate</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'immediate'</span>));
+process.<span class="fn">nextTick</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'nextTick'</span>));
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">'promise'</span>));
+<span class="cm">// nextTick → promise → timeout → immediate
+// (порядок timeout vs immediate є недетермінованим поза I/O)</span></pre>
+<div class="warn-box"><code>process.nextTick</code> спрацьовує до Promise і може заблокувати event loop при рекурсивному виклику. Надавайте перевагу <code>queueMicrotask()</code> для мікрозавдань у користувацькому коді.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Патерни неблокуючого I/O</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Node досягає конкурентності без потоків, делегуючи I/O ОС і використовуючи коллбеки/проміси після завершення роботи.</p>
+<pre><span class="kw">import</span> fs <span class="kw">from</span> <span class="str">'node:fs/promises'</span>;
+
+<span class="cm">// Паралельне читання — не чекайте послідовно!</span>
+<span class="kw">const</span> [a, b] = <span class="kw">await</span> Promise.<span class="fn">all</span>([
+  fs.<span class="fn">readFile</span>(<span class="str">'a.txt'</span>, <span class="str">'utf8'</span>),
+  fs.<span class="fn">readFile</span>(<span class="str">'b.txt'</span>, <span class="str">'utf8'</span>),
+]);
+
+<span class="cm">// Потокове читання великих файлів замість завантаження в пам'ять</span>
+<span class="kw">import</span> { createReadStream } <span class="kw">from</span> <span class="str">'node:fs'</span>;
+<span class="fn">createReadStream</span>(<span class="str">'huge.csv'</span>).<span class="fn">pipe</span>(processStream).<span class="fn">pipe</span>(res);</pre>
+<div class="tip">CPU-інтенсивна робота (обробка зображень, шифрування, стиснення) блокує event loop — виносьте її у потік <code>Worker</code> або дочірній процес.</div>
+</div></div>
+</div>
+
+<!-- ===== MODULES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Модулі: CommonJS vs ESM <span class="badge b-key">Знати обидва</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Відмінності CJS vs ESM</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>CommonJS (CJS)</th><th>ES Modules (ESM)</th></tr>
+<tr><td>Синтаксис</td><td><code>require()</code> / <code>module.exports</code></td><td><code>import</code> / <code>export</code></td></tr>
+<tr><td>Завантаження</td><td>Синхронне, динамічне</td><td>Статичне (аналізується під час парсингу)</td></tr>
+<tr><td>Top-level await</td><td>Ні</td><td>Так</td></tr>
+<tr><td>Tree-shaking</td><td>Ні</td><td>Так (бандлери)</td></tr>
+<tr><td>Розширення файлу</td><td><code>.js</code> / <code>.cjs</code></td><td><code>.mjs</code> або <code>"type":"module"</code></td></tr>
+<tr><td><code>__dirname</code></td><td>Доступний</td><td>Використовуйте <code>import.meta.url</code></td></tr>
+</table>
+<pre><span class="cm">// CJS</span>
+<span class="kw">const</span> path = <span class="fn">require</span>(<span class="str">'path'</span>);
+module.exports = { <span class="fn">add</span> };
+
+<span class="cm">// ESM</span>
+<span class="kw">import</span> path <span class="kw">from</span> <span class="str">'node:path'</span>;
+<span class="kw">export</span> { add };
+
+<span class="cm">// Еквівалент __dirname у ESM</span>
+<span class="kw">import</span> { fileURLToPath } <span class="kw">from</span> <span class="str">'node:url'</span>;
+<span class="kw">const</span> __dirname = path.<span class="fn">dirname</span>(<span class="fn">fileURLToPath</span>(<span class="kw">import</span>.meta.url));</pre>
+<div class="warn-box">Не можна <code>require()</code> ESM-пакет з CJS. Пакети з подвійною публікацією надають обидва формати в полі <code>"exports"</code> файлу <code>package.json</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Поле exports в package.json та умовний експорт</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>{
+  <span class="str">"name"</span>: <span class="str">"my-lib"</span>,
+  <span class="str">"type"</span>: <span class="str">"module"</span>,
+  <span class="str">"exports"</span>: {
+    <span class="str">"."</span>: {
+      <span class="str">"import"</span>: <span class="str">"./dist/index.mjs"</span>,
+      <span class="str">"require"</span>: <span class="str">"./dist/index.cjs"</span>,
+      <span class="str">"types"</span>:   <span class="str">"./dist/index.d.ts"</span>
+    },
+    <span class="str">"./utils"</span>: <span class="str">"./dist/utils.mjs"</span>
+  }
+}</pre>
+<p>Поле <code>"exports"</code> замінює <code>"main"</code> та <code>"module"</code>. Глибокі імпорти, не зазначені тут, блокуються — добре для інкапсуляції.</p>
+</div></div>
+</div>
+
+<!-- ===== STREAMS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Потоки (Streams) &amp; Буфери <span class="badge b-grn">Продуктивність</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Типи потоків та зворотний тиск (back-pressure)</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Потоки обробляють дані частинами, уникаючи завантаження цілих файлів у пам'ять. Node має чотири типи потоків:</p>
+<table>
+<tr><th>Тип</th><th>Приклад</th><th>Ключові методи</th></tr>
+<tr><td>Readable</td><td><code>fs.createReadStream()</code>, <code>req</code></td><td><code>pipe()</code>, <code>read()</code>, подія <code>'data'</code></td></tr>
+<tr><td>Writable</td><td><code>fs.createWriteStream()</code>, <code>res</code></td><td><code>write()</code>, <code>end()</code></td></tr>
+<tr><td>Duplex</td><td>TCP сокети</td><td>Водночас Readable і Writable</td></tr>
+<tr><td>Transform</td><td><code>zlib.createGzip()</code></td><td>Модифікує дані під час передачі</td></tr>
+</table>
+<pre><span class="kw">import</span> { pipeline } <span class="kw">from</span> <span class="str">'node:stream/promises'</span>;
+<span class="kw">import</span> { createReadStream, createWriteStream } <span class="kw">from</span> <span class="str">'node:fs'</span>;
+<span class="kw">import</span> { createGzip } <span class="kw">from</span> <span class="str">'node:zlib'</span>;
+
+<span class="cm">// pipeline автоматично обробляє back-pressure та очищення</span>
+<span class="kw">await</span> <span class="fn">pipeline</span>(
+  <span class="fn">createReadStream</span>(<span class="str">'input.log'</span>),
+  <span class="fn">createGzip</span>(),
+  <span class="fn">createWriteStream</span>(<span class="str">'input.log.gz'</span>)
+);</pre>
+<div class="warn-box"><strong>Back-pressure</strong>: коли writable не встигає, <code>write()</code> повертає <code>false</code>. Призупиніть readable до спрацювання <code>'drain'</code>. <code>pipeline()</code> обробляє це автоматично — використовуйте його замість raw <code>.pipe()</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Буфери та кодування</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Buffer = блок сирої пам'яті фіксованого розміру (uint8)</span>
+<span class="kw">const</span> buf = Buffer.<span class="fn">from</span>(<span class="str">'hello'</span>, <span class="str">'utf8'</span>);
+buf.<span class="fn">toString</span>(<span class="str">'hex'</span>);   <span class="cm">// '68656c6c6f'</span>
+buf.<span class="fn">toString</span>(<span class="str">'base64'</span>); <span class="cm">// 'aGVsbG8='</span>
+
+Buffer.<span class="fn">alloc</span>(<span class="num">10</span>);       <span class="cm">// безпечне виділення з нулями</span>
+Buffer.<span class="fn">allocUnsafe</span>(<span class="num">10</span>); <span class="cm">// швидше, але може містити старі дані</span>
+
+<span class="cm">// Безпечне перетворення частин потоку в рядок</span>
+<span class="kw">const</span> chunks = [];
+stream.<span class="fn">on</span>(<span class="str">'data'</span>, c =&gt; chunks.<span class="fn">push</span>(c));
+stream.<span class="fn">on</span>(<span class="str">'end'</span>, () =&gt; { <span class="kw">const</span> result = Buffer.<span class="fn">concat</span>(chunks).<span class="fn">toString</span>(); });</pre>
+<div class="tip">Завжди вказуйте кодування при виклику <code>toString()</code>. За замовчуванням UTF-8. Використовуйте <code>TextDecoder</code> для інкрементного декодування багатобайтових символів, розбитих між частинами.</div>
+</div></div>
+</div>
+
+<!-- ===== HTTP & EXPRESS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">HTTP &amp; Express <span class="badge b-hot">Практично</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Чистий модуль http vs Express</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Чистий Node HTTP</span>
+<span class="kw">import</span> http <span class="kw">from</span> <span class="str">'node:http'</span>;
+http.<span class="fn">createServer</span>((req, res) =&gt; {
+  res.<span class="fn">writeHead</span>(<span class="num">200</span>, { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> });
+  res.<span class="fn">end</span>(JSON.<span class="fn">stringify</span>({ ok: <span class="kw">true</span> }));
+}).<span class="fn">listen</span>(<span class="num">3000</span>);
+
+<span class="cm">// Еквівалент на Express</span>
+<span class="kw">import</span> express <span class="kw">from</span> <span class="str">'express'</span>;
+<span class="kw">const</span> app = <span class="fn">express</span>();
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+app.<span class="fn">get</span>(<span class="str">'/users/:id'</span>, <span class="kw">async</span> (req, res, next) =&gt; {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> user = <span class="kw">await</span> db.<span class="fn">findById</span>(req.params.id);
+    <span class="kw">if</span> (!user) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">json</span>({ error: <span class="str">'Not found'</span> });
+    res.<span class="fn">json</span>(user);
+  } <span class="kw">catch</span>(e) { <span class="fn">next</span>(e); }
+});
+
+<span class="cm">// Middleware для обробки помилок (4 аргументи)</span>
+app.<span class="fn">use</span>((err, req, res, next) =&gt; {
+  res.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({ error: err.message });
+});</pre>
+<div class="warn-box">Завжди викликайте <code>next(err)</code> в асинхронних обробниках маршрутів — необроблені відхилення промісів не потраплять до middleware помилок. Express 5 обробляє це автоматично.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Ланцюг middleware та поширені патерни</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Middleware = (req, res, next) => void</span>
+
+<span class="cm">// Middleware автентифікації</span>
+<span class="kw">function</span> <span class="fn">auth</span>(req, res, next) {
+  <span class="kw">const</span> token = req.headers.authorization?.split(<span class="str">' '</span>)[<span class="num">1</span>];
+  <span class="kw">if</span> (!token) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ error: <span class="str">'Unauthorized'</span> });
+  req.user = <span class="fn">verifyToken</span>(token);
+  <span class="fn">next</span>();
+}
+
+<span class="cm">// Групування роутерів</span>
+<span class="kw">const</span> router = express.<span class="fn">Router</span>();
+router.<span class="fn">use</span>(auth);
+router.<span class="fn">get</span>(<span class="str">'/'</span>, listUsers);
+router.<span class="fn">post</span>(<span class="str">'/'</span>, createUser);
+app.<span class="fn">use</span>(<span class="str">'/api/users'</span>, router);
+
+<span class="cm">// Обмеження запитів (express-rate-limit)</span>
+<span class="kw">import</span> rateLimit <span class="kw">from</span> <span class="str">'express-rate-limit'</span>;
+app.<span class="fn">use</span>(<span class="fn">rateLimit</span>({ windowMs: <span class="num">15</span>*<span class="num">60</span>*<span class="num">1000</span>, max: <span class="num">100</span> }));</pre>
+<div class="tip">Порядок middleware має значення. Розміщуйте <code>express.json()</code>, CORS та rate-limit перед маршрутами. Обробник помилок — останнім.</div>
+</div></div>
+</div>
+
+<!-- ===== CLUSTER & WORKER THREADS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Cluster &amp; Worker Threads <span class="badge b-grn">Масштабованість</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Cluster vs Worker Threads vs child_process</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>API</th><th>Сценарій використання</th><th>Пам'ять</th><th>Комунікація</th></tr>
+<tr><td><code>cluster</code></td><td>Масштабування HTTP-серверів на ядра CPU</td><td>Окремі процеси</td><td>IPC-повідомлення</td></tr>
+<tr><td><code>worker_threads</code></td><td>CPU-інтенсивна JS-робота (шифрування, парсинг)</td><td>Спільний <code>ArrayBuffer</code></td><td><code>postMessage</code> / <code>SharedArrayBuffer</code></td></tr>
+<tr><td><code>child_process</code></td><td>Запуск зовнішніх програм / shell-команд</td><td>Окремі процеси</td><td>stdin/stdout/IPC</td></tr>
+</table>
+<pre><span class="cm">// Cluster — первинний форкає по одному воркеру на ядро CPU</span>
+<span class="kw">import</span> cluster <span class="kw">from</span> <span class="str">'node:cluster'</span>;
+<span class="kw">import</span> os <span class="kw">from</span> <span class="str">'node:os'</span>;
+
+<span class="kw">if</span> (cluster.<span class="fn">isPrimary</span>) {
+  os.<span class="fn">cpus</span>().<span class="fn">forEach</span>(() =&gt; cluster.<span class="fn">fork</span>());
+  cluster.<span class="fn">on</span>(<span class="str">'exit'</span>, (w) =&gt; { <span class="fn">console</span>.log(<span class="str">`Worker </span>${w.process.pid}<span class="str"> died`</span>); cluster.<span class="fn">fork</span>(); });
+} <span class="kw">else</span> {
+  <span class="cm">// кожен воркер запускає HTTP-сервер незалежно</span>
+  <span class="fn">startServer</span>();
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Worker Threads для CPU-інтенсивних задач</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// worker.js</span>
+<span class="kw">import</span> { workerData, parentPort } <span class="kw">from</span> <span class="str">'node:worker_threads'</span>;
+<span class="kw">const</span> result = <span class="fn">heavyCompute</span>(workerData);
+parentPort.<span class="fn">postMessage</span>(result);
+
+<span class="cm">// main.js</span>
+<span class="kw">import</span> { Worker } <span class="kw">from</span> <span class="str">'node:worker_threads'</span>;
+
+<span class="kw">function</span> <span class="fn">runWorker</span>(data) {
+  <span class="kw">return new</span> <span class="cls">Promise</span>((resolve, reject) =&gt; {
+    <span class="kw">const</span> w = <span class="kw">new</span> <span class="cls">Worker</span>(<span class="str">'./worker.js'</span>, { workerData: data });
+    w.<span class="fn">on</span>(<span class="str">'message'</span>, resolve);
+    w.<span class="fn">on</span>(<span class="str">'error'</span>, reject);
+  });
+}
+
+<span class="cm">// Transferable об'єкти — передача буфера без копіювання</span>
+<span class="kw">const</span> buf = <span class="kw">new</span> <span class="cls">SharedArrayBuffer</span>(<span class="num">1024</span>);
+w.<span class="fn">postMessage</span>({ buf }, [buf]); <span class="cm">// передаємо власність, не копіюємо</span></pre>
+<div class="tip">Використовуйте бібліотеку пулу воркерів (напр. <code>piscina</code>) замість ручного управління. Створення воркера на кожен запит — дороге задоволення.</div>
+</div></div>
+</div>
+
+<!-- ===== NPM ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">npm, Пакети &amp; Безпека <span class="badge b-key">Ops</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основи npm та lock-файли</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm"># Управління залежностями</span>
+npm install                  <span class="cm"># встановити з package-lock.json</span>
+npm ci                       <span class="cm"># чиста установка — швидша, сувора, безпечна для CI</span>
+npm install pkg --save-exact <span class="cm"># зафіксувати точну версію</span>
+npm outdated                 <span class="cm"># показати застарілі залежності</span>
+npm update                   <span class="cm"># оновити в межах діапазону semver</span>
+
+<span class="cm"># Аудит</span>
+npm audit                    <span class="cm"># звіт про відомі вразливості</span>
+npm audit fix                <span class="cm"># автовиправлення сумісних оновлень</span>
+npm audit fix --force        <span class="cm"># може внести критичні зміни</span>
+
+<span class="cm"># Монорепо workspace</span>
+npm install --workspace=packages/app</pre>
+<table>
+<tr><th>Діапазон</th><th>Значення</th><th>Приклад</th></tr>
+<tr><td><code>^1.2.3</code></td><td>Сумісний (minor+patch)</td><td>≥1.2.3 &lt;2.0.0</td></tr>
+<tr><td><code>~1.2.3</code></td><td>Лише patch</td><td>≥1.2.3 &lt;1.3.0</td></tr>
+<tr><td><code>1.2.3</code></td><td>Точна версія</td><td>1.2.3 лише</td></tr>
+</table>
+<div class="warn-box">Завжди комітьте <code>package-lock.json</code>. Використовуйте <code>npm ci</code> в CI-пайплайнах — він завершується з помилкою, якщо lock-файл не синхронізований з <code>package.json</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Найкращі практики безпеки</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong>Ланцюжок постачання</strong>: фіксуйте залежності, використовуйте <code>npm audit</code> у CI, розгляньте <code>socket.dev</code> для поведінкового аналізу</li>
+<li><strong>Секрети</strong>: ніколи не комітьте <code>.env</code>; використовуйте змінні середовища, що вводяться під час виконання</li>
+<li><strong>Prototype pollution</strong>: перевіряйте/санітизуйте ненадійний JSON перед злиттям в об'єкти; використовуйте <code>Object.create(null)</code> для простих словників</li>
+<li><strong>Path traversal</strong>: завжди використовуйте <code>path.resolve()</code> та перевіряйте, що розрахований шлях знаходиться в межах очікуваного кореня</li>
+<li><strong>eval / child_process</strong>: ніколи не передавайте несанітизований ввід користувача до <code>eval</code>, <code>exec</code> або <code>Function()</code></li>
+<li><strong>HTTPS</strong>: примусово використовуйте TLS, встановлюйте заголовки безпеки (<code>helmet</code>), впроваджуйте дозволений список CORS</li>
+</ul>
+<pre><span class="cm">// Захист від path traversal</span>
+<span class="kw">const</span> root = path.<span class="fn">resolve</span>(<span class="str">'./public'</span>);
+<span class="kw">const</span> target = path.<span class="fn">resolve</span>(root, userInput);
+<span class="kw">if</span> (!target.<span class="fn">startsWith</span>(root + path.sep)) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Forbidden'</span>);
+
+<span class="cm">// helmet — встановлює заголовки безпеки в одному рядку</span>
+<span class="kw">import</span> helmet <span class="kw">from</span> <span class="str">'helmet'</span>;
+app.<span class="fn">use</span>(<span class="fn">helmet</span>());</pre>
+<div class="tip">Запускайте Node від імені непривілейованого користувача в контейнерах. Встановіть <code>--max-old-space-size</code>, щоб запобігти OOM від використання всієї пам'яті хоста.</div>
+</div></div>
+</div>

@@ -1,23 +1,104 @@
+// ── I18N ──
+const I18N = {
+  en: {
+    cats: {
+      javascript:        'JavaScript Core',
+      typescript:        'TypeScript',
+      browser:           'How Browsers Work',
+      'web-apis':        'Web APIs & Browser',
+      rxjs:              'RxJS',
+      angular:           'Angular',
+      'state-management':'State Management',
+      'oop-architecture':'OOP & Architecture',
+      testing:           'Testing',
+      infrastructure:    'Infrastructure',
+      graphics:          'Graphics',
+      nodejs:            'Node.js',
+      nestjs:            'NestJS',
+      graphql:           'GraphQL',
+      electron:          'Electron',
+      webrtc:            'WebRTC & VoIP',
+      csharp:            'C#',
+      sql:               'SQL / Databases',
+    },
+    searchPlaceholder:   'Search topics…',
+    sectionsMatched:     n => `${n} section${n !== 1 ? 's' : ''} matched`,
+    noMatches:           'No matches found',
+    filterTitle:         'Filter Categories',
+    filterDesc:          'Select which topics to show. Your choice is saved in localStorage.',
+    apply:               'Apply',
+    cancel:              'Cancel',
+    pageTitle:           'Senior Frontend Developer — Interview Cheatsheet',
+    pageSubtitle:        n => `Angular 18+ · TypeScript · RxJS · NgRx · Testing · Architecture · CI/CD · Docker · ${n} sections`,
+  },
+  uk: {
+    cats: {
+      javascript:        'Ядро JavaScript',
+      typescript:        'TypeScript',
+      browser:           'Як працює браузер',
+      'web-apis':        'Web APIs та браузер',
+      rxjs:              'RxJS',
+      angular:           'Angular',
+      'state-management':'Управління станом',
+      'oop-architecture':'ООП та архітектура',
+      testing:           'Тестування',
+      infrastructure:    'Інфраструктура',
+      graphics:          'Графіка',
+      nodejs:            'Node.js',
+      nestjs:            'NestJS',
+      graphql:           'GraphQL',
+      electron:          'Electron',
+      webrtc:            'WebRTC та VoIP',
+      csharp:            'C#',
+      sql:               'SQL / Бази даних',
+    },
+    searchPlaceholder:   'Пошук тем…',
+    sectionsMatched:     n => `${n} ${n === 1 ? 'розділ' : n < 5 ? 'розділи' : 'розділів'} знайдено`,
+    noMatches:           'Нічого не знайдено',
+    filterTitle:         'Фільтр категорій',
+    filterDesc:          'Оберіть теми для відображення. Вибір зберігається в localStorage.',
+    apply:               'Застосувати',
+    cancel:              'Скасувати',
+    pageTitle:           'Senior Frontend Developer — Шпаргалка для співбесіди',
+    pageSubtitle:        n => `Angular 18+ · TypeScript · RxJS · NgRx · Тестування · Архітектура · CI/CD · Docker · ${n} розділів`,
+  },
+};
+
+const LANG_KEY = 'cheatsheet-lang';
+function getLang() {
+  return localStorage.getItem(LANG_KEY) === 'uk' ? 'uk' : 'en';
+}
+function setLang(lang) {
+  localStorage.setItem(LANG_KEY, lang);
+  document.documentElement.lang = lang;
+}
+
+function t() { return I18N[getLang()]; }
+
+// ── CATEGORIES ──
 const CATS = [
-  { id: 'javascript',       label: 'JavaScript Core'   },
-  { id: 'typescript',       label: 'TypeScript'         },
-  { id: 'browser',          label: 'How Browsers Work'  },
-  { id: 'web-apis',         label: 'Web APIs & Browser' },
-  { id: 'rxjs',             label: 'RxJS'               },
-  { id: 'angular',          label: 'Angular'            },
-  { id: 'state-management', label: 'State Management'   },
-  { id: 'oop-architecture', label: 'OOP & Architecture' },
-  { id: 'testing',          label: 'Testing'            },
-  { id: 'infrastructure',   label: 'Infrastructure'     },
-  { id: 'graphics',         label: 'Graphics'           },
-  { id: 'nodejs',           label: 'Node.js'            },
-  { id: 'nestjs',           label: 'NestJS'             },
-  { id: 'graphql',          label: 'GraphQL'            },
-  { id: 'electron',         label: 'Electron'           },
-  { id: 'webrtc',           label: 'WebRTC & VoIP'      },
-  { id: 'csharp',           label: 'C#'                 },
-  { id: 'sql',              label: 'SQL / Databases'    },
+  { id: 'javascript'        },
+  { id: 'typescript'        },
+  { id: 'browser'           },
+  { id: 'web-apis'          },
+  { id: 'rxjs'              },
+  { id: 'angular'           },
+  { id: 'state-management'  },
+  { id: 'oop-architecture'  },
+  { id: 'testing'           },
+  { id: 'infrastructure'    },
+  { id: 'graphics'          },
+  { id: 'nodejs'            },
+  { id: 'nestjs'            },
+  { id: 'graphql'           },
+  { id: 'electron'          },
+  { id: 'webrtc'            },
+  { id: 'csharp'            },
+  { id: 'sql'               },
 ];
+
+function catLabel(id) { return t().cats[id] || id; }
+
 const STORAGE_KEY = 'cheatsheet-cats';
 
 function getSelected() {
@@ -35,7 +116,6 @@ function initSections() {
   nav.innerHTML = '';
   let n = 0;
 
-  // Group sections by category in nav
   let lastCat = null;
   sections.forEach(sec => {
     n++;
@@ -46,10 +126,9 @@ function initSections() {
 
     if (cat && cat !== lastCat) {
       lastCat = cat;
-      const catInfo = CATS.find(c => c.id === cat);
       const catDiv = document.createElement('div');
       catDiv.className = 'nav-cat';
-      catDiv.textContent = catInfo ? catInfo.label : cat;
+      catDiv.textContent = catLabel(cat);
       nav.appendChild(catDiv);
     }
 
@@ -63,22 +142,23 @@ function initSections() {
     nav.appendChild(a);
   });
 
-  // Update page header count
   const countEl = document.querySelector('.page-header p');
-  if (countEl) countEl.textContent = countEl.textContent.replace(/\d+ sections/, `${n} sections`);
+  if (countEl) countEl.textContent = t().pageSubtitle(n);
 
   initScroll();
 }
 
 // ── LOAD SECTIONS ──
 function loadSections() {
+  const lang = getLang();
+  const src = lang === 'uk' ? (window.__S_uk || window.__S_en) : (window.__S_en || window.__S);
   const selected = getSelected();
   const main = document.querySelector('.sections-container');
   main.innerHTML = '';
 
   for (const cat of CATS) {
     if (!selected.includes(cat.id)) continue;
-    const html = (window.__S || {})[cat.id] || '';
+    const html = src[cat.id] || '';
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     tmp.querySelectorAll('.section').forEach(s => s.dataset.cat = cat.id);
@@ -87,6 +167,34 @@ function loadSections() {
 
   initSections();
 }
+
+// ── APPLY UI STRINGS ──
+function applyUiStrings() {
+  const tr = t();
+  document.getElementById('searchInput').placeholder = tr.searchPlaceholder;
+  document.querySelector('.page-header h1').textContent = tr.pageTitle;
+  document.querySelector('#catPanel h2').textContent = tr.filterTitle;
+  document.querySelector('#catPanel > p').textContent = tr.filterDesc;
+  document.getElementById('catApply').textContent = tr.apply;
+  document.getElementById('catCancel').textContent = tr.cancel;
+  document.documentElement.lang = getLang();
+
+  // Rebuild category grid labels
+  document.querySelectorAll('.cat-item span').forEach(span => {
+    const input = span.previousElementSibling;
+    if (input) span.textContent = catLabel(input.value);
+  });
+}
+
+// ── LANGUAGE TOGGLE ──
+function switchLang(lang) {
+  setLang(lang);
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  applyUiStrings();
+  clearSearch();
+  loadSections();
+}
+window.switchLang = switchLang;
 
 // ── CARD TOGGLE ──
 function T(h) {
@@ -123,7 +231,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenu(
 function setActive(id) {
   document.querySelectorAll('.nav-item').forEach(a => a.classList.remove('active'));
   const a = document.querySelector(`.nav-item[href="#${id}"]`);
-    if (a) { a.classList.add('active'); a.scrollIntoView({ block: 'nearest' }); }
+  if (a) { a.classList.add('active'); a.scrollIntoView({ block: 'nearest' }); }
 }
 function initScroll() {
   const onScroll = () => {
@@ -210,11 +318,10 @@ function renderSearchResults(rx) {
   const resultsEl = document.getElementById('searchResults');
   const navEl = document.getElementById('navList');
 
-  // Build category → sections → cards tree
   const catMap = new Map();
   document.querySelectorAll('.section:not(.s-hide)').forEach(sec => {
     const catId = sec.dataset.cat || '';
-    const catLabel = CATS.find(c => c.id === catId)?.label || catId;
+    const catLbl = catLabel(catId);
     const secTitleEl = sec.querySelector('.sec-title');
     const _titleClone = secTitleEl?.cloneNode(true);
     _titleClone?.querySelectorAll('.badge').forEach(b => b.remove());
@@ -222,7 +329,6 @@ function renderSearchResults(rx) {
     const secNum = sec.querySelector('.sec-num')?.textContent.trim() || '';
     const cards = [];
 
-    // section title match → sentinel card entry (cardIdx -1 = scroll to section)
     rx.lastIndex = 0;
     if (secTitleEl && rx.test(secTitleEl.textContent)) {
       rx.lastIndex = 0;
@@ -248,7 +354,7 @@ function renderSearchResults(rx) {
     });
 
     if (!cards.length) return;
-    if (!catMap.has(catId)) catMap.set(catId, { label: catLabel, sections: [] });
+    if (!catMap.has(catId)) catMap.set(catId, { label: catLbl, sections: [] });
     catMap.get(catId).sections.push({ secId: sec.id, secNum, secTitle, cards });
   });
 
@@ -275,7 +381,7 @@ function renderSearchResults(rx) {
       item.addEventListener('click', () => navigateToResult(item.dataset.sec, +item.dataset.card))
     );
   } else {
-    resultsEl.innerHTML = '<div class="sr-empty">No matches found</div>';
+    resultsEl.innerHTML = `<div class="sr-empty">${t().noMatches}</div>`;
   }
 
   resultsEl.style.display = 'block';
@@ -295,12 +401,10 @@ function clearSearch() {
   document.getElementById('navList').style.display = '';
   document.querySelectorAll('.section.s-hide').forEach(s => s.classList.remove('s-hide'));
   document.querySelectorAll('.nav-item.s-hide,.nav-cat.s-hide').forEach(el => el.classList.remove('s-hide'));
-  // restore marks
   document.querySelectorAll('mark.hl').forEach(m => {
-    const t = document.createTextNode(m.textContent);
-    m.replaceWith(t);
+    const t2 = document.createTextNode(m.textContent);
+    m.replaceWith(t2);
   });
-  // restore open state
   document.querySelectorAll('.cb').forEach(b => {
     const key = b.closest('.section')?.id + '|' + Array.from(b.parentElement.children).indexOf(b);
     const wasOpen = _savedState.get(key);
@@ -332,7 +436,6 @@ function runSearch(q) {
   clearBtn.style.display = 'inline';
   kbdEl.style.display = 'none';
 
-  // save current open state
   if (!_savedState.size) {
     document.querySelectorAll('.cb').forEach(b => {
       const key = b.closest('.section')?.id + '|' + Array.from(b.parentElement.children).indexOf(b);
@@ -340,7 +443,6 @@ function runSearch(q) {
     });
   }
 
-  // clear previous marks
   document.querySelectorAll('mark.hl').forEach(m => {
     m.replaceWith(document.createTextNode(m.textContent));
   });
@@ -380,7 +482,6 @@ function runSearch(q) {
     });
   });
 
-  // hide nav items for hidden sections
   document.querySelectorAll('.nav-item').forEach(a => {
     const href = a.getAttribute('href');
     const sec = href ? document.querySelector(href) : null;
@@ -396,7 +497,7 @@ function runSearch(q) {
     c.classList.toggle('s-hide', allHidden);
   });
 
-  countEl.textContent = `${matchedSecs} section${matchedSecs !== 1 ? 's' : ''} matched`;
+  countEl.textContent = t().sectionsMatched(matchedSecs);
   countEl.style.display = 'block';
 
   rx.lastIndex = 0;
@@ -451,9 +552,12 @@ const grid = document.getElementById('catGrid');
 CATS.forEach(c => {
   const item = document.createElement('label');
   item.className = 'cat-item';
-  item.innerHTML = `<input type="checkbox" value="${c.id}"><span>${c.label}</span>`;
+  item.innerHTML = `<input type="checkbox" value="${c.id}"><span>${catLabel(c.id)}</span>`;
   grid.appendChild(item);
 });
 
 // ── INIT ──
+applyUiStrings();
+// Set active lang button on load
+document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === getLang()));
 loadSections();

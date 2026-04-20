@@ -1,0 +1,192 @@
+<!-- ===== TESTBED VS ISOLATED ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TestBed проти ізольованого модульного тестування <span class="badge b-key">Співбесіда</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Коли використовувати кожен підхід</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>TestBed (інтеграційний стиль)</th><th>Ізольований модульний тест</th></tr>
+<tr><td>Angular-модуль</td><td>Так — завантажує Angular DI + CD</td><td>Ні — чистий TypeScript</td></tr>
+<tr><td>Швидкість</td><td>Повільніше (компіляція на тест)</td><td>Швидко ✓</td></tr>
+<tr><td>Тести</td><td>Рендеринг шаблону, DI, CD, роутинг</td><td>Чиста логіка, пайпи, сервіси</td></tr>
+<tr><td>Коли використовувати</td><td>Компоненти з взаємодіями в шаблоні</td><td>Сервіси, пайпи, чисті функції</td></tr>
+</table>
+<pre><span class="cm">// ─── TestBed — компонент із шаблоном ──────────────────────</span>
+describe(<span class="str">'UserCardComponent'</span>, () =&gt; {
+  <span class="kw">let</span> fixture: ComponentFixture&lt;UserCardComponent&gt;;
+  <span class="kw">let</span> svc: jasmine.SpyObj&lt;UsersService&gt;;
+
+  beforeEach(<span class="kw">async</span> () =&gt; {
+    svc = jasmine.createSpyObj(<span class="str">'UsersService'</span>, [<span class="str">'getUser'</span>]);
+    <span class="kw">await</span> TestBed.configureTestingModule({
+      imports: [UserCardComponent],
+      providers: [{ provide: UsersService, useValue: svc }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UserCardComponent);
+  });
+
+  it(<span class="str">'displays user name'</span>, () =&gt; {
+    fixture.componentInstance.user = { name: <span class="str">'Alice'</span> };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector(<span class="str">'.name'</span>).textContent).toContain(<span class="str">'Alice'</span>);
+  });
+});
+
+<span class="cm">// ─── Ізольований — сервіс без накладних витрат Angular ────</span>
+describe(<span class="str">'CartService'</span>, () =&gt; {
+  <span class="kw">let</span> service: CartService;
+
+  beforeEach(() =&gt; {
+    service = <span class="kw">new</span> CartService();  <span class="cm">// звичайне створення екземпляра</span>
+  });
+
+  it(<span class="str">'calculates total'</span>, () =&gt; {
+    service.add({ price: <span class="num">10</span>, qty: <span class="num">2</span> });
+    expect(service.total()).toBe(<span class="num">20</span>);
+  });
+});</pre>
+<ul>
+<li><strong>Піраміда тестування:</strong> Багато модульних → менше інтеграційних → мало E2E</li>
+<li><strong>AAA:</strong> Arrange (підготовка) → Act (дія) → Assert (перевірка)</li>
+<li><strong>Тестуйте поведінку, а не реалізацію</strong></li>
+<li>Використовуйте <code>HttpClientTestingModule</code> + <code>HttpTestingController</code> для HTTP</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== ASYNC TESTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Асинхронне тестування — fakeAsync і RxJS Marbles <span class="badge b-key">Ключове</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>fakeAsync / tick — керування часом у тестах</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><code>fakeAsync</code> виконує тіло тесту у фіктивній асинхронній зоні — <code>tick(ms)</code> просуває віртуальний час, дозволяючи тестувати <code>setTimeout</code>, <code>debounceTime</code> і Promise синхронно.</p>
+<pre><span class="cm">// fakeAsync + tick — тест відкладеного пошуку</span>
+it(<span class="str">'debounces search input'</span>, fakeAsync(() =&gt; {
+  <span class="kw">const</span> results: string[][] = [];
+  component.searchResults$.subscribe(r =&gt; results.push(r));
+
+  component.searchControl.setValue(<span class="str">'ng'</span>);
+  tick(<span class="num">200</span>);                 <span class="cm">// недостатньо — debounceTime(300)</span>
+  expect(results.length).toBe(<span class="num">0</span>);
+
+  tick(<span class="num">100</span>);                 <span class="cm">// разом 300мс — спрацьовує зараз</span>
+  expect(results.length).toBe(<span class="num">1</span>);
+  discardPeriodicTasks();   <span class="cm">// очистити незавершені інтервали</span>
+}));
+
+<span class="cm">// flushMicrotasks — для Promise / async/await</span>
+it(<span class="str">'resolves promise'</span>, fakeAsync(() =&gt; {
+  <span class="kw">let</span> result = <span class="str">''</span>;
+  Promise.resolve(<span class="str">'hello'</span>).then(v =&gt; result = v);
+  flushMicrotasks();
+  expect(result).toBe(<span class="str">'hello'</span>);
+}));
+
+<span class="cm">// waitForAsync — для справжнього async (HttpClient, compileComponents)</span>
+it(<span class="str">'loads component'</span>, waitForAsync(() =&gt; {
+  fixture.detectChanges();
+  fixture.whenStable().then(() =&gt; {
+    expect(fixture.nativeElement.textContent).toContain(<span class="str">'Alice'</span>);
+  });
+}));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>RxJS Marble-тестування — візуалізація потоків</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Marble-синтаксис описує часові лінії observable у вигляді ASCII-рядків — ідеально для тестування складних ланцюжків операторів без реальних таймерів.</p>
+<pre><span class="cm">// Marble-синтаксис: - = 10мс кадр, | = завершення, # = помилка, літери = значення</span>
+<span class="cm">// 'a--b--c|'  означає: емітувати a, чекати 20мс, емітувати b, чекати 20мс, емітувати c, завершити</span>
+
+<span class="kw">import</span> { TestScheduler } <span class="kw">from</span> <span class="str">'rxjs/testing'</span>;
+
+describe(<span class="str">'switchMap operator'</span>, () =&gt; {
+  <span class="kw">let</span> scheduler: TestScheduler;
+
+  beforeEach(() =&gt; {
+    scheduler = <span class="kw">new</span> TestScheduler((actual, expected) =&gt; {
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  it(<span class="str">'cancels previous inner observable'</span>, () =&gt; {
+    scheduler.run(({ cold, hot, expectObservable }) =&gt; {
+      <span class="kw">const</span> source$  = hot(<span class="str">'a--b------'</span>);            <span class="cm">// користувач вводить 'a', потім 'b'</span>
+      <span class="kw">const</span> innerA$  = cold(<span class="str">'--x|'</span>);                  <span class="cm">// відповідь для 'a'</span>
+      <span class="kw">const</span> innerB$  = cold(<span class="str">'--y|'</span>);                  <span class="cm">// відповідь для 'b'</span>
+      <span class="kw">const</span> expected = <span class="str">'-----y----'</span>;                  <span class="cm">// 'a' скасовано, тільки результат 'b'</span>
+
+      <span class="kw">const</span> result$ = source$.pipe(
+        switchMap(v =&gt; v === <span class="str">'a'</span> ? innerA$ : innerB$)
+      );
+
+      expectObservable(result$).toBe(expected, { y: <span class="str">'result-b'</span> });
+    });
+  });
+});</pre>
+<table>
+<tr><th>Символ</th><th>Значення</th></tr>
+<tr><td><code>-</code></td><td>Один віртуальний кадр часу (10мс)</td></tr>
+<tr><td><code>a</code>–<code>z</code></td><td>Емітоване значення (зіставляється через об'єкт values)</td></tr>
+<tr><td><code>|</code></td><td>Завершення</td></tr>
+<tr><td><code>#</code></td><td>Помилка</td></tr>
+<tr><td><code>^</code></td><td>Точка підписки (гарячі observable)</td></tr>
+<tr><td><code>!</code></td><td>Точка відписки</td></tr>
+</table>
+<div class="tip">Використовуйте <code>cold()</code> для HTTP-подібних observable (починаються заново на кожного підписника). Використовуйте <code>hot()</code> для спільних потоків, як-от події користувача. Marbles роблять складні помилки з часуванням одразу видимими.</div>
+</div></div>
+</div>
+
+<!-- ===== UNIT TESTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Модульне тестування і Jasmine <span class="badge b-key">Ключове</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Тестування компонентів і сервісів</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>describe(<span class="str">'UserCardComponent'</span>, () =&gt; {
+  <span class="kw">let</span> fixture: ComponentFixture&lt;UserCardComponent&gt;;
+  beforeEach(<span class="kw">async</span> () =&gt; {
+    <span class="kw">await</span> TestBed.configureTestingModule({
+      imports: [UserCardComponent],
+      providers: [{ provide: UsersService, useValue: jasmine.createSpyObj(<span class="str">'UsersService'</span>, [<span class="str">'getUser'</span>]) }]
+    }).compileComponents();
+    fixture = TestBed.createComponent(UserCardComponent);
+  });
+  it(<span class="str">'displays user name'</span>, () =&gt; {
+    fixture.componentInstance.user = { name: <span class="str">'Alice'</span> };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector(<span class="str">'.name'</span>).textContent).toContain(<span class="str">'Alice'</span>);
+  });
+});</pre>
+<ul>
+<li><strong>Піраміда тестування:</strong> Багато модульних → менше інтеграційних → мало E2E</li>
+<li><strong>AAA:</strong> Arrange (підготовка) → Act (дія) → Assert (перевірка)</li>
+<li><strong>Тестуйте поведінку, а не реалізацію</strong></li>
+<li>Використовуйте <code>HttpClientTestingModule</code> + <code>HttpTestingController</code> для HTTP</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== PLAYWRIGHT ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Playwright E2E <span class="badge b-key">Ключове</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основи та Page Object Model</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>test(<span class="str">'login flow'</span>, <span class="kw">async</span> ({ page }) =&gt; {
+  <span class="kw">await</span> page.goto(<span class="str">'/login'</span>);
+  <span class="kw">await</span> page.getByTestId(<span class="str">'email'</span>).fill(<span class="str">'user@example.com'</span>);
+  <span class="kw">await</span> page.getByRole(<span class="str">'button'</span>, { name: <span class="str">'Login'</span> }).click();
+  <span class="kw">await</span> expect(page).toHaveURL(<span class="str">/dashboard/</span>);
+});
+
+<span class="cm">// Мок API</span>
+<span class="kw">await</span> page.route(<span class="str">'**/api/users'</span>, route =&gt; route.fulfill({ json: [] }));
+
+<span class="cm">// Page Object Model — завжди згадуйте!</span>
+<span class="kw">class</span> <span class="cls">LoginPage</span> {
+  constructor(<span class="kw">private</span> page: Page) {}
+  <span class="kw">async</span> login(email: string, pass: string) {
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByTestId(<span class="str">'email'</span>).fill(email);
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByTestId(<span class="str">'pwd'</span>).fill(pass);
+    <span class="kw">await</span> <span class="kw">this</span>.page.getByRole(<span class="str">'button'</span>, { name: <span class="str">'Login'</span> }).click();
+  }
+}</pre>
+<div class="tip">Використовуйте атрибути <code>data-testid</code> — стабільні, не прив'язані до CSS. POM = повторно використовувані, підтримувані селектори. E2E: покривайте лише критичні сценарії користувача.</div>
+</div></div>
+</div>

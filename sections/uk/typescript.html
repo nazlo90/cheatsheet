@@ -1,0 +1,524 @@
+<!-- ===== TS BASICS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TypeScript Основи <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Анотації, масиви, кортежі, enum, union</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>TypeScript</strong> — це статично типізований надбудова над JavaScript: він додає анотації типів та виявляє помилки типів під час компіляції, після чого компілюється у звичайний JS.</p>
+<pre><span class="cm">// Анотації</span>
+<span class="kw">let</span> n: number = <span class="num">10</span>;
+<span class="kw">const</span> name: string = <span class="str">"Alice"</span>;
+<span class="kw">let</span> active: boolean = <span class="kw">true</span>;
+<span class="kw">let</span> val: unknown;   <span class="cm">// потрібно звузити перед використанням</span>
+<span class="kw">let</span> x: any;         <span class="cm">// вимикає систему типів — уникайте</span>
+<span class="kw">function</span> <span class="fn">log</span>(msg: string): <span class="kw">void</span> {}
+
+<span class="cm">// Масиви та кортежі</span>
+<span class="kw">let</span> arr: number[] = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>];
+<span class="kw">let</span> tuple: [string, number] = [<span class="str">"age"</span>, <span class="num">30</span>];
+<span class="kw">let</span> readonly_arr: <span class="kw">readonly</span> number[] = [<span class="num">1</span>, <span class="num">2</span>];
+
+<span class="cm">// Enum</span>
+<span class="kw">enum</span> Role { Admin = <span class="str">'ADMIN'</span>, User = <span class="str">'USER'</span> }  <span class="cm">// рядковий enum</span>
+<span class="kw">const enum</span> Dir { Up, Down }  <span class="cm">// const enum — підставляється під час компіляції</span>
+
+<span class="cm">// Union та intersection</span>
+<span class="kw">type</span> ID = string | number;
+<span class="kw">type</span> AdminUser = Admin & User;
+
+<span class="cm">// Літеральні типи</span>
+<span class="kw">type</span> Dir = <span class="str">"left"</span> | <span class="str">"right"</span> | <span class="str">"up"</span> | <span class="str">"down"</span>;
+
+<span class="cm">// Функції</span>
+<span class="kw">type</span> Fn = (a: number, b: number) =&gt; number;
+<span class="kw">function</span> <span class="fn">greet</span>(name: string, greeting?: string): string {
+  <span class="kw">return</span> <span class="str">`${greeting ?? <span class="str">'Hello'</span>}, ${name}`</span>;
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>any vs never vs unknown</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Три спеціальних типи, що визначають крайнощі системи типів: <code>any</code> вимикає перевірку типів, <code>unknown</code> — безпечний top type, <code>never</code> — bottom type, значення якого не може існувати.</p>
+<table>
+<tr><th></th><th>any</th><th>unknown</th><th>never</th></tr>
+<tr><td>Приймає значення від</td><td>Будь-якого типу ✓</td><td>Будь-якого типу ✓</td><td>Нічого — порожня множина ✗</td></tr>
+<tr><td>Присвоюється до</td><td>Будь-якого типу ✓ (обхід)</td><td>Лише <code>unknown</code> / <code>any</code></td><td>Кожного типу ✓ (bottom)</td></tr>
+<tr><td>Доступ до властивостей</td><td>Завжди дозволено</td><td>Помилка до звуження</td><td>Помилка (недосяжний код)</td></tr>
+<tr><td>Безпека типів</td><td>Вимкнена ✗</td><td>Збережена ✓</td><td>Збережена ✓</td></tr>
+<tr><td>Застосування</td><td>Міграція, швидкий обхід</td><td>Зовнішні дані, відповіді API</td><td>Перевірка вичерпності, недосяжний код, порожні union</td></tr>
+</table>
+<pre><span class="kw">// any — повністю вимикає перевірку типів</span>
+<span class="kw">let</span> b: <span class="kw">any</span> = <span class="fn">fetchData</span>();
+b.toFixed();            <span class="cm">// ✓ немає помилки — але під час виконання може кинути</span>
+b.foo.bar.baz;          <span class="cm">// ✓ TS мовчить</span>
+
+<span class="cm">// unknown — потрібно звузити перед використанням</span>
+<span class="kw">let</span> a: unknown = <span class="fn">fetchData</span>();
+a.toFixed();            <span class="cm">// ✗ Помилка — тип ще не звужено</span>
+<span class="kw">if</span> (<span class="kw">typeof</span> a === <span class="str">'number'</span>) a.toFixed(); <span class="cm">// ✓ звужено</span>
+
+<span class="cm">// never — значення, яке не може існувати</span>
+<span class="kw">function</span> <span class="fn">throwErr</span>(msg: string): <span class="kw">never</span> {
+  <span class="kw">throw new</span> Error(msg);  <span class="cm">// ніколи не повертає значення</span>
+}
+
+<span class="cm">// never у перевірці вичерпності — TS видасть помилку, якщо кейс пропущено</span>
+<span class="kw">type</span> Shape = { kind: <span class="str">'circle'</span> } | { kind: <span class="str">'rect'</span> };
+<span class="kw">function</span> <span class="fn">area</span>(s: Shape) {
+  <span class="kw">switch</span> (s.kind) {
+    <span class="kw">case</span> <span class="str">'circle'</span>: <span class="kw">return</span> <span class="num">1</span>;
+    <span class="kw">case</span> <span class="str">'rect'</span>:   <span class="kw">return</span> <span class="num">2</span>;
+    <span class="kw">default</span>: <span class="kw">const</span> _exhaustive: <span class="kw">never</span> = s; <span class="cm">// ✗ помилка, якщо фігуру додано, але не оброблено</span>
+  }
+}
+
+<span class="cm">// never у умовних типах — фільтрує елементи</span>
+<span class="kw">type</span> NonNullable&lt;T&gt; = T <span class="kw">extends</span> null | undefined ? <span class="kw">never</span> : T;
+<span class="kw">type</span> OnlyStrings&lt;T&gt; = T <span class="kw">extends</span> string ? T : <span class="kw">never</span>;
+<span class="kw">type</span> R = OnlyStrings&lt;string | number | boolean&gt;;  <span class="cm">// string</span>
+
+<span class="cm">// Використовуйте unknown для параметрів функцій із довільним введенням</span>
+<span class="kw">function</span> <span class="fn">parse</span>(val: unknown): string {
+  <span class="kw">if</span> (<span class="kw">typeof</span> val === <span class="str">'string'</span>) <span class="kw">return</span> val;
+  <span class="kw">return</span> String(val);
+}</pre>
+<div class="tip"><strong>Правило:</strong> використовуйте <code>unknown</code>, коли тип невідомий (зовнішні дані) — це змушує вас звузити тип. Використовуйте <code>never</code>, щоб позначити неможливі гілки та фільтрувати елементи union. Уникайте <code>any</code>, крім крайнього випадку при міграції.</div>
+</div></div>
+</div>
+
+<!-- ===== TYPE vs INTERFACE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">type vs interface <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Ключові відмінності</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Обидва — <code>interface</code> та <code>type</code> — описують форму об'єкта, але <code>interface</code> підтримує злиття оголошень і є кращим вибором для контрактів класів, тоді як <code>type</code> гнучкіший для union, mapped types та псевдонімів.</p>
+<table>
+<tr><th>Можливість</th><th>interface</th><th>type</th></tr>
+<tr><td>Злиття оголошень</td><td>Так ✓</td><td>Ні ✗</td></tr>
+<tr><td>Розширення</td><td><code>extends</code></td><td><code>&amp;</code> intersection</td></tr>
+<tr><td>Union типи</td><td>Ні ✗</td><td>Так ✓</td></tr>
+<tr><td>Mapped/умовні типи</td><td>Ні ✗</td><td>Так ✓</td></tr>
+<tr><td>Псевдоніми примітивів</td><td>Ні ✗</td><td>Так ✓</td></tr>
+</table>
+<div class="tip">Використовуйте <code>interface</code> для публічних API та контрактів класів. Використовуйте <code>type</code> для union, mapped types, складних generics.</div>
+</div></div>
+</div>
+
+<!-- ===== STRUCTURAL TYPING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Структурна vs Номінальна типізація <span class="badge b-key">Співбесіда</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Duck typing — форма важливіша за назву</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>TypeScript використовує <strong>структурну типізацію</strong>: сумісність базується на <em>формі</em> типу (його властивостях), а не на назві або оголошенні. Два типи з однаковою структурою є взаємозамінними, навіть якщо не пов'язані між собою.</p>
+<pre><span class="cm">// Структурна типізація — однакова форма = сумісні</span>
+<span class="kw">interface</span> <span class="cls">Point</span> { x: number; y: number; }
+<span class="kw">class</span> <span class="cls">Vector</span> { x = <span class="num">0</span>; y = <span class="num">0</span>; }
+
+<span class="kw">const</span> p: Point = <span class="kw">new</span> Vector();  <span class="cm">// ✓ — однакова форма</span>
+
+<span class="cm">// Перевірка зайвих властивостей — лише для ЛІТЕРАЛІВ об'єктів</span>
+<span class="kw">const</span> p2: Point = { x: <span class="num">1</span>, y: <span class="num">2</span>, z: <span class="num">3</span> };  <span class="cm">// ✗ Помилка — зайва властивість z</span>
+<span class="kw">const</span> obj = { x: <span class="num">1</span>, y: <span class="num">2</span>, z: <span class="num">3</span> };
+<span class="kw">const</span> p3: Point = obj;               <span class="cm">// ✓ — не літерал, перевірка не застосовується</span>
+
+<span class="cm">// Вплив на Angular — структурна типізація означає: два сервіси</span>
+<span class="cm">// з однаковим публічним API взаємозамінні на рівні типів:</span>
+<span class="kw">class</span> <span class="cls">RealAuthService</span>  { isLoggedIn() { <span class="kw">return true</span>; } }
+<span class="kw">class</span> <span class="cls">MockAuthService</span>  { isLoggedIn() { <span class="kw">return false</span>; } }
+<span class="cm">// TestBed може замінити їх без спільного interface — структурний збіг достатній</span>
+
+<span class="cm">// Симуляція номінальної типізації — branded types запобігають випадковому змішуванню</span>
+<span class="kw">type</span> UserId  = string &amp; { <span class="kw">readonly</span> _brand: <span class="str">'UserId'</span>  };
+<span class="kw">type</span> OrderId = string &amp; { <span class="kw">readonly</span> _brand: <span class="str">'OrderId'</span> };
+
+<span class="kw">function</span> <span class="fn">asUserId</span>(id: string): UserId { <span class="kw">return</span> id <span class="kw">as</span> UserId; }
+
+<span class="kw">function</span> <span class="fn">getUser</span>(id: UserId) { <span class="cm">/* ... */</span> }
+<span class="kw">const</span> orderId = <span class="fn">asOrderId</span>(<span class="str">'abc'</span>);
+<span class="fn">getUser</span>(orderId);  <span class="cm">// ✗ Помилка — OrderId не присвоюється до UserId</span>
+<span class="cm">// Без branded types: обидва є string → тихо приймається</span></pre>
+<table>
+<tr><th></th><th>Структурна (TypeScript)</th><th>Номінальна (Java, C#)</th></tr>
+<tr><td>Перевірка сумісності</td><td>Форма властивостей</td><td>Явна назва класу/interface</td></tr>
+<tr><td>Два однакові типи</td><td>Завжди сумісні ✓</td><td>Несумісні без оголошення</td></tr>
+<tr><td>Перевага для тестування</td><td>Mock за формою — спільний interface не потрібен</td><td>Потрібно реалізувати той самий interface</td></tr>
+<tr><td>Ризик</td><td>Випадкова сумісність (UserId ↔ OrderId)</td><td>Зайвий код, жорсткі ієрархії</td></tr>
+</table>
+<div class="tip">Використовуйте <strong>branded types</strong>, коли важлива доменна коректність (ID, валюти, одиниці). Freely використовуйте структурну типізацію для моків і DTO — це перевага, а не недолік.</div>
+</div></div>
+</div>
+
+<!-- ===== ADVANCED TS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Просунутий TypeScript <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Utility types — повна таблиця</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Utility</th><th>Ефект</th></tr>
+<tr><td><code>Partial&lt;T&gt;</code></td><td>Всі властивості необов'язкові</td></tr>
+<tr><td><code>Required&lt;T&gt;</code></td><td>Всі обов'язкові</td></tr>
+<tr><td><code>Readonly&lt;T&gt;</code></td><td>Всі лише для читання</td></tr>
+<tr><td><code>Pick&lt;T,K&gt;</code></td><td>Залишити лише ключі K</td></tr>
+<tr><td><code>Omit&lt;T,K&gt;</code></td><td>Видалити ключі K</td></tr>
+<tr><td><code>Record&lt;K,V&gt;</code></td><td>Тип-словник</td></tr>
+<tr><td><code>Exclude&lt;T,U&gt;</code></td><td>Видалити з T те, що присвоюється до U</td></tr>
+<tr><td><code>Extract&lt;T,U&gt;</code></td><td>Залишити з T те, що присвоюється до U</td></tr>
+<tr><td><code>NonNullable&lt;T&gt;</code></td><td>Видалити null/undefined</td></tr>
+<tr><td><code>ReturnType&lt;T&gt;</code></td><td>Тип повернення функції</td></tr>
+<tr><td><code>Parameters&lt;T&gt;</code></td><td>Кортеж параметрів функції</td></tr>
+<tr><td><code>InstanceType&lt;T&gt;</code></td><td>Тип екземпляра класу</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Generics, mapped, conditional, infer</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Generic з обмеженням</span>
+<span class="kw">function</span> <span class="fn">getProperty</span>&lt;T, K <span class="kw">extends keyof</span> T&gt;(obj: T, key: K): T[K] {
+  <span class="kw">return</span> obj[key];
+}
+
+<span class="cm">// Mapped type</span>
+<span class="kw">type</span> Nullable&lt;T&gt; = { [K <span class="kw">in keyof</span> T]: T[K] | null };
+<span class="kw">type</span> Mutable&lt;T&gt; = { <span class="op">-readonly</span> [K <span class="kw">in keyof</span> T]: T[K] };   <span class="cm">// прибрати readonly</span>
+<span class="kw">type</span> Optional&lt;T&gt; = { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: T[K] };           <span class="cm">// додати ?</span>
+
+<span class="cm">// Conditional + infer</span>
+<span class="kw">type</span> UnwrapPromise&lt;T&gt; = T <span class="kw">extends</span> Promise&lt;<span class="kw">infer</span> R&gt; ? R : T;
+<span class="kw">type</span> IsArray&lt;T&gt; = T <span class="kw">extends</span> any[] ? <span class="str">'yes'</span> : <span class="str">'no'</span>;
+
+<span class="cm">// Template literal types</span>
+<span class="kw">type</span> EventName&lt;T <span class="kw">extends</span> string&gt; = <span class="str">`on${Capitalize&lt;T&gt;}`</span>;
+
+<span class="cm">// Discriminated union + звуження</span>
+<span class="kw">type</span> Shape = { kind: <span class="str">'circle'</span>; r: number } | { kind: <span class="str">'rect'</span>; w: number; h: number };
+<span class="kw">function</span> area(s: Shape): number {
+  <span class="kw">switch</span> (s.kind) {
+    <span class="kw">case</span> <span class="str">'circle'</span>: <span class="kw">return</span> Math.PI * s.r ** <span class="num">2</span>;
+    <span class="kw">case</span> <span class="str">'rect'</span>:   <span class="kw">return</span> s.w * s.h;
+  }
+}
+
+<span class="cm">// Deep partial (рекурсивний)</span>
+<span class="kw">type</span> DeepPartial&lt;T&gt; = T <span class="kw">extends</span> object
+  ? { [K <span class="kw">in keyof</span> T]<span class="op">?</span>: DeepPartial&lt;T[K]&gt; } : T;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Типобезпечний API клієнт — mapped + conditional types на практиці</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Поєднуйте mapped types, conditional types та template literals для побудови HTTP клієнта, де параметри та відповідь кожного endpoint повністю типізовані під час компіляції.</p>
+<pre><span class="cm">// 1. Визначте контракт API як map типів</span>
+<span class="kw">interface</span> <span class="cls">ApiRoutes</span> {
+  <span class="str">'/users'</span>:        { method: <span class="str">'GET'</span>;  params: { page: number };   response: User[]   };
+  <span class="str">'/users/:id'</span>:    { method: <span class="str">'GET'</span>;  params: { id: string };      response: User     };
+  <span class="str">'/users/create'</span>: { method: <span class="str">'POST'</span>; params: { body: NewUser };   response: User     };
+}
+
+<span class="cm">// 2. Виведіть допоміжні типи через conditional types</span>
+<span class="kw">type</span> GetRoutes  = { [K <span class="kw">in keyof</span> ApiRoutes]: ApiRoutes[K][<span class="str">'method'</span>] <span class="kw">extends</span> <span class="str">'GET'</span>  ? K : <span class="kw">never</span> }[<span class="kw">keyof</span> ApiRoutes];
+<span class="kw">type</span> PostRoutes = { [K <span class="kw">in keyof</span> ApiRoutes]: ApiRoutes[K][<span class="str">'method'</span>] <span class="kw">extends</span> <span class="str">'POST'</span> ? K : <span class="kw">never</span> }[<span class="kw">keyof</span> ApiRoutes];
+
+<span class="kw">type</span> RouteParams&lt;T <span class="kw">extends keyof</span> ApiRoutes&gt;   = ApiRoutes[T][<span class="str">'params'</span>];
+<span class="kw">type</span> RouteResponse&lt;T <span class="kw">extends keyof</span> ApiRoutes&gt; = ApiRoutes[T][<span class="str">'response'</span>];
+
+<span class="cm">// 3. Типізована функція клієнта</span>
+<span class="kw">function</span> <span class="fn">apiGet</span>&lt;T <span class="kw">extends</span> GetRoutes&gt;(
+  url: T,
+  params: RouteParams&lt;T&gt;
+): Observable&lt;RouteResponse&lt;T&gt;&gt; {
+  <span class="kw">return</span> http.get&lt;RouteResponse&lt;T&gt;&gt;(url, { params: params <span class="kw">as any</span> });
+}
+
+<span class="cm">// 4. Використання — повністю типізовано, неправильні аргументи = помилка компіляції</span>
+apiGet(<span class="str">'/users'</span>, { page: <span class="num">1</span> });         <span class="cm">// ✓ відповідь: User[]</span>
+apiGet(<span class="str">'/users/:id'</span>, { id: <span class="str">'abc'</span> });  <span class="cm">// ✓ відповідь: User</span>
+apiGet(<span class="str">'/users'</span>, { id: <span class="str">'abc'</span> });      <span class="cm">// ✗ Помилка — невірні params для /users</span>
+
+<span class="cm">// Template literal type — автоматичне генерування назв подій</span>
+<span class="kw">type</span> Endpoint = <span class="kw">keyof</span> ApiRoutes;
+<span class="kw">type</span> LoadAction&lt;T <span class="kw">extends</span> string&gt; = <span class="str">`load${Capitalize&lt;T&gt;}`</span>;
+<span class="kw">type</span> UserActions = LoadAction&lt;<span class="str">'users'</span> | <span class="str">'orders'</span>&gt;;  <span class="cm">// 'loadUsers' | 'loadOrders'</span></pre>
+<div class="tip">Цей патерн використовується у tRPC та типізованих обгортках fetch — тип клієнта повністю виводиться з map маршрутів, тому додавання нового endpoint в одному місці автоматично оновлює весь клієнт.</div>
+</div></div>
+</div>
+
+<!-- ===== ABSTRACT CLASSES vs INTERFACES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Abstract Classes vs Interfaces <span class="badge b-ng">TS</span><span class="badge b-key">Співбесіда</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні відмінності з першого погляду</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Abstract classes</strong> можуть містити реалізацію (методи, поля, конструктори) і задавати контракт — вони знаходяться між конкретним класом та interface. <strong>Interfaces</strong> — це чисті контракти форми: нульовий runtime-слід, видаляються під час компіляції.</p>
+<table>
+<tr><th>Можливість</th><th>Abstract class</th><th>Interface</th></tr>
+<tr><td>Існування під час виконання</td><td>Так — компілюється у JS клас</td><td>Ні — видаляється під час компіляції</td></tr>
+<tr><td>Конкретні методи / поля</td><td>Так ✓</td><td>Ні ✗ (лише сигнатури)</td></tr>
+<tr><td>Логіка конструктора</td><td>Так ✓</td><td>Ні ✗</td></tr>
+<tr><td>Множинне успадкування</td><td>Ні — одиночний <code>extends</code></td><td>Так — множинний <code>implements</code></td></tr>
+<tr><td>Злиття оголошень</td><td>Ні ✗</td><td>Так ✓</td></tr>
+<tr><td>Використання з <code>instanceof</code></td><td>Так ✓</td><td>Ні ✗</td></tr>
+<tr><td>Токен Dependency Injection</td><td>Так ✓ (Angular/NestJS)</td><td>Ні — не є runtime значенням</td></tr>
+</table>
+<div class="tip">Правило за замовчуванням: надавайте перевагу <strong>interface</strong> для чистих контрактів форми. Використовуйте <strong>abstract class</strong>, коли потрібна спільна реалізація, конструктор або runtime токен для DI.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Abstract class — спільна реалізація + контракт</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Abstract class — не може бути створений безпосередньо</span>
+<span class="kw">abstract class</span> <span class="cls">Animal</span> {
+  <span class="cm">// Конкретне поле + конструктор — спільні для всіх підкласів</span>
+  <span class="kw">constructor</span>(<span class="kw">protected readonly</span> name: string) {}
+
+  <span class="cm">// Конкретний метод — успадковується як є</span>
+  <span class="fn">describe</span>(): string {
+    <span class="kw">return</span> <span class="str">`I am ${this.name}`</span>;
+  }
+
+  <span class="cm">// Abstract метод — підкласи ЗОБОВ'ЯЗАНІ реалізувати</span>
+  <span class="kw">abstract</span> <span class="fn">makeSound</span>(): string;
+}
+
+<span class="kw">class</span> <span class="cls">Dog</span> <span class="kw">extends</span> <span class="cls">Animal</span> {
+  <span class="fn">makeSound</span>() { <span class="kw">return</span> <span class="str">'Woof'</span>; }
+}
+
+<span class="kw">const</span> d = <span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">'Rex'</span>);
+d.describe();   <span class="cm">// 'I am Rex' — успадковано від Animal</span>
+d.makeSound();  <span class="cm">// 'Woof'</span>
+
+<span class="cm">// new Animal('x') — ✗ Помилка: не можна створити екземпляр abstract класу</span>
+d <span class="kw">instanceof</span> Animal; <span class="cm">// ✓ true — runtime перевірка працює</span></pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Interface — чиста форма, нульові витрати під час виконання</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Interface — лише на рівні типів, видаляється при компіляції</span>
+<span class="kw">interface</span> <span class="cls">Serializable</span> {
+  <span class="fn">serialize</span>(): string;
+  <span class="fn">deserialize</span>(raw: string): <span class="kw">void</span>;
+}
+
+<span class="cm">// Клас може реалізовувати декілька interfaces</span>
+<span class="kw">interface</span> <span class="cls">Loggable</span> { <span class="fn">log</span>(): <span class="kw">void</span>; }
+
+<span class="kw">class</span> <span class="cls">UserRecord</span> <span class="kw">implements</span> <span class="cls">Serializable</span>, <span class="cls">Loggable</span> {
+  <span class="fn">serialize</span>()          { <span class="kw">return</span> JSON.stringify(<span class="kw">this</span>); }
+  <span class="fn">deserialize</span>(raw)     { Object.assign(<span class="kw">this</span>, JSON.parse(raw)); }
+  <span class="fn">log</span>()                { console.log(<span class="kw">this</span>); }
+}
+
+<span class="cm">// Злиття оголошень — додати поля до існуючого interface</span>
+<span class="kw">interface</span> <span class="cls">Serializable</span> { version: number; }  <span class="cm">// ✓ злито</span>
+
+<span class="cm">// instanceof з interface — ✗ не працює (немає runtime токена)</span>
+<span class="cm">// ur instanceof Serializable  — помилка компіляції</span>
+
+<span class="cm">// Замість цього використовуйте type guard:</span>
+<span class="kw">function</span> <span class="fn">isSerializable</span>(v: unknown): v <span class="kw">is</span> <span class="cls">Serializable</span> {
+  <span class="kw">return</span> <span class="kw">typeof</span> (v <span class="kw">as any</span>)?.serialize === <span class="str">'function'</span>;
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Коли що використовувати — керівництво з вибору</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Ситуація</th><th>Вибір</th><th>Причина</th></tr>
+<tr><td>Спільна базова логіка (логування, кешування, lifecycle)</td><td>Abstract class</td><td>Конкретні методи уникають дублювання коду між підкласами</td></tr>
+<tr><td>Токен DI у Angular / NestJS</td><td>Abstract class</td><td>Interfaces видаляються — ін'єктуйте за посиланням на клас</td></tr>
+<tr><td>Визначення форми API / DTO</td><td>Interface</td><td>Нульові runtime витрати; підтримує злиття оголошень</td></tr>
+<tr><td>Декілька контрактів на одному класі</td><td>Interface</td><td>Клас може реалізовувати N interfaces, але розширювати лише 1 клас</td></tr>
+<tr><td>Розширення типів сторонніх бібліотек</td><td>Interface</td><td>Злиття оголошень дозволяє розширювати існуючі interfaces</td></tr>
+<tr><td>Патерн Template Method</td><td>Abstract class</td><td>Базовий клас визначає скелет алгоритму; підкласи заповнюють кроки</td></tr>
+</table>
+<pre><span class="cm">// Angular DI — abstract class як токен (працює під час виконання)</span>
+<span class="kw">abstract class</span> <span class="cls">Logger</span> { <span class="kw">abstract</span> <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
+<span class="kw">class</span> <span class="cls">ConsoleLogger</span> <span class="kw">extends</span> <span class="cls">Logger</span> { <span class="fn">log</span>(m: string) { console.log(m); } }
+
+<span class="cm">// масив providers у Angular модулі:</span>
+<span class="cm">// { provide: Logger, useClass: ConsoleLogger }</span>
+<span class="cm">// inject(Logger) — ✓ вирішується у ConsoleLogger під час виконання</span>
+
+<span class="cm">// Токен interface — ✗ НЕ працює</span>
+<span class="kw">interface</span> <span class="cls">ILogger</span> { <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
+<span class="cm">// { provide: ILogger, useClass: ... } — помилка компіляції: ILogger не є значенням</span></pre>
+<div class="tip">У Angular / NestJS: використовуйте abstract classes як токени DI — вони зберігаються після компіляції, interfaces — ні. Abstract class виконує роль і типового контракту, і ключа ін'єкції.</div>
+</div></div>
+</div>
+
+<!-- ===== TS MIXINS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TypeScript Mixins <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Що таке mixins і навіщо їх використовувати</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Mixin</strong> — це функція, яка приймає базовий клас і повертає розширений клас. Це патерн, що додає поведінку до класу без успадкування. Вирішує обмеження одиночного успадкування у TypeScript/JavaScript.</p>
+<table>
+<tr><th></th><th>Успадкування</th><th>Mixin</th></tr>
+<tr><td>Декілька баз</td><td>Ні — розширює один клас</td><td>Так — складати декілька mixins</td></tr>
+<tr><td>Runtime витрати</td><td>Ланцюжок прототипів</td><td>Однакові — ланцюжок прототипів</td></tr>
+<tr><td>Tree-shakeable</td><td>Ні</td><td>Так — включати лише потрібне</td></tr>
+<tr><td>Альтернатива в Angular</td><td>Abstract базовий компонент</td><td>hostDirectives API (Angular 15+)</td></tr>
+</table>
+<pre><span class="cm">// Допоміжний тип для mixin</span>
+<span class="kw">type</span> Constructor&lt;T = {}&gt; = <span class="kw">new</span> (...args: any[]) =&gt; T;
+
+<span class="cm">// Mixin — додає відстеження часових міток</span>
+<span class="kw">function</span> <span class="fn">Timestamped</span>&lt;TBase <span class="kw">extends</span> Constructor&gt;(Base: TBase) {
+  <span class="kw">return class extends</span> Base {
+    createdAt = <span class="kw">new</span> Date();
+    updatedAt = <span class="kw">new</span> Date();
+    <span class="fn">touch</span>() { <span class="kw">this</span>.updatedAt = <span class="kw">new</span> Date(); }
+  };
+}
+
+<span class="cm">// Mixin — додає поведінку м'якого видалення</span>
+<span class="kw">function</span> <span class="fn">SoftDeletable</span>&lt;TBase <span class="kw">extends</span> Constructor&gt;(Base: TBase) {
+  <span class="kw">return class extends</span> Base {
+    deletedAt: Date | null = null;
+    <span class="fn">softDelete</span>() { <span class="kw">this</span>.deletedAt = <span class="kw">new</span> Date(); }
+    <span class="kw">get</span> <span class="fn">isDeleted</span>() { <span class="kw">return this</span>.deletedAt !== null; }
+  };
+}
+
+<span class="cm">// Складання декількох mixins на базовому класі</span>
+<span class="kw">class</span> <span class="cls">Entity</span> {
+  <span class="kw">constructor</span>(<span class="kw">public</span> id: number) {}
+}
+
+<span class="kw">class</span> <span class="cls">User</span> <span class="kw">extends</span> <span class="fn">SoftDeletable</span>(<span class="fn">Timestamped</span>(<span class="cls">Entity</span>)) {
+  <span class="kw">constructor</span>(id: number, <span class="kw">public</span> name: string) {
+    <span class="kw">super</span>(id);
+  }
+}
+
+<span class="kw">const</span> u = <span class="kw">new</span> <span class="cls">User</span>(<span class="num">1</span>, <span class="str">'Alice'</span>);
+u.touch();          <span class="cm">// з Timestamped</span>
+u.softDelete();     <span class="cm">// з SoftDeletable</span>
+u.isDeleted;        <span class="cm">// true</span>
+u.createdAt;        <span class="cm">// з Timestamped</span></pre>
+<div class="tip">Тримайте mixins якомога без стану — вони повинні додавати поведінку, а не зберігати незалежний стан. В Angular надавайте перевагу <code>hostDirectives</code> для компонентної композиції поведінки; використовуйте TS mixins для звичайних сервісів та утилітних класів.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Обмежені mixins + злиття interfaces</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Обмежена база — mixin вимагає конкретних членів у базовому класі</span>
+<span class="kw">interface</span> <span class="cls">HasName</span> { name: string; }
+
+<span class="kw">function</span> <span class="fn">Greetable</span>&lt;TBase <span class="kw">extends</span> Constructor&lt;HasName&gt;&gt;(Base: TBase) {
+  <span class="kw">return class extends</span> Base {
+    <span class="fn">greet</span>() { <span class="kw">return</span> `Hello, ${<span class="kw">this</span>.name}!`; }
+  };
+}
+
+<span class="cm">// ✗ Помилка — база повинна мати .name</span>
+<span class="cm">// class BadBase {} class Bad extends Greetable(BadBase) {}</span>
+
+<span class="cm">// ✓ Працює — Person має .name</span>
+<span class="kw">class</span> <span class="cls">Person</span> { <span class="kw">constructor</span>(<span class="kw">public</span> name: string) {} }
+<span class="kw">class</span> <span class="cls">FriendlyPerson</span> <span class="kw">extends</span> <span class="fn">Greetable</span>(<span class="cls">Person</span>) {}
+<span class="kw">new</span> <span class="cls">FriendlyPerson</span>(<span class="str">'Bob'</span>).<span class="fn">greet</span>(); <span class="cm">// 'Hello, Bob!'</span>
+
+<span class="cm">// Злиття interface для типу повернення mixin — покращує автодоповнення в IDE</span>
+<span class="kw">interface</span> <span class="cls">User</span> <span class="kw">extends</span> <span class="fn">ReturnType</span>&lt;<span class="kw">typeof</span> <span class="fn">Timestamped</span>&gt;,
+                         <span class="fn">ReturnType</span>&lt;<span class="kw">typeof</span> <span class="fn">SoftDeletable</span>&gt; {}</pre>
+</div></div>
+</div>
+
+<!-- ===== TS DECORATORS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TypeScript Decorators <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Що таке decorators та їх типи</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Decorator</strong> — це спеціальна функція, яка прикріплює метадані або модифікує клас/властивість/метод під час оголошення. TypeScript підтримує <strong>experimental decorators</strong> (stage 2, використовуються Angular) та нові <strong>TC39 stage 3</strong> decorators (TypeScript 5+).</p>
+<p>Увімкніть через <code>"experimentalDecorators": true</code> у tsconfig (для Angular/NestJS). TC39 decorators працюють без цього прапора у TS 5+.</p>
+<table>
+<tr><th>Тип decorator</th><th>Застосовується до</th><th>Аргументи</th></tr>
+<tr><td><strong>Class</strong></td><td>Оголошення класу</td><td><code>(target: Function)</code></td></tr>
+<tr><td><strong>Method</strong></td><td>Метод класу</td><td><code>(target, key, descriptor)</code></td></tr>
+<tr><td><strong>Property</strong></td><td>Властивість класу</td><td><code>(target, key)</code></td></tr>
+<tr><td><strong>Accessor</strong></td><td>get/set</td><td><code>(target, key, descriptor)</code></td></tr>
+<tr><td><strong>Parameter</strong></td><td>Параметр конструктора / методу</td><td><code>(target, key, paramIndex)</code></td></tr>
+</table>
+<pre><span class="cm">// 1. Class decorator — додає метадані / обгортає клас</span>
+<span class="kw">function</span> <span class="fn">Sealed</span>(target: Function) {
+  Object.seal(target);
+  Object.seal(target.prototype);
+}
+
+@Sealed
+<span class="kw">class</span> <span class="cls">Config</span> { apiUrl = <span class="str">'https://api.example.com'</span>; }
+
+<span class="cm">// 2. Method decorator — обгортає метод (напр. логування, вимірювання часу)</span>
+<span class="kw">function</span> <span class="fn">Log</span>(target: any, key: string, desc: PropertyDescriptor) {
+  <span class="kw">const</span> orig = desc.value;
+  desc.value = <span class="kw">function</span>(...args: any[]) {
+    console.log(`${key} called with`, args);
+    <span class="kw">return</span> orig.apply(<span class="kw">this</span>, args);
+  };
+}
+
+<span class="kw">class</span> <span class="cls">UserService</span> {
+  @Log
+  <span class="fn">findById</span>(id: number) { <span class="cm">/* ... */</span> }
+}
+
+<span class="cm">// 3. Property decorator — позначити обов'язкові поля</span>
+<span class="kw">function</span> <span class="fn">Required</span>(target: any, key: string) {
+  <span class="kw">let</span> val = target[key];
+  Object.defineProperty(target, key, {
+    <span class="kw">get</span>: () =&gt; val,
+    <span class="kw">set</span>: (v) =&gt; { <span class="kw">if</span> (!v) <span class="kw">throw new</span> Error(`${key} is required`); val = v; }
+  });
+}
+
+<span class="cm">// 4. Parameter decorator — використовується у DI фреймворках (Angular, NestJS)</span>
+<span class="kw">function</span> <span class="fn">Inject</span>(token: <span class="kw">any</span>) {
+  <span class="kw">return</span> (target: any, _: string | undefined, index: number) =&gt; {
+    Reflect.defineMetadata(<span class="str">'inject'</span>, token, target, String(index));
+  };
+}
+
+<span class="cm">// 5. Decorator factory — decorator з аргументами</span>
+<span class="kw">function</span> <span class="fn">MinLength</span>(min: number) {
+  <span class="kw">return function</span>(target: any, key: string) {
+    <span class="kw">let</span> val: string;
+    Object.defineProperty(target, key, {
+      <span class="kw">set</span>: (v: string) =&gt; {
+        <span class="kw">if</span> (v.length &lt; min) <span class="kw">throw new</span> Error(`${key} min length ${min}`);
+        val = v;
+      },
+      <span class="kw">get</span>: () =&gt; val
+    });
+  };
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Порядок виконання decorators + використання в Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Порядок виконання (знизу вгору для вкладених decorators)</span>
+@A   <span class="cm">// обчислюється 1-м, застосовується 2-м</span>
+@B   <span class="cm">// обчислюється 2-м, застосовується 1-м</span>
+<span class="kw">class</span> <span class="cls">Foo</span> {}
+<span class="cm">// Порядок: обчислити A → обчислити B → застосувати B → застосувати A</span>
+
+<span class="cm">// Angular decorators — це class/property decorators під капотом</span>
+@Component({ selector: <span class="str">'app-root'</span>, template: <span class="str">'...'</span> })
+<span class="kw">class</span> <span class="cls">AppComponent</span> {
+  @Input() title = <span class="str">''</span>;      <span class="cm">// property decorator</span>
+  @Output() saved = <span class="kw">new</span> EventEmitter(); <span class="cm">// property decorator</span>
+  @HostListener(<span class="str">'click'</span>)    <span class="cm">// method decorator</span>
+  <span class="fn">onClick</span>() {}
+}
+
+<span class="cm">// NestJS decorators — той самий механізм</span>
+@Controller(<span class="str">'users'</span>)
+<span class="kw">class</span> <span class="cls">UsersController</span> {
+  @Get(<span class="str">'/:id'</span>)
+  <span class="fn">getUser</span>(@Param(<span class="str">'id'</span>) id: string) {}  <span class="cm">// parameter decorator</span>
+}
+
+<span class="cm">// TC39 stage 3 (TS 5+, experimentalDecorators не потрібен)</span>
+<span class="kw">function</span> <span class="fn">logged</span>(target: any, ctx: ClassMethodDecoratorContext) {
+  <span class="kw">return function</span>(...args: any[]) {
+    console.log(`${String(ctx.name)} called`);
+    <span class="kw">return</span> target.apply(<span class="kw">this</span>, args);
+  };
+}
+<span class="kw">class</span> <span class="cls">Service</span> {
+  @logged
+  <span class="fn">fetch</span>() { <span class="cm">/* ... */</span> }
+}</pre>
+<div class="tip">Angular використовує <code>reflect-metadata</code> для зберігання інформації про типи під час проектування для DI. Decorator зберігає токен типу; інжектор зчитує його під час виконання. Завжди вмикайте <code>"emitDecoratorMetadata": true</code> разом з <code>"experimentalDecorators"</code> у Angular проектах.</div>
+</div></div>
+</div>

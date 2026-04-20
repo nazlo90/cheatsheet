@@ -1,0 +1,377 @@
+<!-- ===== GRAPHQL FUNDAMENTALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Основи GraphQL <span class="badge b-hot">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Схема, типи та операції</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>GraphQL — це мова запитів і середовище виконання для API. Клієнти запитують рівно ті дані, які їм потрібні — без надмірного або недостатнього отримання.</p>
+<table>
+<tr><th>Концепція</th><th>Опис</th></tr>
+<tr><td>Schema</td><td>Строго типізований контракт між клієнтом і сервером (SDL)</td></tr>
+<tr><td>Query</td><td>Отримання даних лише для читання</td></tr>
+<tr><td>Mutation</td><td>Операція запису (створення / оновлення / видалення)</td></tr>
+<tr><td>Subscription</td><td>Оновлення в реальному часі через WebSocket</td></tr>
+<tr><td>Resolver</td><td>Функція, що повертає дані для поля</td></tr>
+<tr><td>Scalar</td><td>Листові типи: <code>String</code>, <code>Int</code>, <code>Float</code>, <code>Boolean</code>, <code>ID</code></td></tr>
+</table>
+<pre><span class="cm"># Schema Definition Language (SDL)</span>
+<span class="kw">type</span> <span class="cls">User</span> {
+  id:        <span class="cls">ID</span>!
+  name:      <span class="cls">String</span>!
+  email:     <span class="cls">String</span>!
+  posts:     [<span class="cls">Post</span>!]!
+  createdAt: <span class="cls">String</span>
+}
+
+<span class="kw">type</span> <span class="cls">Query</span> {
+  user(id: <span class="cls">ID</span>!):  <span class="cls">User</span>
+  users:            [<span class="cls">User</span>!]!
+}
+
+<span class="kw">type</span> <span class="cls">Mutation</span> {
+  createUser(input: <span class="cls">CreateUserInput</span>!): <span class="cls">User</span>!
+  deleteUser(id: <span class="cls">ID</span>!):               <span class="cls">Boolean</span>!
+}
+
+<span class="kw">input</span> <span class="cls">CreateUserInput</span> {
+  name:  <span class="cls">String</span>!
+  email: <span class="cls">String</span>!
+}</pre>
+<div class="tip"><code>!</code> означає not-nullable. <code>[Post!]!</code> означає not-nullable список not-nullable об'єктів Post — і список, і кожен елемент гарантовано існують.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Синтаксис запитів клієнта</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Запит з вибором полів</span>
+query <span class="fn">GetUser</span>($id: <span class="cls">ID</span>!) {
+  user(id: $id) {
+    id
+    name
+    posts {
+      title
+      publishedAt
+    }
+  }
+}
+
+<span class="cm"># Mutation</span>
+mutation <span class="fn">CreateUser</span>($input: <span class="cls">CreateUserInput</span>!) {
+  createUser(input: $input) {
+    id
+    name
+  }
+}
+
+<span class="cm"># Fragments — набори полів для повторного використання</span>
+fragment <span class="fn">UserFields</span> on <span class="cls">User</span> {
+  id
+  name
+  email
+}
+
+query { users { ...<span class="fn">UserFields</span> } }
+
+<span class="cm"># Aliases — двічі запитати одне поле з різними аргументами</span>
+query {
+  alice: user(id: <span class="str">"1"</span>) { name }
+  bob:   user(id: <span class="str">"2"</span>) { name }
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== RESOLVERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Resolvers &amp; Context <span class="badge b-key">Ключове</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Анатомія resolver'а (code-first з NestJS)</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { <span class="cls">Resolver</span>, <span class="cls">Query</span>, <span class="cls">Mutation</span>, <span class="cls">Args</span>, <span class="cls">ID</span>,
+         <span class="cls">ResolveField</span>, <span class="cls">Parent</span>, <span class="cls">Context</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+<span class="kw">import</span> { <span class="cls">UsersService</span> } <span class="kw">from</span> <span class="str">'./users.service'</span>;
+<span class="kw">import</span> { <span class="cls">User</span> } <span class="kw">from</span> <span class="str">'./models/user.model'</span>;
+<span class="kw">import</span> { <span class="cls">CreateUserInput</span> } <span class="kw">from</span> <span class="str">'./dto/create-user.input'</span>;
+
+<span class="fn">@Resolver</span>(() =&gt; <span class="cls">User</span>)
+<span class="kw">export class</span> <span class="cls">UsersResolver</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> usersService: <span class="cls">UsersService</span>) {}
+
+  <span class="fn">@Query</span>(() =&gt; [<span class="cls">User</span>], { name: <span class="str">'users'</span> })
+  <span class="fn">findAll</span>() { <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findAll</span>(); }
+
+  <span class="fn">@Query</span>(() =&gt; <span class="cls">User</span>, { nullable: <span class="kw">true</span> })
+  <span class="fn">user</span>(<span class="fn">@Args</span>(<span class="str">'id'</span>, { type: () =&gt; <span class="cls">ID</span> }) id: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(id);
+  }
+
+  <span class="fn">@Mutation</span>(() =&gt; <span class="cls">User</span>)
+  <span class="fn">createUser</span>(<span class="fn">@Args</span>(<span class="str">'input'</span>) input: <span class="cls">CreateUserInput</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">create</span>(input);
+  }
+
+  <span class="cm">// Field resolver — виконується для кожного повернутого User</span>
+  <span class="fn">@ResolveField</span>(<span class="str">'posts'</span>, () =&gt; [<span class="cls">Post</span>])
+  <span class="fn">getPosts</span>(<span class="fn">@Parent</span>() user: <span class="cls">User</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.postsService.<span class="fn">findByAuthor</span>(user.id);
+  }
+}</pre>
+<div class="tip">Підхід code-first автоматично генерує SDL з TypeScript-декораторів. Підхід schema-first використовує написаний вручну SDL і прив'язує до нього resolver'и.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Моделі ObjectType та InputType</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { <span class="cls">ObjectType</span>, <span class="cls">Field</span>, <span class="cls">ID</span>, <span class="cls">InputType</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+<span class="kw">import</span> { <span class="cls">IsEmail</span>, <span class="cls">IsString</span> } <span class="kw">from</span> <span class="str">'class-validator'</span>;
+
+<span class="fn">@ObjectType</span>()
+<span class="kw">export class</span> <span class="cls">User</span> {
+  <span class="fn">@Field</span>(() =&gt; <span class="cls">ID</span>)
+  id: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>()
+  name: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>({ nullable: <span class="kw">true</span> })
+  bio?: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>(() =&gt; [<span class="cls">Post</span>])
+  posts: <span class="cls">Post</span>[];
+}
+
+<span class="fn">@InputType</span>()
+<span class="kw">export class</span> <span class="cls">CreateUserInput</span> {
+  <span class="fn">@Field</span>()
+  <span class="fn">@IsString</span>()
+  name: <span class="kw">string</span>;
+
+  <span class="fn">@Field</span>()
+  <span class="fn">@IsEmail</span>()
+  email: <span class="kw">string</span>;
+}</pre>
+<div class="warn-box"><code>ValidationPipe</code> від Nest працює також з GraphQL-аргументами — додайте його глобально через <code>app.useGlobalPipes</code> та використовуйте декоратори <code>class-validator</code> на класах <code>@InputType()</code>.</div>
+</div></div>
+</div>
+
+<!-- ===== DATALOADER & N+1 ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">DataLoader &amp; Проблема N+1 <span class="badge b-grn">Performance</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Проблема N+1 та розв'язання через DataLoader</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Коли запит до списку вирішує вкладені поля, наївні resolver'и виконують один запит до БД <em>на кожного батька</em> — це проблема N+1. DataLoader групує та кешує їх в один запит на запит.</p>
+<pre><span class="cm">// Без DataLoader — N+1</span>
+<span class="cm">// 1 запит для users, потім 1 запит на кожного user для posts → N+1</span>
+<span class="fn">@ResolveField</span>(<span class="str">'posts'</span>, () =&gt; [<span class="cls">Post</span>])
+<span class="fn">getPosts</span>(<span class="fn">@Parent</span>() user: <span class="cls">User</span>) {
+  <span class="kw">return</span> <span class="kw">this</span>.db.<span class="fn">query</span>(<span class="str">'SELECT * FROM posts WHERE author_id = $1'</span>, [user.id]);
+}
+
+<span class="cm">// З DataLoader — 1 групований запит</span>
+<span class="kw">import</span> <span class="cls">DataLoader</span> <span class="kw">from</span> <span class="str">'dataloader'</span>;
+
+<span class="kw">export function</span> <span class="fn">createPostsLoader</span>(db) {
+  <span class="kw">return new</span> <span class="cls">DataLoader</span>&lt;<span class="kw">string</span>, <span class="cls">Post</span>[]&gt;(<span class="kw">async</span> (authorIds) =&gt; {
+    <span class="kw">const</span> posts = <span class="kw">await</span> db.<span class="fn">query</span>(
+      <span class="str">'SELECT * FROM posts WHERE author_id = ANY($1)'</span>, [authorIds],
+    );
+    <span class="cm">// Групуємо за author_id, щоб DataLoader відобразив 1 результат на ключ</span>
+    <span class="kw">return</span> authorIds.<span class="fn">map</span>(id =&gt; posts.<span class="fn">filter</span>(p =&gt; p.author_id === id));
+  });
+}
+
+<span class="cm">// Реєструємо per-request у контексті GraphQL</span>
+<span class="kw">const</span> server = <span class="kw">new</span> <span class="cls">ApolloServer</span>({
+  context: ({ req }) =&gt; ({
+    user:        req.user,
+    postsLoader: <span class="fn">createPostsLoader</span>(db),  <span class="cm">// новий екземпляр = свіжий кеш</span>
+  }),
+});
+
+<span class="cm">// У resolver'і</span>
+<span class="fn">@ResolveField</span>(<span class="str">'posts'</span>, () =&gt; [<span class="cls">Post</span>])
+<span class="fn">getPosts</span>(<span class="fn">@Parent</span>() user: <span class="cls">User</span>, <span class="fn">@Context</span>() ctx) {
+  <span class="kw">return</span> ctx.postsLoader.<span class="fn">load</span>(user.id);
+}</pre>
+<div class="warn-box">Завжди створюйте новий екземпляр DataLoader на кожен запит. Спільне використання між запитами призводить до витоку даних між користувачами.</div>
+</div></div>
+</div>
+
+<!-- ===== SUBSCRIPTIONS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Subscriptions &amp; Реальний час <span class="badge b-hot">Real-time</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Підписки з PubSub</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { <span class="cls">PubSub</span> } <span class="kw">from</span> <span class="str">'graphql-subscriptions'</span>;
+<span class="kw">import</span> { <span class="cls">Subscription</span>, <span class="cls">Resolver</span>, <span class="cls">Mutation</span>, <span class="cls">Args</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+
+<span class="kw">const</span> pubSub = <span class="kw">new</span> <span class="cls">PubSub</span>();
+
+<span class="fn">@Resolver</span>()
+<span class="kw">export class</span> <span class="cls">PostsResolver</span> {
+  <span class="fn">@Mutation</span>(() =&gt; <span class="cls">Post</span>)
+  <span class="kw">async</span> <span class="fn">createPost</span>(<span class="fn">@Args</span>(<span class="str">'input'</span>) input: <span class="cls">CreatePostInput</span>) {
+    <span class="kw">const</span> post = <span class="kw">await</span> <span class="kw">this</span>.postsService.<span class="fn">create</span>(input);
+    pubSub.<span class="fn">publish</span>(<span class="str">'POST_CREATED'</span>, { postCreated: post });
+    <span class="kw">return</span> post;
+  }
+
+  <span class="fn">@Subscription</span>(() =&gt; <span class="cls">Post</span>, {
+    <span class="cm">// Необов'язковий фільтр — надсилати лише підписникам відповідного authorId</span>
+    filter: (payload, variables) =&gt;
+      payload.postCreated.authorId === variables.authorId,
+  })
+  <span class="fn">postCreated</span>(<span class="fn">@Args</span>(<span class="str">'authorId'</span>) authorId: <span class="kw">string</span>) {
+    <span class="kw">return</span> pubSub.<span class="fn">asyncIterator</span>(<span class="str">'POST_CREATED'</span>);
+  }
+}</pre>
+<pre><span class="cm"># Запит підписки на клієнті</span>
+subscription {
+  postCreated {
+    id
+    title
+    author { name }
+  }
+}</pre>
+<div class="tip">Для продакшну замініть in-memory <code>PubSub</code> на <code>graphql-redis-subscriptions</code> (<code>RedisPubSub</code>), щоб події працювали між кількома екземплярами сервера.</div>
+</div></div>
+</div>
+
+<!-- ===== AUTHENTICATION IN GRAPHQL ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Auth &amp; Guards у GraphQL <span class="badge b-key">Безпека</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GqlAuthGuard та декоратор CurrentUser</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// gql-auth.guard.ts — адаптує HTTP guard для контексту GraphQL</span>
+<span class="kw">import</span> { <span class="cls">ExecutionContext</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+<span class="kw">import</span> { <span class="cls">GqlExecutionContext</span> } <span class="kw">from</span> <span class="str">'@nestjs/graphql'</span>;
+<span class="kw">import</span> { <span class="cls">AuthGuard</span> } <span class="kw">from</span> <span class="str">'@nestjs/passport'</span>;
+
+<span class="kw">export class</span> <span class="cls">GqlAuthGuard</span> <span class="kw">extends</span> <span class="fn">AuthGuard</span>(<span class="str">'jwt'</span>) {
+  <span class="fn">getRequest</span>(context: <span class="cls">ExecutionContext</span>) {
+    <span class="kw">const</span> ctx = <span class="cls">GqlExecutionContext</span>.<span class="fn">create</span>(context);
+    <span class="kw">return</span> ctx.<span class="fn">getContext</span>().req;   <span class="cm">// витягуємо HTTP req з контексту GQL</span>
+  }
+}
+
+<span class="cm">// current-user.decorator.ts</span>
+<span class="kw">import</span> { <span class="cls">createParamDecorator</span>, <span class="cls">ExecutionContext</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+
+<span class="kw">export const</span> <span class="cls">CurrentUser</span> = <span class="fn">createParamDecorator</span>(
+  (data: <span class="kw">unknown</span>, ctx: <span class="cls">ExecutionContext</span>) =&gt; {
+    <span class="kw">const</span> gqlCtx = <span class="cls">GqlExecutionContext</span>.<span class="fn">create</span>(ctx);
+    <span class="kw">return</span> gqlCtx.<span class="fn">getContext</span>().req.user;
+  },
+);
+
+<span class="cm">// Використання в resolver'і</span>
+<span class="fn">@UseGuards</span>(<span class="cls">GqlAuthGuard</span>)
+<span class="fn">@Query</span>(() =&gt; <span class="cls">User</span>)
+<span class="fn">me</span>(<span class="fn">@CurrentUser</span>() user: <span class="cls">User</span>) {
+  <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(user.id);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== ERROR HANDLING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Обробка помилок у GraphQL <span class="badge b-grn">Resilience</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Помилки GraphQL проти HTTP-помилок</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>GraphQL завжди повертає <code>200 OK</code> на рівні HTTP. Помилки передаються всередині масиву <code>errors</code> у тілі відповіді.</p>
+<pre><span class="cm">// Структура відповіді з помилкою GraphQL</span>
+{
+  <span class="str">"data"</span>: { <span class="str">"user"</span>: <span class="kw">null</span> },
+  <span class="str">"errors"</span>: [{
+    <span class="str">"message"</span>: <span class="str">"User not found"</span>,
+    <span class="str">"locations"</span>: [{ <span class="str">"line"</span>: <span class="num">2</span>, <span class="str">"column"</span>: <span class="num">3</span> }],
+    <span class="str">"path"</span>: [<span class="str">"user"</span>],
+    <span class="str">"extensions"</span>: { <span class="str">"code"</span>: <span class="str">"NOT_FOUND"</span> }
+  }]
+}
+
+<span class="cm">// Кидаємо GraphQL-помилки, видимі користувачу, у resolver'ах</span>
+<span class="kw">import</span> { <span class="cls">GraphQLError</span> } <span class="kw">from</span> <span class="str">'graphql'</span>;
+
+<span class="fn">@Query</span>(() =&gt; <span class="cls">User</span>)
+<span class="kw">async</span> <span class="fn">user</span>(<span class="fn">@Args</span>(<span class="str">'id'</span>) id: <span class="kw">string</span>) {
+  <span class="kw">const</span> found = <span class="kw">await</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(id);
+  <span class="kw">if</span> (!found) <span class="kw">throw new</span> <span class="cls">GraphQLError</span>(<span class="str">'User not found'</span>, {
+    extensions: { code: <span class="str">'NOT_FOUND'</span> },
+  });
+  <span class="kw">return</span> found;
+}
+
+<span class="cm">// NestJS HttpException автоматично перетворюється ApolloDriver — без додаткових налаштувань</span></pre>
+<div class="warn-box">Ніколи не виставляйте сирі стектрейси або внутрішні деталі помилок у полі <code>extensions</code> у продакшні. Використовуйте <code>formatError</code> у конфізі Apollo для очищення.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>formatError та власне маскування помилок</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// app.module.ts — конфігурація ApolloDriver</span>
+<span class="fn">@Module</span>({
+  imports: [
+    <span class="cls">GraphQLModule</span>.<span class="fn">forRoot</span>&lt;<span class="cls">ApolloDriverConfig</span>&gt;({
+      driver: <span class="cls">ApolloDriver</span>,
+      autoSchemaFile: <span class="kw">true</span>,
+      formatError: (error) =&gt; {
+        <span class="kw">const</span> code = error.extensions?.code;
+        <span class="cm">// Показувати деталі лише для відомих помилок, видимих користувачу</span>
+        <span class="kw">if</span> ([<span class="str">'NOT_FOUND'</span>, <span class="str">'BAD_USER_INPUT'</span>, <span class="str">'UNAUTHENTICATED'</span>].<span class="fn">includes</span>(code)) {
+          <span class="kw">return</span> error;
+        }
+        <span class="fn">console</span>.<span class="fn">error</span>(error);  <span class="cm">// логувати для внутрішнього аналізу</span>
+        <span class="kw">return new</span> <span class="cls">GraphQLError</span>(<span class="str">'Internal server error'</span>);
+      },
+    }),
+  ],
+})</pre>
+</div></div>
+</div>
+
+<!-- ===== PERFORMANCE & BEST PRACTICES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Продуктивність GraphQL &amp; Найкращі практики <span class="badge b-grn">Production</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Обмеження складності та глибини запитів</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Без обмежень клієнти можуть створювати глибоко вкладені або ресурсомісткі запити, які вичерпають ресурси сервера.</p>
+<pre><span class="kw">import</span> { <span class="fn">createComplexityPlugin</span> } <span class="kw">from</span> <span class="str">'graphql-query-complexity'</span>;
+
+<span class="cm">// Параметр plugins для ApolloDriver</span>
+plugins: [
+  <span class="fn">createComplexityPlugin</span>({
+    maximumComplexity: <span class="num">100</span>,
+    estimators: [
+      <span class="fn">fieldExtensionsEstimator</span>(),   <span class="cm">// читає @complexity з resolver'а</span>
+      <span class="fn">simpleEstimator</span>({ defaultComplexity: <span class="num">1</span> }),
+    ],
+    onComplete: (complexity) =&gt; {
+      <span class="kw">if</span> (complexity &gt; <span class="num">100</span>) <span class="kw">throw new</span> <span class="cls">GraphQLError</span>(<span class="str">'Query too complex'</span>);
+    },
+  }),
+]
+
+<span class="cm">// Обмеження глибини</span>
+<span class="kw">import</span> depthLimit <span class="kw">from</span> <span class="str">'graphql-depth-limit'</span>;
+validationRules: [<span class="fn">depthLimit</span>(<span class="num">5</span>)]   <span class="cm">// максимум 5 рівнів вкладеності</span></pre>
+<div class="warn-box">Встановлюйте обмеження складності та глибини в будь-якому публічному GraphQL API. Без них один спеціально сформований запит може покласти сервер.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Persisted queries та кешування</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Техніка</th><th>Перевага</th></tr>
+<tr><td>Persisted Queries (APQ)</td><td>Клієнт надсилає хеш замість повного тексту запиту — зменшує трафік; сервер кешує розібраний AST</td></tr>
+<tr><td>Кешування відповідей</td><td>Кешувати результати resolver'ів за аргументами (наприклад, Redis + директива <code>@cacheControl</code>)</td></tr>
+<tr><td>DataLoader</td><td>Групувати та дедублювати запити до БД в межах одного тіку запиту</td></tr>
+<tr><td>Вимкнення introspection</td><td>Вимкнути <code>introspection</code> у продакшні для запобігання перебору схеми</td></tr>
+</table>
+<pre><span class="cm">// Вимкнення introspection у продакшні</span>
+<span class="cls">GraphQLModule</span>.<span class="fn">forRoot</span>({
+  introspection: process.env.NODE_ENV !== <span class="str">'production'</span>,
+  playground:    process.env.NODE_ENV !== <span class="str">'production'</span>,
+})
+
+<span class="cm">// Директива @cacheControl в SDL (schema-first)</span>
+<span class="kw">type</span> <span class="cls">User</span> @cacheControl(maxAge: <span class="num">60</span>) {
+  id:   <span class="cls">ID</span>!
+  name: <span class="cls">String</span>!
+}</pre>
+<div class="tip">Поєднуйте persisted queries з CDN для публічних/анонімних запитів. Це наближає затримку GraphQL до REST із правильною семантикою HTTP-кешування.</div>
+</div></div>
+</div>

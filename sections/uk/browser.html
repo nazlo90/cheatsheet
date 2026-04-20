@@ -1,0 +1,206 @@
+<!-- ===== NAVIGATION PHASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Як працюють браузери — Навігація <span class="badge b-hot">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3><abbr title="Domain Name System">DNS</abbr> → <abbr title="Transmission Control Protocol">TCP</abbr> → <abbr title="Transport Layer Security">TLS</abbr> → Перший байт</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Коли користувач переходить за URL, браузер проходить кілька мережевих кроків до отримання першого HTML. Розуміння цього конвеєра є ключем до діагностики та оптимізації продуктивності завантаження.</p>
+<table>
+<tr><th>Крок</th><th>Що відбувається</th><th>Вартість</th></tr>
+<tr><td><strong><abbr title="Domain Name System">DNS</abbr>-запит</strong></td><td>Перетворює ім'я хоста на <abbr title="Internet Protocol">IP</abbr>-адресу (наприклад <code>example.com</code> → <code>93.184.216.34</code>)</td><td>Кешується після першого запиту; на мобільних пристроях додає значну затримку на кожне унікальне ім'я хоста</td></tr>
+<tr><td><strong>Рукостискання <abbr title="Transmission Control Protocol">TCP</abbr></strong></td><td><abbr title="Synchronize">SYN</abbr> → <abbr title="Synchronize-Acknowledgment">SYN-ACK</abbr> → <abbr title="Acknowledgment">ACK</abbr> встановлює з'єднання та узгоджує параметри</td><td>3 повідомлення = 3 кола передачі</td></tr>
+<tr><td><strong>Переговори <abbr title="Transport Layer Security">TLS</abbr></strong></td><td>Визначає шифр, перевіряє сертифікат, встановлює зашифрований канал</td><td>Ще 5 кіл передачі — 8 загалом до будь-яких даних</td></tr>
+<tr><td><strong><abbr title="HyperText Transfer Protocol">HTTP</abbr> GET</strong></td><td>Браузер надсилає запит; сервер відповідає першим пакетом</td><td>Перший фрагмент ≈ 14 КБ (обмеження TCP slow start)</td></tr>
+</table>
+<div class="warn-box"><strong>Штраф на мобільних:</strong> кожне унікальне ім'я хоста (шрифти, скрипти, <abbr title="Content Delivery Networks">CDN</abbr>и, реклама) вимагає власного <abbr title="Domain Name System">DNS</abbr>-запиту — мінімізація кількості різних доменів зменшує затримку.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>TCP Slow Start і <abbr title="Time to First Byte">TTFB</abbr></h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Час до першого байту (TTFB)</strong> вимірює проміжок між запитом користувача та отриманням першого пакету даних — ключовий ранній показник продуктивності сервера та мережі.</p>
+<p><strong><abbr title="Transmission Control Protocol">TCP</abbr> Slow Start / контроль перевантаження</strong> визначає швидкість передачі даних:</p>
+<ul>
+<li>Вікно перевантаження (<abbr title="Congestion Window">CWND</abbr>) починається з 1–10 <abbr title="Maximum Segment Size">MSS</abbr> (≈ 1500 байт на сегмент для Ethernet)</li>
+<li>Кожен отриманий <abbr title="Acknowledgment">ACK</abbr> → <abbr title="Congestion Window">CWND</abbr> подвоюється (експоненційне зростання)</li>
+<li>Втрата пакету / відсутність <abbr title="Acknowledgment">ACK</abbr> → <abbr title="Congestion Window">CWND</abbr> зменшується вдвічі (експоненційне зменшення)</li>
+<li>Результат: перші 14 КБ надходять за одне коло передачі; наступні дані ростуть поступово</li>
+</ul>
+<div class="warn-box">Помістіть найкритичніший контент «вище згину» в перші <strong>14 КБ</strong> HTML-відповіді, щоб використати перше TCP-вікно та забезпечити ранній First Contentful Paint.</div>
+</div></div>
+</div>
+
+<!-- ===== PARSING PHASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Як працюють браузери — Розбір</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Побудова <abbr title="Document Object Model">DOM</abbr> і <abbr title="CSS Object Model">CSSOM</abbr></h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>При надходженні HTML браузерний парсер токенізує його та будує <strong>дерево DOM</strong>. Паралельно CSS розбирається в окреме <strong>дерево CSSOM</strong> (CSS Object Model). Обидва дерева необхідні до початку рендерингу.</p>
+<table>
+<tr><th></th><th><abbr title="Document Object Model">DOM</abbr></th><th><abbr title="CSS Object Model">CSSOM</abbr></th></tr>
+<tr><td>Вхід</td><td>Байти <abbr title="HyperText Markup Language">HTML</abbr></td><td>Байти <abbr title="Cascading Style Sheets">CSS</abbr></td></tr>
+<tr><td>Вихід</td><td>Дерево вузлів, що представляє вміст і ієрархію</td><td>Дерево правил з обчисленими стилями</td></tr>
+<tr><td>Блокує?</td><td>Блокується синхронним <code>&lt;script&gt;</code></td><td>Блокує рендеринг (не розбір)</td></tr>
+<tr><td>Швидкість</td><td>Інкрементна</td><td>Дуже швидко — рідко є вузьким місцем</td></tr>
+</table>
+<pre><span class="cm">/* CSSOM застосовує каскад: від загального до конкретного */</span>
+body { font-size: 16px; }
+h1   { font-size: 2em; }   <span class="cm">/* успадковує body, перевизначає розмір */</span>
+h1.hero { color: red; }   <span class="cm">/* більш специфічне — застосовується останнім */</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Розбір JavaScript і блокування рендерингу</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Тег <code>&lt;script&gt;</code> без <code>async</code> або <code>defer</code> <strong>блокує і розбір HTML, і рендеринг</strong>. Браузер повинен завантажити, розібрати, скомпілювати та виконати скрипт перед продовженням.</p>
+<table>
+<tr><th>Атрибут</th><th>Завантаження</th><th>Виконання</th><th>Блокує парсер?</th></tr>
+<tr><td>(відсутній)</td><td>Синхронне</td><td>Одразу</td><td>Так</td></tr>
+<tr><td><code>async</code></td><td>Паралельне</td><td>Щойно готовий</td><td>Тільки при виконанні</td></tr>
+<tr><td><code>defer</code></td><td>Паралельне</td><td>Після розбору DOM</td><td>Ні</td></tr>
+</table>
+<pre><span class="cm">&lt;!-- Блокує розбір: --&gt;</span>
+&lt;script src="heavy.js"&gt;&lt;/script&gt;
+
+<span class="cm">&lt;!-- Не блокує: --&gt;</span>
+&lt;script src="analytics.js" async&gt;&lt;/script&gt;
+&lt;script src="app.js" defer&gt;&lt;/script&gt;</pre>
+<div class="warn-box">CSS також опосередковано блокує виконання скриптів — браузер не запускатиме <code>&lt;script&gt;</code>, поки <abbr title="CSS Object Model">CSSOM</abbr> не готовий, оскільки скрипти можуть запитувати обчислені стилі.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Сканер попереднього завантаження</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Поки основний потік заблоковано (наприклад, виконує скрипт), вторинний <strong>сканер попереднього завантаження</strong> спекулятивно розбирає сирий HTML і завчасно ініціює мережеві запити для пріоритетних ресурсів — CSS, скриптів, шрифтів, зображень — ще до того, як до них дійде основний парсер.</p>
+<pre><span class="cm">&lt;!-- Сканер попереднього завантаження завантажить styles.css і обидва скрипти,
+     навіть поки основний парсер заблокований попереднім скриптом --&gt;</span>
+&lt;link rel="stylesheet" href="styles.css"&gt;
+&lt;script src="app.js" async&gt;&lt;/script&gt;
+&lt;img src="hero.jpg" alt="Hero"&gt;
+&lt;script src="widget.js" async&gt;&lt;/script&gt;</pre>
+<p>Сканер попереднього завантаження — ось чому переміщення скриптів у кінець <code>&lt;body&gt;</code> або використання <code>async</code>/<code>defer</code> все одно дозволяє паралельне виявлення ресурсів.</p>
+</div></div>
+</div>
+
+<!-- ===== RENDER PHASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Як працюють браузери — Критичний шлях рендерингу</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>6-кроковий конвеєр рендерингу</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Критичний шлях рендерингу</strong> — це послідовність кроків, які браузер виконує для перетворення <abbr title="HyperText Markup Language">HTML</abbr>, <abbr title="Cascading Style Sheets">CSS</abbr> та JS у пікселі на екрані. Його оптимізація безпосередньо покращує First Contentful Paint та інтерактивність.</p>
+<table>
+<tr><th>#</th><th>Крок</th><th>Опис</th></tr>
+<tr><td>1</td><td><strong>Стилі</strong></td><td>Об'єднання <abbr title="Document Object Model">DOM</abbr> + <abbr title="CSS Object Model">CSSOM</abbr> у <em>дерево рендерингу</em> — виключає вузли <code>display:none</code> і <code>&lt;head&gt;</code>; включає <code>visibility:hidden</code> (все ще займає місце)</td></tr>
+<tr><td>2</td><td><strong>Розкладка</strong></td><td>Обчислення точного положення та розміру кожного вузла в дереві рендерингу (перший запуск = <em>layout</em>; наступні = <em>reflow</em>)</td></tr>
+<tr><td>3</td><td><strong>Малювання</strong></td><td>Перетворення блоків на піксельні інструкції: текст, кольори, рамки, тіні. Ціль 60 <abbr title="Frames Per Second">FPS</abbr> → ≤ 16.67 мс на кадр</td></tr>
+<tr><td>4</td><td><strong>Композитинг</strong></td><td>Коли елементи перекриваються між шарами, об'єднує їх у правильному порядку — часто з прискоренням GPU</td></tr>
+</table>
+<pre><span class="cm">/* Запуск кожного етапу має різну вартість */</span>
+el.style.width = <span class="str">'200px'</span>;   <span class="cm">// Layout + Paint + Composite (дорого)</span>
+el.style.color = <span class="str">'red'</span>;     <span class="cm">// Paint + Composite</span>
+el.style.transform = <span class="str">'translateX(10px)'</span>; <span class="cm">// Тільки Composite (найдешевше)</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Шари і композитинг</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Браузер автоматично підвищує певні елементи до власного <strong>шару композитора</strong>, що малюється на <abbr title="Graphics Processing Unit">GPU</abbr>. Це дозволяє уникнути перемальовування всієї сторінки та звільняє основний потік.</p>
+<p><strong>Елементи, що отримують власний шар:</strong></p>
+<ul>
+<li><code>&lt;video&gt;</code>, <code>&lt;canvas&gt;</code></li>
+<li><code>opacity</code>, 3D <code>transform</code></li>
+<li><code>will-change: transform</code> (явна підказка)</li>
+<li>Елементи з предком <code>position: fixed</code></li>
+</ul>
+<pre><span class="cm">/* Підвищення до шару GPU для плавної анімації */</span>
+.animated {
+  will-change: transform;  <span class="cm">/* підказка браузеру */</span>
+  transform: translateZ(0); <span class="cm">/* також примусово створює шар (хак, краще will-change) */</span>
+}
+<span class="cm">/* Прибрати підказку після завершення анімації, щоб звільнити пам'ять */</span>
+el.style.willChange = <span class="str">'auto'</span>;</pre>
+<div class="warn-box">Кожен шар споживає пам'ять <abbr title="Graphics Processing Unit">GPU</abbr>. Підвищення всього є контрпродуктивним — використовуйте шари лише для елементів, що <em>фактично</em> анімуються або потребують ізоляції.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Reflow і repaint — що їх викликає</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Reflow (Layout)</strong> — найдорожча операція: вона змушує браузер перераховувати позиції потенційно для всього документа.</p>
+<table>
+<tr><th>Тригер</th><th>Запускає етап</th></tr>
+<tr><td>Зміна <code>width</code>, <code>height</code>, <code>margin</code>, <code>padding</code>, <code>font-size</code></td><td>Layout → Paint → Composite</td></tr>
+<tr><td>Зміна <code>color</code>, <code>background</code>, <code>box-shadow</code></td><td>Paint → Composite</td></tr>
+<tr><td>Зміна <code>transform</code>, <code>opacity</code> (на композитному шарі)</td><td>Тільки Composite</td></tr>
+<tr><td>Читання <code>offsetWidth</code>, <code>getBoundingClientRect()</code></td><td>Примусовий синхронний layout (layout thrashing)</td></tr>
+</table>
+<pre><span class="cm">// Layout thrashing — уникайте</span>
+elements.forEach(el =&gt; {
+  <span class="kw">const</span> width = el.offsetWidth; <span class="cm">// примусовий layout</span>
+  el.style.width = width * <span class="num">2</span> + <span class="str">'px'</span>; <span class="cm">// інвалідує layout → цикл повторюється</span>
+});
+
+<span class="cm">// Правильно — групуйте читання, потім записи</span>
+<span class="kw">const</span> widths = elements.map(el =&gt; el.offsetWidth); <span class="cm">// один layout</span>
+elements.forEach((el, i) =&gt; el.style.width = widths[i] * <span class="num">2</span> + <span class="str">'px'</span>);
+
+<span class="cm">// Також: визначайте розміри зображень, щоб запобігти reflow при завантаженні</span>
+&lt;img src="photo.jpg" width="800" height="600" alt="..."&gt;</pre>
+</div></div>
+</div>
+
+<!-- ===== INTERACTIVITY ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Як працюють браузери — Інтерактивність і метрики продуктивності</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Time to Interactive і основний потік</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Time to Interactive (TTI)</strong> вимірює, коли сторінка може надійно реагувати на введення користувача протягом <strong>50 мс</strong> після First Contentful Paint. Сторінка може виглядати готовою, але залишатися непідйомною, якщо основний потік зайнятий.</p>
+<p>Блокувальники основного потоку після <code>DOMContentLoaded</code>:</p>
+<ul>
+<li>Розбір, компіляція та виконання JavaScript (включаючи відкладені скрипти)</li>
+<li>Довгі завдання (&gt; 50 мс) перешкоджають обробці введення</li>
+<li>Важкі синхронні ланцюжки layout/reflow</li>
+</ul>
+<pre><span class="cm">// Розбивайте довгі завдання за допомогою scheduler або setTimeout</span>
+<span class="kw">async function</span> <span class="fn">processLargeList</span>(items) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; items.length; i++) {
+    <span class="fn">processItem</span>(items[i]);
+    <span class="kw">if</span> (i % <span class="num">100</span> === <span class="num">0</span>) <span class="kw">await</span> <span class="kw">new</span> Promise(r =&gt; setTimeout(r, <span class="num">0</span>)); <span class="cm">// передаємо керування</span>
+  }
+}</pre>
+<div class="warn-box">Пакет JavaScript розміром 2 МБ на повільному з'єднанні означає, що користувач бачить відрендерену сторінку, але не може взаємодіяти — прокрутка зависає, натискання ігноруються. <strong>Відкладайте та розбивайте на частини некритичний JS.</strong></div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Ключові метрики продуктивності</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Метрика</th><th>Вимірює</th><th>Ціль</th></tr>
+<tr><td><strong><abbr title="Time to First Byte">TTFB</abbr></strong></td><td>Швидкість сервера + мережі до першого байту</td><td>&lt; 800 мс</td></tr>
+<tr><td><strong><abbr title="First Contentful Paint">FCP</abbr></strong> (First Contentful Paint)</td><td>Перший відрендерений текст/зображення</td><td>&lt; 1.8 с</td></tr>
+<tr><td><strong><abbr title="Largest Contentful Paint">LCP</abbr></strong> (Largest Contentful Paint)</td><td>Найбільший відрендерений елемент «вище згину»</td><td>&lt; 2.5 с</td></tr>
+<tr><td><strong><abbr title="Time to Interactive">TTI</abbr></strong> (Time to Interactive)</td><td>Сторінка надійно реагує на введення</td><td>&lt; 3.8 с</td></tr>
+<tr><td><strong><abbr title="Total Blocking Time">TBT</abbr></strong> (Total Blocking Time)</td><td>Сума часу блокування довгими завданнями</td><td>&lt; 200 мс</td></tr>
+<tr><td><strong><abbr title="Cumulative Layout Shift">CLS</abbr></strong> (Cumulative Layout Shift)</td><td>Візуальна стабільність / несподівані зміщення</td><td>&lt; 0.1</td></tr>
+<tr><td><strong>Частота кадрів</strong></td><td>Цикл малювання + композитингу</td><td>60 FPS = 16.67 мс/кадр</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Конвеєр рендерингу браузера — повне резюме</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">Навігація</span>
+  └─ DNS-запит  →  TCP-рукостискання  →  TLS-переговори
+       └─ HTTP GET  →  TTFB  →  перший фрагмент 14 КБ
+
+<span class="cm">Розбір</span>
+  ├─ HTML  →  дерево DOM
+  ├─ CSS   →  дерево CSSOM         (блокує рендеринг)
+  ├─ JS    →  розбір / компіляція  (блокує розбір якщо синхронний)
+  └─ <abbr title="Accessibility Object Model">AOM</abbr> (дерево доступності)   (семантичне дзеркало <abbr title="Document Object Model">DOM</abbr>)
+
+<span class="cm">Рендеринг (Критичний шлях рендерингу)</span>
+  ├─ Стилі    →  Дерево рендерингу  (DOM + CSSOM, тільки видимі вузли)
+  ├─ Layout   →  геометрія блоків  (reflow при змінах)
+  ├─ Paint    →  піксельні інструкції на шар
+  └─ Composite  →  злиття GPU, правильний z-порядок
+
+<span class="cm">Інтерактивність</span>
+  └─ TTI: основний потік вільний, реагує на введення &lt; 50 мс</pre>
+<p><strong>Контрольний список оптимізації:</strong></p>
+<ul>
+<li>Об'єднуйте домени для зменшення DNS-запитів</li>
+<li>Вміщайте критичний контент у перші 14 КБ HTML</li>
+<li>Використовуйте <code>async</code>/<code>defer</code> для некритичних скриптів</li>
+<li>Завжди встановлюйте <code>width</code>/<code>height</code> на зображення для запобігання зміщенню layout</li>
+<li>Надавайте перевагу анімаціям <code>transform</code>/<code>opacity</code> (тільки composite)</li>
+<li>Групуйте читання DOM перед записами, щоб уникнути layout thrashing</li>
+<li>Використовуйте <code>will-change</code> помірно для GPU-прискорених шарів</li>
+<li>Розбивайте на частини та відкладайте великі JS-бандли для покращення TTI</li>
+</ul>
+</div></div>
+</div>

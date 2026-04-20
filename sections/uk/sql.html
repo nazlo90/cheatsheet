@@ -1,0 +1,560 @@
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Основи SQL та SELECT <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Порядок виконання SELECT</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Порядок</th><th>Клауза</th><th>Що робить</th></tr>
+        <tr><td>1</td><td>FROM / JOIN</td><td>Визначення вихідних таблиць</td></tr>
+        <tr><td>2</td><td>WHERE</td><td>Фільтрація рядків до групування</td></tr>
+        <tr><td>3</td><td>GROUP BY</td><td>Агрегація рядків у групи</td></tr>
+        <tr><td>4</td><td>HAVING</td><td>Фільтрація груп (після агрегації)</td></tr>
+        <tr><td>5</td><td>SELECT</td><td>Обчислення вихідних стовпців</td></tr>
+        <tr><td>6</td><td>DISTINCT</td><td>Видалення дублікатів</td></tr>
+        <tr><td>7</td><td>ORDER BY</td><td>Сортування результату</td></tr>
+        <tr><td>8</td><td>OFFSET / FETCH (або TOP)</td><td>Пагінація</td></tr>
+      </table>
+      <div class="warn-box">Псевдоніми стовпців, визначені в SELECT, не можна використовувати у WHERE або GROUP BY — ці клаузи виконуються раніше.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>JOINs</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>Тип JOIN</th><th>Повертає</th></tr>
+        <tr><td>INNER JOIN</td><td>Лише співпадаючі рядки з обох таблиць</td></tr>
+        <tr><td>LEFT JOIN</td><td>Усі рядки з лівої + відповідні з правої (NULL якщо немає збігу)</td></tr>
+        <tr><td>RIGHT JOIN</td><td>Усі рядки з правої + відповідні з лівої</td></tr>
+        <tr><td>FULL OUTER JOIN</td><td>Усі рядки з обох, NULL там де немає збігу</td></tr>
+        <tr><td>CROSS JOIN</td><td>Декартовий добуток (усі комбінації)</td></tr>
+        <tr><td>SELF JOIN</td><td>Таблиця, з'єднана сама з собою (напр., менеджер/підлеглий)</td></tr>
+      </table>
+      <pre><span class="cm">-- Знайти клієнтів без замовлень (anti-join патерн)</span>
+<span class="kw">SELECT</span> c.CustomerId, c.Name
+<span class="kw">FROM</span>   Customers c
+<span class="kw">LEFT JOIN</span> Orders o <span class="kw">ON</span> o.CustomerId = c.CustomerId
+<span class="kw">WHERE</span>  o.OrderId <span class="kw">IS NULL</span>;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Віконні функції <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>OVER, PARTITION BY, ORDER BY</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">-- Ранжування всередині кожного відділу за зарплатою</span>
+<span class="kw">SELECT</span>
+    Name, Dept, Salary,
+    <span class="fn">ROW_NUMBER</span>()  <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> RowNum,
+    <span class="fn">RANK</span>()        <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> Rnk,
+    <span class="fn">DENSE_RANK</span>()  <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> DRnk,
+    <span class="fn">LAG</span>(Salary, <span class="num">1</span>) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary) <span class="kw">AS</span> PrevSalary,
+    <span class="fn">SUM</span>(Salary)   <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept) <span class="kw">AS</span> DeptTotal
+<span class="kw">FROM</span> Employees;</pre>
+      <table>
+        <tr><th>Функція</th><th>Обробка збігів</th><th>Пропуски у послідовності</th></tr>
+        <tr><td>ROW_NUMBER</td><td>Довільний порядок</td><td>Без пропусків</td></tr>
+        <tr><td>RANK</td><td>Однаковий ранг при збігах</td><td>Пропуски після збігів</td></tr>
+        <tr><td>DENSE_RANK</td><td>Однаковий ранг при збігах</td><td>Без пропусків</td></tr>
+        <tr><td>NTILE(n)</td><td>Розбиває на n груп</td><td>—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Наростаючі підсумки &amp; frame клаузи</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Наростаючий підсумок з frame</span>
+<span class="kw">SELECT</span>
+    OrderDate, Amount,
+    <span class="fn">SUM</span>(Amount) <span class="kw">OVER</span> (
+        <span class="kw">ORDER BY</span> OrderDate
+        <span class="kw">ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</span>
+    ) <span class="kw">AS</span> RunningTotal,
+    <span class="cm">-- ковзне середнє за 3 дні</span>
+    <span class="fn">AVG</span>(Amount) <span class="kw">OVER</span> (
+        <span class="kw">ORDER BY</span> OrderDate
+        <span class="kw">ROWS BETWEEN</span> <span class="num">2</span> <span class="kw">PRECEDING AND CURRENT ROW</span>
+    ) <span class="kw">AS</span> MovingAvg3
+<span class="kw">FROM</span> Orders;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">CTE та підзапити <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>CTE (Common Table Expression)</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">-- Кілька CTE у ланцюжку</span>
+<span class="kw">WITH</span> ActiveCustomers <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> CustomerId, Name
+    <span class="kw">FROM</span>   Customers
+    <span class="kw">WHERE</span>  IsActive = <span class="num">1</span>
+),
+CustomerRevenue <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> ac.CustomerId, <span class="fn">SUM</span>(o.Total) <span class="kw">AS</span> Revenue
+    <span class="kw">FROM</span>   ActiveCustomers ac
+    <span class="kw">JOIN</span>   Orders o <span class="kw">ON</span> o.CustomerId = ac.CustomerId
+    <span class="kw">GROUP BY</span> ac.CustomerId
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> CustomerRevenue <span class="kw">WHERE</span> Revenue &gt; <span class="num">1000</span>;</pre>
+      <div class="tip">CTE покращують читабельність і можуть використовуватись кілька разів в одному запиті. У SQL Server вони НЕ матеріалізуються за замовчуванням — оптимізатор може їх вбудовувати.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Рекурсивний CTE</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Обхід організаційної ієрархії</span>
+<span class="kw">WITH</span> OrgTree <span class="kw">AS</span> (
+    <span class="cm">-- Anchor: співробітники верхнього рівня</span>
+    <span class="kw">SELECT</span> EmployeeId, Name, ManagerId, <span class="num">0</span> <span class="kw">AS</span> Level
+    <span class="kw">FROM</span>   Employees
+    <span class="kw">WHERE</span>  ManagerId <span class="kw">IS NULL</span>
+
+    <span class="kw">UNION ALL</span>
+
+    <span class="cm">-- Рекурсія: підлеглі</span>
+    <span class="kw">SELECT</span> e.EmployeeId, e.Name, e.ManagerId, ot.Level + <span class="num">1</span>
+    <span class="kw">FROM</span>   Employees e
+    <span class="kw">JOIN</span>   OrgTree ot <span class="kw">ON</span> ot.EmployeeId = e.ManagerId
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> OrgTree <span class="kw">ORDER BY</span> Level, Name;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Специфічні можливості T-SQL (MS SQL Server) <span class="badge b-hot">MSSQL</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Збережені процедури, змінні &amp; керування потоком</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="kw">CREATE OR ALTER PROCEDURE</span> dbo.<span class="fn">usp_GetTopOrders</span>
+    @CustomerId <span class="kw">INT</span>,
+    @TopN       <span class="kw">INT</span> = <span class="num">10</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET NOCOUNT ON</span>;
+
+    <span class="kw">DECLARE</span> @Revenue <span class="kw">DECIMAL</span>(<span class="num">18</span>,<span class="num">2</span>);
+
+    <span class="kw">SELECT TOP</span> (@TopN)
+        OrderId, Total, OrderDate
+    <span class="kw">FROM</span>   Orders
+    <span class="kw">WHERE</span>  CustomerId = @CustomerId
+    <span class="kw">ORDER BY</span> Total <span class="kw">DESC</span>;
+
+    <span class="kw">IF</span> @@ROWCOUNT = <span class="num">0</span>
+        <span class="kw">RAISERROR</span>(<span class="str">'No orders found'</span>, <span class="num">16</span>, <span class="num">1</span>);
+<span class="kw">END</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Транзакції &amp; обробка помилок</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">BEGIN TRY</span>
+    <span class="kw">BEGIN TRANSACTION</span>;
+
+    <span class="kw">UPDATE</span> Accounts <span class="kw">SET</span> Balance -= <span class="num">100</span> <span class="kw">WHERE</span> Id = <span class="num">1</span>;
+    <span class="kw">UPDATE</span> Accounts <span class="kw">SET</span> Balance += <span class="num">100</span> <span class="kw">WHERE</span> Id = <span class="num">2</span>;
+
+    <span class="kw">COMMIT TRANSACTION</span>;
+<span class="kw">END TRY</span>
+<span class="kw">BEGIN CATCH</span>
+    <span class="kw">ROLLBACK TRANSACTION</span>;
+    <span class="kw">THROW</span>; <span class="cm">-- перекинути оригінальну помилку</span>
+<span class="kw">END CATCH</span>;</pre>
+      <div class="warn-box">Завжди перевіряйте <code>XACT_STATE()</code> перед ROLLBACK у вкладених транзакціях — стан -1 означає, що транзакцію приречено і вона не може бути закомічена.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Табличні змінні vs тимчасові таблиці vs CTE</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th></th><th>@TableVar</th><th>#TempTable</th><th>CTE</th></tr>
+        <tr><td>Область видимості</td><td>Batch/proc</td><td>Сесія (##global)</td><td>Лише поточний оператор</td></tr>
+        <tr><td>Статистика</td><td>Ні</td><td>Так</td><td>Н/Д</td></tr>
+        <tr><td>Відкат транзакції</td><td>Не відкочується</td><td>Відкочується</td><td>Н/Д</td></tr>
+        <tr><td>Найкраще для</td><td>Малих наборів рядків</td><td>Великих проміжних наборів</td><td>Читабельності</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Корисні функції T-SQL</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Рядкові</span>
+<span class="fn">STRING_AGG</span>(Name, <span class="str">', '</span>) <span class="kw">WITHIN GROUP</span> (<span class="kw">ORDER BY</span> Name)
+<span class="fn">STRING_SPLIT</span>(<span class="str">'a,b,c'</span>, <span class="str">','</span>)
+<span class="fn">FORMAT</span>(Amount, <span class="str">'C2'</span>, <span class="str">'en-US'</span>)
+<span class="fn">TRIM</span>(<span class="str">'  text  '</span>)
+
+<span class="cm">-- Дата</span>
+<span class="fn">GETDATE</span>() / <span class="fn">SYSDATETIME</span>()   <span class="cm">-- поточна дата і час</span>
+<span class="fn">DATEADD</span>(<span class="kw">DAY</span>, <span class="num">7</span>, OrderDate)
+<span class="fn">DATEDIFF</span>(<span class="kw">DAY</span>, StartDate, EndDate)
+<span class="fn">EOMONTH</span>(OrderDate)            <span class="cm">-- останній день місяця</span>
+
+<span class="cm">-- Умовні</span>
+<span class="kw">IIF</span>(Score &gt; <span class="num">50</span>, <span class="str">'Pass'</span>, <span class="str">'Fail'</span>)
+<span class="fn">COALESCE</span>(Phone, Mobile, <span class="str">'N/A'</span>)
+<span class="fn">NULLIF</span>(Value, <span class="num">0</span>)               <span class="cm">-- повертає NULL якщо значення рівні</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Індекси &amp; продуктивність запитів <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Кластерний vs некластерний індекс</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>Кластерний</th><th>Некластерний</th></tr>
+        <tr><td>Кількість на таблицю</td><td>1 (дані І Є індексом)</td><td>Багато</td></tr>
+        <tr><td>Порядок даних</td><td>Таблиця фізично відсортована за ключем</td><td>Окрема структура з вказівником</td></tr>
+        <tr><td>Вартість пошуку</td><td>O(log n) — дані читаються напряму</td><td>O(log n) + bookmark lookup</td></tr>
+        <tr><td>Найкращий ключ</td><td>Вузький, унікальний, зростаючий (IDENTITY)</td><td>Стовпці у WHERE/JOIN/ORDER BY</td></tr>
+      </table>
+      <pre><span class="cm">-- Покриваючий індекс — включає всі потрібні стовпці, уникає bookmark lookup</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> ix_Orders_Customer
+    <span class="kw">ON</span> Orders (CustomerId)
+    <span class="kw">INCLUDE</span> (OrderDate, Total);
+
+<span class="cm">-- Фільтрований індекс — індексує підмножину рядків</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> ix_Orders_Active
+    <span class="kw">ON</span> Orders (OrderDate)
+    <span class="kw">WHERE</span> Status = <span class="str">'Active'</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Читання планів виконання &amp; типові помилки</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>Оператор</th><th>Значення</th><th>Дія</th></tr>
+        <tr><td>Index Seek</td><td>Ефективний пошук за діапазоном</td><td>Добре</td></tr>
+        <tr><td>Index Scan</td><td>Читає весь індекс</td><td>Перевірте чи корисний індекс</td></tr>
+        <tr><td>Key Lookup</td><td>Додатковий I/O для стовпців не в індексі</td><td>Додайте стовпці в INCLUDE</td></tr>
+        <tr><td>Hash Match</td><td>Великий join/агрегація</td><td>Розгляньте індекс на ключ з'єднання</td></tr>
+        <tr><td>Sort</td><td>Потрібне явне сортування</td><td>Розгляньте індексований ORDER BY</td></tr>
+      </table>
+      <div class="warn-box">Функції на індексованих стовпцях вбивають index seek: <code>WHERE YEAR(OrderDate) = 2024</code> сканує. Використовуйте <code>WHERE OrderDate &gt;= '2024-01-01' AND OrderDate &lt; '2025-01-01'</code> натомість (sargable predicate).</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Статистика &amp; кеш планів</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Оновити статистику таблиці</span>
+<span class="kw">UPDATE STATISTICS</span> dbo.Orders;
+
+<span class="cm">-- Очистити кеш планів (лише для розробки/тестування!)</span>
+<span class="kw">DBCC FREEPROCCACHE</span>;
+
+<span class="cm">-- Знайти дорогі запити в кеші планів</span>
+<span class="kw">SELECT TOP</span> <span class="num">10</span>
+    qs.total_worker_time / qs.execution_count <span class="kw">AS</span> AvgCPU,
+    <span class="fn">SUBSTRING</span>(qt.text, (qs.statement_start_offset/<span class="num">2</span>)+<span class="num">1</span>,
+        ((qs.statement_end_offset - qs.statement_start_offset)/<span class="num">2</span>)+<span class="num">1</span>) <span class="kw">AS</span> QueryText
+<span class="kw">FROM</span>   sys.dm_exec_query_stats qs
+<span class="kw">CROSS APPLY</span> sys.dm_exec_sql_text(qs.sql_handle) qt
+<span class="kw">ORDER BY</span> AvgCPU <span class="kw">DESC</span>;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Транзакції &amp; рівні ізоляції <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Рівні ізоляції &amp; проблеми паралелізму</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Рівень ізоляції</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th></tr>
+        <tr><td>READ UNCOMMITTED</td><td>Так</td><td>Так</td><td>Так</td></tr>
+        <tr><td>READ COMMITTED (за замовч.)</td><td>Ні</td><td>Так</td><td>Так</td></tr>
+        <tr><td>REPEATABLE READ</td><td>Ні</td><td>Ні</td><td>Так</td></tr>
+        <tr><td>SERIALIZABLE</td><td>Ні</td><td>Ні</td><td>Ні</td></tr>
+        <tr><td>SNAPSHOT (MSSQL)</td><td>Ні</td><td>Ні</td><td>Ні (версіонування рядків)</td></tr>
+      </table>
+      <pre><span class="kw">SET TRANSACTION ISOLATION LEVEL READ COMMITTED</span>;
+
+<span class="cm">-- MSSQL: увімкнути RCSI (версіонування рядків, без shared locks при читанні)</span>
+<span class="kw">ALTER DATABASE</span> MyDb <span class="kw">SET READ_COMMITTED_SNAPSHOT ON</span>;</pre>
+      <div class="tip">SNAPSHOT ізоляція використовує tempdb для версій рядків — немає блокувань читання, записники не блокують читачів. Рекомендовано для OLTP у SQL Server.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">MS SQL Server vs Oracle vs PostgreSQL <span class="badge b-hot">Multi-DB</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Шпаргалка відмінностей синтаксису</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Можливість</th><th>MS SQL Server (T-SQL)</th><th>Oracle (PL/SQL)</th><th>PostgreSQL</th></tr>
+        <tr><td>Автоінкремент</td><td>IDENTITY(1,1)</td><td>SEQUENCE + NEXTVAL / GENERATED AS IDENTITY</td><td>SERIAL / GENERATED ALWAYS AS IDENTITY</td></tr>
+        <tr><td>Перші N рядків</td><td>SELECT TOP 10</td><td>WHERE ROWNUM &lt;= 10 / FETCH FIRST 10 ROWS ONLY</td><td>LIMIT 10</td></tr>
+        <tr><td>Конкатенація рядків</td><td>оператор + або CONCAT()</td><td>оператор ||</td><td>оператор || або CONCAT()</td></tr>
+        <tr><td>Поточна дата/час</td><td>GETDATE() / SYSDATETIME()</td><td>SYSDATE / SYSTIMESTAMP</td><td>NOW() / CURRENT_TIMESTAMP</td></tr>
+        <tr><td>Значення при NULL</td><td>ISNULL(val, default)</td><td>NVL(val, default)</td><td>COALESCE(val, default)</td></tr>
+        <tr><td>Довжина рядка</td><td>LEN()</td><td>LENGTH()</td><td>LENGTH() / CHAR_LENGTH()</td></tr>
+        <tr><td>Пагінація</td><td>OFFSET x ROWS FETCH NEXT y ROWS ONLY</td><td>OFFSET x ROWS FETCH NEXT y ROWS ONLY</td><td>LIMIT y OFFSET x</td></tr>
+        <tr><td>Upsert</td><td>оператор MERGE</td><td>оператор MERGE</td><td>INSERT ... ON CONFLICT DO UPDATE</td></tr>
+        <tr><td>План виконання</td><td>SET STATISTICS IO ON; SHOWPLAN</td><td>EXPLAIN PLAN FOR ...</td><td>EXPLAIN (ANALYZE, BUFFERS) ...</td></tr>
+        <tr><td>Тимчасові таблиці</td><td>#local, ##global</td><td>Global temp (GTT)</td><td>CREATE TEMP TABLE</td></tr>
+        <tr><td>Схеми</td><td>dbo.Table</td><td>Owner.Table (схема = користувач)</td><td>public.Table (схема за замовч.)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Специфічні можливості PostgreSQL</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- JSONB — бінарний JSON з індексуванням</span>
+<span class="kw">SELECT</span> data-&gt;&gt;<span class="str">'name'</span> <span class="kw">AS</span> name
+<span class="kw">FROM</span>   products
+<span class="kw">WHERE</span>  data @&gt; <span class="str">'{"category": "electronics"}'</span>;
+
+<span class="cm">-- Тип масив</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> posts <span class="kw">WHERE</span> <span class="num">5</span> = <span class="fn">ANY</span>(tag_ids);
+
+<span class="cm">-- Upsert</span>
+<span class="kw">INSERT INTO</span> users (id, email) <span class="kw">VALUES</span> (<span class="num">1</span>, <span class="str">'a@b.com'</span>)
+<span class="kw">ON CONFLICT</span> (id) <span class="kw">DO UPDATE SET</span> email = <span class="kw">EXCLUDED</span>.email;
+
+<span class="cm">-- GIN індекс для JSONB/повнотекстового пошуку</span>
+<span class="kw">CREATE INDEX</span> idx_data <span class="kw">ON</span> products <span class="kw">USING GIN</span>(data);
+
+<span class="cm">-- EXPLAIN ANALYZE</span>
+<span class="kw">EXPLAIN</span> (ANALYZE, BUFFERS, <span class="kw">FORMAT</span> JSON)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> orders <span class="kw">WHERE</span> customer_id = <span class="num">42</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Специфіка Oracle PL/SQL</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Анонімний блок</span>
+<span class="kw">DECLARE</span>
+    v_count <span class="kw">NUMBER</span>;
+<span class="kw">BEGIN</span>
+    <span class="kw">SELECT COUNT</span>(*) <span class="kw">INTO</span> v_count <span class="kw">FROM</span> Orders;
+    <span class="fn">DBMS_OUTPUT</span>.<span class="fn">PUT_LINE</span>(<span class="str">'Count: '</span> || v_count);
+<span class="kw">EXCEPTION</span>
+    <span class="kw">WHEN NO_DATA_FOUND THEN</span>
+        <span class="fn">DBMS_OUTPUT</span>.<span class="fn">PUT_LINE</span>(<span class="str">'No rows'</span>);
+<span class="kw">END</span>;
+/
+
+<span class="cm">-- Sequence</span>
+<span class="kw">CREATE SEQUENCE</span> seq_order_id <span class="kw">START WITH</span> <span class="num">1</span> <span class="kw">INCREMENT BY</span> <span class="num">1</span>;
+<span class="kw">INSERT INTO</span> Orders (Id) <span class="kw">VALUES</span> (seq_order_id.<span class="fn">NEXTVAL</span>);
+
+<span class="cm">-- Аналітична (віконна) функція — така ж, як у стандарті SQL</span>
+<span class="fn">RANK</span>() <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> dept_id <span class="kw">ORDER BY</span> salary <span class="kw">DESC</span>)</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Нормалізація &amp; проектування схем <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Нормальні форми</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>НФ</th><th>Правило</th><th>Приклад порушення</th></tr>
+        <tr><td>1НФ</td><td>Атомарні значення, без повторюваних груп</td><td>Зберігання "tag1,tag2" в одному стовпці</td></tr>
+        <tr><td>2НФ</td><td>1НФ + жодної часткової залежності від складеного PK</td><td>OrderItem.ProductName залежить лише від ProductId, а не від повного PK</td></tr>
+        <tr><td>3НФ</td><td>2НФ + жодної транзитивної залежності</td><td>Employee.DeptName залежить від DeptId, а не від EmployeeId</td></tr>
+        <tr><td>BCNF</td><td>Кожен детермінант є кандидатним ключем</td><td>Крайній випадок перекриваючих кандидатних ключів</td></tr>
+      </table>
+      <div class="tip">Більшість продакшн-схем орієнтовані на 3НФ. Навмисна денормалізація (напр., збережені агрегати) допустима для читання-орієнтованих запитів, якщо виміряна.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Ключі &amp; обмеження</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">CREATE TABLE</span> Orders (
+    OrderId    <span class="kw">INT IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    CustomerId <span class="kw">INT NOT NULL</span>
+                   <span class="kw">REFERENCES</span> Customers(CustomerId)
+                   <span class="kw">ON DELETE CASCADE</span>,
+    Status     <span class="kw">VARCHAR</span>(<span class="num">20</span>)
+                   <span class="kw">CONSTRAINT</span> chk_status
+                   <span class="kw">CHECK</span> (Status <span class="kw">IN</span> (<span class="str">'Pending'</span>,<span class="str">'Shipped'</span>,<span class="str">'Cancelled'</span>)),
+    Total      <span class="kw">DECIMAL</span>(<span class="num">18</span>,<span class="num">2</span>) <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    UNIQUE (CustomerId, OrderDate)
+);</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Збережені процедури, представлення &amp; тригери</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Views vs Materialized Views</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>View</th><th>Indexed View (MSSQL) / Materialized View (PG/Oracle)</th></tr>
+        <tr><td>Дані зберігаються</td><td>Ні — запит виконується щоразу</td><td>Так — фізично збережений результат</td></tr>
+        <tr><td>Продуктивність</td><td>Як звичайний запит</td><td>Попередньо обчислено — швидке читання</td></tr>
+        <tr><td>Актуальність</td><td>Завжди поточний</td><td>Оновлюється за розкладом або при коміті</td></tr>
+        <tr><td>Використовувати для</td><td>Спрощення складних запитів, безпека</td><td>Звітність, повільні агрегації</td></tr>
+      </table>
+      <pre><span class="cm">-- Матеріалізований вигляд PostgreSQL</span>
+<span class="kw">CREATE MATERIALIZED VIEW</span> mv_monthly_revenue <span class="kw">AS</span>
+    <span class="kw">SELECT</span> <span class="fn">DATE_TRUNC</span>(<span class="str">'month'</span>, OrderDate) <span class="kw">AS</span> Month,
+           <span class="fn">SUM</span>(Total) <span class="kw">AS</span> Revenue
+    <span class="kw">FROM</span>   Orders
+    <span class="kw">GROUP BY</span> <span class="num">1</span>;
+
+<span class="kw">REFRESH MATERIALIZED VIEW CONCURRENTLY</span> mv_monthly_revenue;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Тригери (T-SQL)</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">CREATE OR ALTER TRIGGER</span> trg_Orders_AuditUpdate
+<span class="kw">ON</span> dbo.Orders
+<span class="kw">AFTER UPDATE</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET NOCOUNT ON</span>;
+    <span class="kw">INSERT INTO</span> OrderAudit (OrderId, OldTotal, NewTotal, ChangedAt)
+    <span class="kw">SELECT</span> d.OrderId, d.Total, i.Total, <span class="fn">GETDATE</span>()
+    <span class="kw">FROM</span>   deleted d
+    <span class="kw">JOIN</span>   inserted i <span class="kw">ON</span> i.OrderId = d.OrderId
+    <span class="kw">WHERE</span>  d.Total &lt;&gt; i.Total;
+<span class="kw">END</span>;</pre>
+      <div class="warn-box">Тригери виконуються в тій самій транзакції, що й DML-оператор. Важка логіка всередині тригерів може спричинити конкуренцію за блокування та сповільнити операції запису.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Рівні ізоляції транзакцій (SQL Standard)</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Аномалії та рівні ізоляції</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <p>Рівень ізоляції транзакцій визначає, які аномалії можливі при паралельній роботі транзакцій. Чим вищий рівень — тим безпечніше, але повільніше.</p>
+      <table>
+        <tr><th>Аномалія</th><th>Опис</th></tr>
+        <tr><td><strong>Dirty Read</strong></td><td>Транзакція читає незакомічені зміни іншої транзакції</td></tr>
+        <tr><td><strong>Non-repeatable Read</strong></td><td>Повторне читання того ж рядка повертає інше значення (інша транзакція змінила і закомітила)</td></tr>
+        <tr><td><strong>Phantom Read</strong></td><td>Повторний запит повертає нові рядки (інша транзакція вставила і закомітила)</td></tr>
+        <tr><td><strong>Lost Update</strong></td><td>Дві транзакції читають, змінюють і записують — одне оновлення губиться</td></tr>
+      </table>
+      <table>
+        <tr><th>Рівень ізоляції</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th></tr>
+        <tr><td><strong>READ UNCOMMITTED</strong></td><td>Можливий ✗</td><td>Можливий ✗</td><td>Можливий ✗</td></tr>
+        <tr><td><strong>READ COMMITTED</strong></td><td>Захищений ✓</td><td>Можливий ✗</td><td>Можливий ✗</td></tr>
+        <tr><td><strong>REPEATABLE READ</strong></td><td>Захищений ✓</td><td>Захищений ✓</td><td>Можливий ✗</td></tr>
+        <tr><td><strong>SERIALIZABLE</strong></td><td>Захищений ✓</td><td>Захищений ✓</td><td>Захищений ✓</td></tr>
+      </table>
+      <div class="warn-box"><strong>Дефолти:</strong> PostgreSQL — READ COMMITTED; SQL Server — READ COMMITTED; MySQL InnoDB — REPEATABLE READ; Oracle — READ COMMITTED.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Деталі кожного рівня + приклади</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- READ UNCOMMITTED — бачить незакомічені зміни (dirty reads)</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED</span>;
+
+<span class="cm">-- READ COMMITTED — дефолт у більшості СУБД</span>
+<span class="cm">-- Два однакових SELECT у одній транзакції можуть дати різний результат</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL READ COMMITTED</span>;
+<span class="cm">-- T1: SELECT balance FROM accounts WHERE id=1  → 1000</span>
+<span class="cm">-- T2: UPDATE accounts SET balance=500 WHERE id=1; COMMIT;</span>
+<span class="cm">-- T1: SELECT balance FROM accounts WHERE id=1  → 500 (non-repeatable read!)</span>
+
+<span class="cm">-- REPEATABLE READ — рядки прочитані у транзакції не змінюються</span>
+<span class="cm">-- Але нові INSERT від іншої транзакції можуть зʼявитись — phantom reads</span>
+<span class="cm">-- Примітка: PostgreSQL вирішує phantom reads через MVCC навіть на цьому рівні</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL REPEATABLE READ</span>;
+
+<span class="cm">-- SERIALIZABLE — повний захист; транзакції виглядають як послідовні</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL SERIALIZABLE</span>;
+
+<span class="cm">-- PostgreSQL snapshot isolation</span>
+<span class="kw">BEGIN</span>;
+<span class="kw">SET TRANSACTION ISOLATION LEVEL REPEATABLE READ</span>;
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> orders <span class="kw">WHERE</span> user_id = <span class="num">42</span>;
+<span class="cm">-- бачимо snapshot на момент початку транзакції</span>
+<span class="kw">COMMIT</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>MVCC & практичні поради</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <p><strong>MVCC (Multi-Version Concurrency Control)</strong> — PostgreSQL і MySQL InnoDB зберігають декілька версій рядків замість блокувань читання. Читачі не блокують записників і навпаки.</p>
+      <table>
+        <tr><th>Сценарій</th><th>Рекомендований рівень</th><th>Причина</th></tr>
+        <tr><td>Звіти / аналітика (read-only)</td><td>REPEATABLE READ або SERIALIZABLE</td><td>Консистентний snapshot на весь запит</td></tr>
+        <tr><td>OLTP (замовлення, платежі)</td><td>READ COMMITTED + явні блокування</td><td>Баланс між безпекою та продуктивністю</td></tr>
+        <tr><td>Фінансові операції</td><td>SERIALIZABLE</td><td>Захист від lost update та phantom reads</td></tr>
+        <tr><td>Лічильники / черги</td><td>READ COMMITTED + <code>SELECT FOR UPDATE</code></td><td>Оптимістичне або песимістичне блокування</td></tr>
+      </table>
+      <pre><span class="cm">-- Pessimistic lock — блокує рядок для оновлення</span>
+<span class="kw">BEGIN</span>;
+<span class="kw">SELECT</span> balance <span class="kw">FROM</span> accounts <span class="kw">WHERE</span> id = <span class="num">1</span> <span class="kw">FOR UPDATE</span>;
+<span class="kw">UPDATE</span> accounts <span class="kw">SET</span> balance = balance - <span class="num">100</span> <span class="kw">WHERE</span> id = <span class="num">1</span>;
+<span class="kw">COMMIT</span>;
+
+<span class="cm">-- Optimistic lock — перевірка версії перед оновленням</span>
+<span class="kw">UPDATE</span> accounts
+<span class="kw">SET</span> balance = <span class="num">900</span>, version = version + <span class="num">1</span>
+<span class="kw">WHERE</span> id = <span class="num">1</span> <span class="kw">AND</span> version = <span class="num">5</span>;
+<span class="cm">-- якщо 0 рядків оновлено — конфлікт, повторити транзакцію</span></pre>
+      <div class="tip">Для більшості OLTP-задач достатньо <strong>READ COMMITTED + SELECT FOR UPDATE</strong> на критичних ресурсах. SERIALIZABLE застосовуйте точково — він може значно знизити throughput під навантаженням.</div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,148 @@
+<!-- ===== STORAGE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Storage APIs</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>localStorage vs sessionStorage vs Cookies vs IndexedDB</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Browser Storage APIs</strong> дозволяють зберігати дані на стороні клієнта. Вибір залежить від розміру даних, потрібного терміну зберігання та необхідності надсилати їх на сервер.</p>
+<table>
+<tr><th></th><th>localStorage</th><th>sessionStorage</th><th>Cookie</th><th>IndexedDB</th></tr>
+<tr><td>Обсяг</td><td>~5–10 MB</td><td>~5 MB</td><td>~4 KB</td><td>Гігабайти</td></tr>
+<tr><td>Зберігається</td><td>До очищення</td><td>Час життя вкладки</td><td>До дати закінчення</td><td>До очищення</td></tr>
+<tr><td>Область видимості</td><td>Той самий origin</td><td>Та сама вкладка</td><td>Той самий origin + сервер</td><td>Той самий origin</td></tr>
+<tr><td>Надсилається на сервер</td><td>Ні</td><td>Ні</td><td>Так (заголовок)</td><td>Ні</td></tr>
+<tr><td>Асинхронний</td><td>Ні (блокує)</td><td>Ні</td><td>Ні</td><td>Так</td></tr>
+</table>
+<div class="warn-box">Ніколи не зберігайте токени авторизації в localStorage — вразливість до XSS. Використовуйте <code>httpOnly</code> cookies для чутливих даних автентифікації.</div>
+</div></div>
+</div>
+
+<!-- ===== WEBSOCKETS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">WebSockets <span class="badge b-grn">Real-time</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket vs HTTP vs SSE</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>WebSocket</strong> — протокол, що забезпечує повнодуплексний постійний зв'язок через одне TCP-з'єднання, на відміну від моделі HTTP «один запит — одна відповідь».</p>
+<table>
+<tr><th></th><th>HTTP</th><th>WebSocket</th><th>SSE</th></tr>
+<tr><td>З'єднання</td><td>Нове на кожен запит</td><td>Постійне, повнодуплексне</td><td>Постійне, однобічне (сервер→клієнт)</td></tr>
+<tr><td>Напрямок</td><td>Запит/Відповідь</td><td>Двонаправлене</td><td>Лише сервер надсилає</td></tr>
+<tr><td>Накладні витрати</td><td>Великі (заголовки)</td><td>Малі (фрейми)</td><td>Малі</td></tr>
+<tr><td>Сценарій використання</td><td>Стандартні API-виклики</td><td>Чат, ігри наживо, торгівля</td><td>Сповіщення, стрічки новин</td></tr>
+<tr><td>Авто-перепідключення</td><td>Н/З</td><td>Ручне</td><td>Вбудоване</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WebSocket API та життєвий цикл</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Життєвий цикл з'єднання</span>
+<span class="kw">const</span> ws = <span class="kw">new</span> WebSocket(<span class="str">'wss://api.example.com/ws'</span>);
+
+ws.onopen    = () =&gt; ws.send(JSON.stringify({ type: <span class="str">'auth'</span>, token }));
+ws.onmessage = (e) =&gt; { <span class="kw">const</span> data = JSON.parse(e.data); handle(data); };
+ws.onclose   = (e) =&gt; <span class="fn">console</span>.log(<span class="str">`Closed: ${e.code} ${e.reason}`</span>);
+ws.onerror   = (e) =&gt; <span class="fn">console</span>.error(<span class="str">'WS Error'</span>, e);
+
+ws.send(<span class="str">'text'</span>);
+ws.send(JSON.stringify({ type: <span class="str">'message'</span>, body: <span class="str">'hello'</span> }));
+ws.close(<span class="num">1000</span>, <span class="str">'Normal closure'</span>);
+
+<span class="cm">// ReadyState</span>
+<span class="cm">// CONNECTING=0, OPEN=1, CLOSING=2, CLOSED=3</span>
+ws.readyState === WebSocket.OPEN;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Патерн авто-перепідключення + RxJS WebSocket</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Перепідключення з експоненціальним відступом</span>
+<span class="kw">class</span> <span class="cls">ReconnectingWS</span> {
+  <span class="kw">private</span> ws: WebSocket | null = null;
+  <span class="kw">private</span> retries = <span class="num">0</span>;
+
+  connect() {
+    <span class="kw">this</span>.ws = <span class="kw">new</span> WebSocket(<span class="kw">this</span>.url);
+    <span class="kw">this</span>.ws.onclose = () =&gt; {
+      <span class="kw">const</span> delay = Math.min(<span class="num">1000</span> * <span class="num">2</span> ** <span class="kw">this</span>.retries++, <span class="num">30000</span>);
+      setTimeout(() =&gt; <span class="kw">this</span>.connect(), delay);
+    };
+  }
+}
+
+<span class="cm">// RxJS webSocket</span>
+<span class="kw">import</span> { webSocket } <span class="kw">from</span> <span class="str">'rxjs/webSocket'</span>;
+<span class="kw">const</span> subject = webSocket(<span class="str">'wss://api.example.com/ws'</span>);
+subject.subscribe(msg =&gt; handle(msg));
+subject.next({ type: <span class="str">'subscribe'</span>, channel: <span class="str">'prices'</span> });
+subject.pipe(
+  retryWhen(errors =&gt; errors.pipe(delay(<span class="num">2000</span>)))
+).subscribe();</pre>
+<div class="tip">В Angular завжди закривайте WebSocket у <code>ngOnDestroy</code>. Використовуйте <code>shareReplay(1)</code> для спільного використання одного з'єднання між кількома компонентами.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Поширені коди закриття</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Код</th><th>Значення</th></tr>
+<tr><td>1000</td><td>Нормальне закриття</td></tr>
+<tr><td>1001</td><td>Відхід (навігація по сторінці)</td></tr>
+<tr><td>1006</td><td>Аномальне закриття (без фрейму закриття)</td></tr>
+<tr><td>1011</td><td>Помилка сервера</td></tr>
+<tr><td>4xxx</td><td>Специфічні для застосунку (кастомні)</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== SERVICE WORKERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Service Workers</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Концепція, життєвий цикл та стратегії кешування</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Окремий потік, що виступає мережевим проксі. Лише HTTPS. Забезпечує офлайн-режим, фонову синхронізацію, push-сповіщення.</p>
+<p><strong>Життєвий цикл:</strong> Installing → Waiting → Activating → Activated → Redundant</p>
+<pre>navigator.serviceWorker.register(<span class="str">'/sw.js'</span>);
+self.addEventListener(<span class="str">'install'</span>, e =&gt; e.waitUntil(caches.open(<span class="str">'v1'</span>).then(c =&gt; c.addAll([<span class="str">'/'</span>]))));
+self.addEventListener(<span class="str">'fetch'</span>, e =&gt; e.respondWith(
+  caches.match(e.request).then(cached =&gt; cached || fetch(e.request))
+));</pre>
+<table>
+<tr><th>Стратегія</th><th>Коли використовувати</th></tr>
+<tr><td>Cache first</td><td>Статичні ресурси</td></tr>
+<tr><td>Network first</td><td>Дані API — критично важлива свіжість</td></tr>
+<tr><td>Stale-while-revalidate</td><td>Баланс: віддати кеш, оновити у фоні</td></tr>
+<tr><td>Network only</td><td>Запити автентифікації</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== WEB WORKERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Web Workers</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Web Workers vs Service Workers</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Web Workers</strong> запускають скрипти у фонових потоках, окремо від головного UI-потоку — зберігаючи сторінку чутливою під час важких CPU-задач. Немає доступу до DOM; спілкуються через <code>postMessage</code>.</p>
+<table>
+<tr><th></th><th>Web Worker</th><th>Service Worker</th></tr>
+<tr><td>Призначення</td><td>CPU-обчислення</td><td>Мережевий проксі / офлайн</td></tr>
+<tr><td>Життєвий цикл</td><td>Прив'язаний до сторінки</td><td>Незалежний</td></tr>
+<tr><td>DOM</td><td>Немає доступу</td><td>Немає доступу</td></tr>
+</table>
+<pre><span class="kw">const</span> w = <span class="kw">new</span> Worker(<span class="str">'worker.js'</span>);
+w.postMessage({ data: largeArr });
+w.onmessage = e =&gt; <span class="fn">console</span>.log(e.data);
+<span class="cm">// worker.js</span>
+self.onmessage = e =&gt; self.postMessage(heavyWork(e.data.data));</pre>
+<div class="tip">Angular 18 додав офіційну підтримку Web Workers. Використовуйте для: сортування/фільтрації, шифрування, обробки зображень — будь-чого, що блокує більше 16 мс.</div>
+</div></div>
+</div>
+
+<!-- ===== HTML & CSS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">HTML & CSS Essentials</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Довідник ключових питань</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Питання</th><th>Відповідь</th></tr>
+<tr><td><code>div</code> vs <code>span</code></td><td>block vs inline. Не можна розміщувати блочний елемент всередині рядкового.</td></tr>
+<tr><td><code>*ngIf</code> vs <code>[hidden]</code></td><td>ngIf видаляє з DOM; [hidden] = display:none (залишається в DOM)</td></tr>
+<tr><td><code>async</code> vs <code>defer</code></td><td>Обидва не блокуючі. async: виконується одразу після завантаження; defer: виконується після парсингу, по порядку</td></tr>
+<tr><td>Псевдоклас vs псевдоелемент</td><td><code>:hover</code>, <code>:nth-child</code> — стани; <code>::before</code>, <code>::after</code> — віртуальні елементи</td></tr>
+<tr><td><code>box-sizing: border-box</code></td><td>ширина/висота включає padding+border</td></tr>
+</table>
+</div></div>
+</div>

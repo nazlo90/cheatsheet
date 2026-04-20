@@ -34,30 +34,53 @@
   <span class="kw">return</span> <span class="str">`${greeting ?? <span class="str">'Hello'</span>}, ${name}`</span>;
 }</pre>
 </div></div>
-<div class="card"><div class="ch" onclick="T(this)"><h3>unknown vs any</h3><span class="arrow">▶</span></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>any vs never vs unknown</h3><span class="arrow">▶</span></div>
 <div class="cb">
-<p>Both accept any value, but <code>unknown</code> is the <em>type-safe</em> counterpart — you must narrow it before use, while <code>any</code> silently disables all type checking.</p>
+<p>Three special types that define the extremes of the type system: <code>any</code> opts out of type checking, <code>unknown</code> is the type-safe top type, <code>never</code> is the bottom type — a value that can never exist.</p>
 <table>
-<tr><th></th><th>unknown</th><th>any</th></tr>
-<tr><td>Accepts any value</td><td>Yes ✓</td><td>Yes ✓</td></tr>
-<tr><td>Assignable to other types</td><td>No — must narrow first</td><td>Yes — bypasses checks</td></tr>
-<tr><td>Property/method access</td><td>Error until narrowed</td><td>Always allowed</td></tr>
-<tr><td>Type safety</td><td>Preserved ✓</td><td>Disabled ✗</td></tr>
-<tr><td>Use case</td><td>External data, API responses</td><td>Migration, quick escape hatch</td></tr>
+<tr><th></th><th>any</th><th>unknown</th><th>never</th></tr>
+<tr><td>Accepts value from</td><td>Any type ✓</td><td>Any type ✓</td><td>Nothing — empty set ✗</td></tr>
+<tr><td>Assignable to</td><td>Any type ✓ (escape hatch)</td><td>Only <code>unknown</code> / <code>any</code></td><td>Every type ✓ (bottom)</td></tr>
+<tr><td>Property access</td><td>Always allowed</td><td>Error until narrowed</td><td>Error (can't reach)</td></tr>
+<tr><td>Type safety</td><td>Disabled ✗</td><td>Preserved ✓</td><td>Preserved ✓</td></tr>
+<tr><td>Use case</td><td>Migration, quick escape hatch</td><td>External data, API responses</td><td>Exhaustiveness checks, unreachable code, empty unions</td></tr>
 </table>
-<pre><span class="kw">let</span> a: unknown = <span class="fn">fetchData</span>();
+<pre><span class="kw">// any — opts out of type checking entirely</span>
+<span class="kw">let</span> b: <span class="kw">any</span> = <span class="fn">fetchData</span>();
+b.toFixed();            <span class="cm">// ✓ no error — but runtime may throw</span>
+b.foo.bar.baz;          <span class="cm">// ✓ TS is silent</span>
+
+<span class="cm">// unknown — must narrow before use</span>
+<span class="kw">let</span> a: unknown = <span class="fn">fetchData</span>();
 a.toFixed();            <span class="cm">// ✗ Error — not narrowed yet</span>
 <span class="kw">if</span> (<span class="kw">typeof</span> a === <span class="str">'number'</span>) a.toFixed(); <span class="cm">// ✓ narrowed</span>
 
-<span class="kw">let</span> b: any = <span class="fn">fetchData</span>();
-b.toFixed();            <span class="cm">// ✓ no error — but runtime may explode</span>
-b.foo.bar.baz;          <span class="cm">// ✓ TS is silent, runtime throws</span>
+<span class="cm">// never — value that can never exist</span>
+<span class="kw">function</span> <span class="fn">throwErr</span>(msg: string): <span class="kw">never</span> {
+  <span class="kw">throw new</span> Error(msg);  <span class="cm">// never returns</span>
+}
+
+<span class="cm">// never in exhaustiveness check — TS errors if a case is missed</span>
+<span class="kw">type</span> Shape = { kind: <span class="str">'circle'</span> } | { kind: <span class="str">'rect'</span> };
+<span class="kw">function</span> <span class="fn">area</span>(s: Shape) {
+  <span class="kw">switch</span> (s.kind) {
+    <span class="kw">case</span> <span class="str">'circle'</span>: <span class="kw">return</span> <span class="num">1</span>;
+    <span class="kw">case</span> <span class="str">'rect'</span>:   <span class="kw">return</span> <span class="num">2</span>;
+    <span class="kw">default</span>: <span class="kw">const</span> _exhaustive: <span class="kw">never</span> = s; <span class="cm">// ✗ error if shape added but not handled</span>
+  }
+}
+
+<span class="cm">// never in conditional types — filters out members</span>
+<span class="kw">type</span> NonNullable&lt;T&gt; = T <span class="kw">extends</span> null | undefined ? <span class="kw">never</span> : T;
+<span class="kw">type</span> OnlyStrings&lt;T&gt; = T <span class="kw">extends</span> string ? T : <span class="kw">never</span>;
+<span class="kw">type</span> R = OnlyStrings&lt;string | number | boolean&gt;;  <span class="cm">// string</span>
 
 <span class="cm">// Prefer unknown for function params accepting arbitrary input</span>
 <span class="kw">function</span> <span class="fn">parse</span>(val: unknown): string {
   <span class="kw">if</span> (<span class="kw">typeof</span> val === <span class="str">'string'</span>) <span class="kw">return</span> val;
   <span class="kw">return</span> String(val);
 }</pre>
+<div class="tip"><strong>Rule of thumb:</strong> use <code>unknown</code> when you don't know the type (external data) — it forces you to narrow. Use <code>never</code> to mark impossible branches and filter union members. Avoid <code>any</code> except as a last-resort migration tool.</div>
 </div></div>
 </div>
 
@@ -313,5 +336,189 @@ d <span class="kw">instanceof</span> Animal; <span class="cm">// ✓ true — ru
 <span class="kw">interface</span> <span class="cls">ILogger</span> { <span class="fn">log</span>(msg: string): <span class="kw">void</span>; }
 <span class="cm">// { provide: ILogger, useClass: ... } — compile error: ILogger not a value</span></pre>
 <div class="tip">In Angular / NestJS: use abstract classes as DI tokens — they survive compilation, interfaces don't. The abstract class acts as both the type contract and the injection key.</div>
+</div></div>
+</div>
+
+<!-- ===== TS MIXINS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TypeScript Mixins <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>What are mixins & why use them</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>mixin</strong> is a function that takes a base class and returns an extended class — a pattern that adds behaviour to a class without inheritance. Solves the single-inheritance limitation in TypeScript/JavaScript.</p>
+<table>
+<tr><th></th><th>Inheritance</th><th>Mixin</th></tr>
+<tr><td>Multiple bases</td><td>No — extends one class</td><td>Yes — compose many mixins</td></tr>
+<tr><td>Runtime overhead</td><td>Prototype chain</td><td>Same — prototype chain</td></tr>
+<tr><td>Tree-shakeable</td><td>No</td><td>Yes — only include what you use</td></tr>
+<tr><td>Angular alternative</td><td>Abstract base component</td><td>hostDirectives API (Angular 15+)</td></tr>
+</table>
+<pre><span class="cm">// Mixin type helper</span>
+<span class="kw">type</span> Constructor&lt;T = {}&gt; = <span class="kw">new</span> (...args: any[]) =&gt; T;
+
+<span class="cm">// Mixin — adds timestamp tracking</span>
+<span class="kw">function</span> <span class="fn">Timestamped</span>&lt;TBase <span class="kw">extends</span> Constructor&gt;(Base: TBase) {
+  <span class="kw">return class extends</span> Base {
+    createdAt = <span class="kw">new</span> Date();
+    updatedAt = <span class="kw">new</span> Date();
+    <span class="fn">touch</span>() { <span class="kw">this</span>.updatedAt = <span class="kw">new</span> Date(); }
+  };
+}
+
+<span class="cm">// Mixin — adds soft-delete behaviour</span>
+<span class="kw">function</span> <span class="fn">SoftDeletable</span>&lt;TBase <span class="kw">extends</span> Constructor&gt;(Base: TBase) {
+  <span class="kw">return class extends</span> Base {
+    deletedAt: Date | null = null;
+    <span class="fn">softDelete</span>() { <span class="kw">this</span>.deletedAt = <span class="kw">new</span> Date(); }
+    <span class="kw">get</span> <span class="fn">isDeleted</span>() { <span class="kw">return this</span>.deletedAt !== null; }
+  };
+}
+
+<span class="cm">// Compose multiple mixins onto a base class</span>
+<span class="kw">class</span> <span class="cls">Entity</span> {
+  <span class="kw">constructor</span>(<span class="kw">public</span> id: number) {}
+}
+
+<span class="kw">class</span> <span class="cls">User</span> <span class="kw">extends</span> <span class="fn">SoftDeletable</span>(<span class="fn">Timestamped</span>(<span class="cls">Entity</span>)) {
+  <span class="kw">constructor</span>(id: number, <span class="kw">public</span> name: string) {
+    <span class="kw">super</span>(id);
+  }
+}
+
+<span class="kw">const</span> u = <span class="kw">new</span> <span class="cls">User</span>(<span class="num">1</span>, <span class="str">'Alice'</span>);
+u.touch();          <span class="cm">// from Timestamped</span>
+u.softDelete();     <span class="cm">// from SoftDeletable</span>
+u.isDeleted;        <span class="cm">// true</span>
+u.createdAt;        <span class="cm">// from Timestamped</span></pre>
+<div class="tip">Keep mixins stateless where possible — they should add behaviour, not carry independent state. In Angular, prefer <code>hostDirectives</code> for component behaviour composition; use TS mixins for plain service/utility classes.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Constrained mixins + interface merging</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Constrained base — mixin requires specific members on the base</span>
+<span class="kw">interface</span> <span class="cls">HasName</span> { name: string; }
+
+<span class="kw">function</span> <span class="fn">Greetable</span>&lt;TBase <span class="kw">extends</span> Constructor&lt;HasName&gt;&gt;(Base: TBase) {
+  <span class="kw">return class extends</span> Base {
+    <span class="fn">greet</span>() { <span class="kw">return</span> `Hello, ${<span class="kw">this</span>.name}!`; }
+  };
+}
+
+<span class="cm">// ✗ Error — base must have .name</span>
+<span class="cm">// class BadBase {} class Bad extends Greetable(BadBase) {}</span>
+
+<span class="cm">// ✓ Works — Person has .name</span>
+<span class="kw">class</span> <span class="cls">Person</span> { <span class="kw">constructor</span>(<span class="kw">public</span> name: string) {} }
+<span class="kw">class</span> <span class="cls">FriendlyPerson</span> <span class="kw">extends</span> <span class="fn">Greetable</span>(<span class="cls">Person</span>) {}
+<span class="kw">new</span> <span class="cls">FriendlyPerson</span>(<span class="str">'Bob'</span>).<span class="fn">greet</span>(); <span class="cm">// 'Hello, Bob!'</span>
+
+<span class="cm">// Interface merging for mixin return type — improves IDE completion</span>
+<span class="kw">interface</span> <span class="cls">User</span> <span class="kw">extends</span> <span class="fn">ReturnType</span>&lt;<span class="kw">typeof</span> <span class="fn">Timestamped</span>&gt;,
+                         <span class="fn">ReturnType</span>&lt;<span class="kw">typeof</span> <span class="fn">SoftDeletable</span>&gt; {}</pre>
+</div></div>
+</div>
+
+<!-- ===== TS DECORATORS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">TypeScript Decorators <span class="badge b-ng">TS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>What are decorators & types</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>decorator</strong> is a special function that attaches metadata or modifies a class/property/method at declaration time. TypeScript supports <strong>experimental decorators</strong> (stage 2, used by Angular) and the new <strong>TC39 stage 3</strong> decorators (TypeScript 5+).</p>
+<p>Enable with <code>"experimentalDecorators": true</code> in tsconfig (for Angular/NestJS). TC39 decorators work without the flag in TS 5+.</p>
+<table>
+<tr><th>Decorator type</th><th>Applied to</th><th>Arguments</th></tr>
+<tr><td><strong>Class</strong></td><td>Class declaration</td><td><code>(target: Function)</code></td></tr>
+<tr><td><strong>Method</strong></td><td>Class method</td><td><code>(target, key, descriptor)</code></td></tr>
+<tr><td><strong>Property</strong></td><td>Class property</td><td><code>(target, key)</code></td></tr>
+<tr><td><strong>Accessor</strong></td><td>get/set</td><td><code>(target, key, descriptor)</code></td></tr>
+<tr><td><strong>Parameter</strong></td><td>Constructor / method param</td><td><code>(target, key, paramIndex)</code></td></tr>
+</table>
+<pre><span class="cm">// 1. Class decorator — adds metadata / wraps class</span>
+<span class="kw">function</span> <span class="fn">Sealed</span>(target: Function) {
+  Object.seal(target);
+  Object.seal(target.prototype);
+}
+
+@Sealed
+<span class="kw">class</span> <span class="cls">Config</span> { apiUrl = <span class="str">'https://api.example.com'</span>; }
+
+<span class="cm">// 2. Method decorator — wraps method (e.g. logging, timing)</span>
+<span class="kw">function</span> <span class="fn">Log</span>(target: any, key: string, desc: PropertyDescriptor) {
+  <span class="kw">const</span> orig = desc.value;
+  desc.value = <span class="kw">function</span>(...args: any[]) {
+    console.log(`${key} called with`, args);
+    <span class="kw">return</span> orig.apply(<span class="kw">this</span>, args);
+  };
+}
+
+<span class="kw">class</span> <span class="cls">UserService</span> {
+  @Log
+  <span class="fn">findById</span>(id: number) { <span class="cm">/* ... */</span> }
+}
+
+<span class="cm">// 3. Property decorator — mark required fields</span>
+<span class="kw">function</span> <span class="fn">Required</span>(target: any, key: string) {
+  <span class="kw">let</span> val = target[key];
+  Object.defineProperty(target, key, {
+    <span class="kw">get</span>: () =&gt; val,
+    <span class="kw">set</span>: (v) =&gt; { <span class="kw">if</span> (!v) <span class="kw">throw new</span> Error(`${key} is required`); val = v; }
+  });
+}
+
+<span class="cm">// 4. Parameter decorator — used by DI frameworks (Angular, NestJS)</span>
+<span class="kw">function</span> <span class="fn">Inject</span>(token: <span class="kw">any</span>) {
+  <span class="kw">return</span> (target: any, _: string | undefined, index: number) =&gt; {
+    Reflect.defineMetadata(<span class="str">'inject'</span>, token, target, String(index));
+  };
+}
+
+<span class="cm">// 5. Decorator factory — decorator with arguments</span>
+<span class="kw">function</span> <span class="fn">MinLength</span>(min: number) {
+  <span class="kw">return function</span>(target: any, key: string) {
+    <span class="kw">let</span> val: string;
+    Object.defineProperty(target, key, {
+      <span class="kw">set</span>: (v: string) =&gt; {
+        <span class="kw">if</span> (v.length &lt; min) <span class="kw">throw new</span> Error(`${key} min length ${min}`);
+        val = v;
+      },
+      <span class="kw">get</span>: () =&gt; val
+    });
+  };
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Decorator execution order + Angular usage</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Execution order (bottom-up for stacked decorators)</span>
+@A   <span class="cm">// evaluated 1st, applied 2nd</span>
+@B   <span class="cm">// evaluated 2nd, applied 1st</span>
+<span class="kw">class</span> <span class="cls">Foo</span> {}
+<span class="cm">// Order: evaluate A → evaluate B → apply B → apply A</span>
+
+<span class="cm">// Angular decorators are class/property decorators under the hood</span>
+@Component({ selector: <span class="str">'app-root'</span>, template: <span class="str">'...'</span> })
+<span class="kw">class</span> <span class="cls">AppComponent</span> {
+  @Input() title = <span class="str">''</span>;      <span class="cm">// property decorator</span>
+  @Output() saved = <span class="kw">new</span> EventEmitter(); <span class="cm">// property decorator</span>
+  @HostListener(<span class="str">'click'</span>)    <span class="cm">// method decorator</span>
+  <span class="fn">onClick</span>() {}
+}
+
+<span class="cm">// NestJS decorators — same mechanism</span>
+@Controller(<span class="str">'users'</span>)
+<span class="kw">class</span> <span class="cls">UsersController</span> {
+  @Get(<span class="str">'/:id'</span>)
+  <span class="fn">getUser</span>(@Param(<span class="str">'id'</span>) id: string) {}  <span class="cm">// parameter decorator</span>
+}
+
+<span class="cm">// TC39 stage 3 (TS 5+, no experimentalDecorators needed)</span>
+<span class="kw">function</span> <span class="fn">logged</span>(target: any, ctx: ClassMethodDecoratorContext) {
+  <span class="kw">return function</span>(...args: any[]) {
+    console.log(`${String(ctx.name)} called`);
+    <span class="kw">return</span> target.apply(<span class="kw">this</span>, args);
+  };
+}
+<span class="kw">class</span> <span class="cls">Service</span> {
+  @logged
+  <span class="fn">fetch</span>() { <span class="cm">/* ... */</span> }
+}</pre>
+<div class="tip">Angular uses <code>reflect-metadata</code> to store design-time type info for DI. The decorator stores the type token; the injector reads it at runtime. Always enable <code>"emitDecoratorMetadata": true</code> alongside <code>"experimentalDecorators"</code> in Angular projects.</div>
 </div></div>
 </div>

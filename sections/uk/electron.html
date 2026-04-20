@@ -1,0 +1,262 @@
+<!-- ===== ELECTRON ARCHITECTURE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Архітектура Electron <span class="badge b-hot">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Головний процес проти процесу рендерера</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Electron запускає два типи процесів. <strong>Головний процес</strong> — це Node.js: він керує життєвим циклом застосунку та доступом до нативного ОС. Кожен <strong>процес рендерера</strong> — це веб-сторінка Chromium: він виконує код інтерфейсу і за замовчуванням ізольований.</p>
+<table>
+<tr><th></th><th>Головний процес</th><th>Процес рендерера</th></tr>
+<tr><td>Середовище виконання</td><td>Node.js</td><td>Chromium (браузер)</td></tr>
+<tr><td>Кількість</td><td>Один на застосунок</td><td>Один на BrowserWindow</td></tr>
+<tr><td>Доступ до Node</td><td>Повний</td><td>Відсутній (ізольований)</td></tr>
+<tr><td>Доступ до DOM</td><td>Відсутній</td><td>Повний</td></tr>
+<tr><td>Файл входу</td><td><code>main.js</code></td><td><code>index.html</code></td></tr>
+</table>
+<pre><span class="cm">// main.js — Головний процес</span>
+<span class="kw">const</span> { <span class="cls">app</span>, <span class="cls">BrowserWindow</span> } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="fn">app</span>.whenReady().<span class="fn">then</span>(() =&gt; {
+  <span class="kw">const</span> win = <span class="kw">new</span> <span class="cls">BrowserWindow</span>({
+    width: <span class="num">1200</span>, height: <span class="num">800</span>,
+    webPreferences: {
+      preload: <span class="fn">path</span>.join(__dirname, <span class="str">'preload.js'</span>),
+      contextIsolation: <span class="kw">true</span>,   <span class="cm">// обов'язково для безпеки</span>
+      sandbox: <span class="kw">true</span>,
+    },
+  });
+  win.<span class="fn">loadFile</span>(<span class="str">'index.html'</span>);
+});</pre>
+<div class="tip">Ніколи не встановлюйте <code>nodeIntegration: true</code> у рендерері — це відкриває повний API Node для потенційно ненадійного веб-вмісту.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Preload-скрипт і contextBridge</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Preload-скрипт</strong> запускається в рендерері до будь-якого веб-вмісту, маючи доступ до обмеженого набору API Node/Electron. <code>contextBridge</code> безпечно відкриває контрольований API рендереру.</p>
+<pre><span class="cm">// preload.js</span>
+<span class="kw">const</span> { contextBridge, ipcRenderer } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="fn">contextBridge</span>.exposeInMainWorld(<span class="str">'electronAPI'</span>, {
+  <span class="fn">openFile</span>: () =&gt; <span class="fn">ipcRenderer</span>.invoke(<span class="str">'dialog:openFile'</span>),
+  <span class="fn">onUpdate</span>: (cb) =&gt; <span class="fn">ipcRenderer</span>.on(<span class="str">'update-available'</span>, cb),
+  <span class="fn">removeUpdate</span>: () =&gt; <span class="fn">ipcRenderer</span>.removeAllListeners(<span class="str">'update-available'</span>),
+});
+
+<span class="cm">// рендерер — window.electronAPI тепер доступний</span>
+<span class="kw">const</span> filePath = <span class="kw">await</span> window.electronAPI.<span class="fn">openFile</span>();</pre>
+<div class="warn-box">Ніколи не передавайте сирий об'єкт <code>ipcRenderer</code> через contextBridge — це дозволить рендереру надсилати довільні IPC-канали. Відкривайте лише іменовані конкретні функції.</div>
+</div></div>
+</div>
+
+<!-- ===== IPC COMMUNICATION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">IPC-комунікація <span class="badge b-key">IPC</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Патерни ipcMain / ipcRenderer</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Міжпроцесна комунікація (IPC) — єдиний спосіб обміну даними між процесами рендерера і головним процесом. Використовуйте <code>invoke/handle</code> для запит-відповідь і <code>send/on</code> для «надіслав і забув».</p>
+<table>
+<tr><th>Патерн</th><th>З боку рендерера</th><th>З боку головного процесу</th><th>Коли використовувати</th></tr>
+<tr><td>Запит / Відповідь</td><td><code>ipcRenderer.invoke()</code></td><td><code>ipcMain.handle()</code></td><td>Потрібна відповідь (async)</td></tr>
+<tr><td>Одностороннє (R→M)</td><td><code>ipcRenderer.send()</code></td><td><code>ipcMain.on()</code></td><td>Надіслати і забути до головного</td></tr>
+<tr><td>Одностороннє (M→R)</td><td><code>ipcRenderer.on()</code></td><td><code>win.webContents.send()</code></td><td>Push з головного до рендерера</td></tr>
+</table>
+<pre><span class="cm">// main.js</span>
+<span class="fn">ipcMain</span>.handle(<span class="str">'dialog:openFile'</span>, <span class="kw">async</span> () =&gt; {
+  <span class="kw">const</span> { canceled, filePaths } = <span class="kw">await</span> <span class="fn">dialog</span>.showOpenDialog({});
+  <span class="kw">if</span> (canceled) <span class="kw">return</span> <span class="kw">null</span>;
+  <span class="kw">return</span> filePaths[<span class="num">0</span>];
+});
+
+<span class="cm">// Push-сповіщення з головного → рендерер</span>
+<span class="fn">autoUpdater</span>.on(<span class="str">'update-available'</span>, () =&gt; {
+  win.webContents.<span class="fn">send</span>(<span class="str">'update-available'</span>);
+});</pre>
+<div class="tip">Валідуйте всі дані, отримані в <code>ipcMain.handle</code> — скомпрометований рендерер може надсилати довільні навантаження.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Іменування IPC-каналів і валідація</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Використовуйте білий список дозволених каналів у preload</span>
+<span class="kw">const</span> ALLOWED_CHANNELS = [<span class="str">'app:getVersion'</span>, <span class="str">'file:read'</span>, <span class="str">'file:write'</span>];
+
+<span class="fn">contextBridge</span>.exposeInMainWorld(<span class="str">'ipc'</span>, {
+  <span class="fn">invoke</span>: (channel, ...args) =&gt; {
+    <span class="kw">if</span> (!ALLOWED_CHANNELS.<span class="fn">includes</span>(channel)) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Blocked channel'</span>);
+    <span class="kw">return</span> <span class="fn">ipcRenderer</span>.invoke(channel, ...args);
+  },
+});
+
+<span class="cm">// main.js — завжди валідуйте аргументи</span>
+<span class="fn">ipcMain</span>.handle(<span class="str">'file:read'</span>, <span class="kw">async</span> (event, filePath) =&gt; {
+  <span class="kw">if</span> (<span class="kw">typeof</span> filePath !== <span class="str">'string'</span>) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Invalid path'</span>);
+  <span class="kw">const</span> safe = <span class="fn">path</span>.resolve(filePath);
+  <span class="kw">if</span> (!safe.<span class="fn">startsWith</span>(ALLOWED_DIR)) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Path traversal denied'</span>);
+  <span class="kw">return</span> <span class="fn">fs</span>.promises.readFile(safe, <span class="str">'utf8'</span>);
+});</pre>
+</div></div>
+</div>
+
+<!-- ===== APP LIFECYCLE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Життєвий цикл застосунку і вікна <span class="badge b-key">Lifecycle</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Події життєвого циклу app</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Подія</th><th>Коли спрацьовує</th><th>Типове використання</th></tr>
+<tr><td><code>ready</code></td><td>Electron ініціалізовано</td><td>Створення вікон, реєстрація скорочень</td></tr>
+<tr><td><code>window-all-closed</code></td><td>Всі вікна закрито</td><td>Вихід на Windows/Linux (<code>app.quit()</code>)</td></tr>
+<tr><td><code>activate</code></td><td>Клік на іконку в Dock (macOS)</td><td>Відтворення вікна, якщо жодного немає</td></tr>
+<tr><td><code>before-quit</code></td><td>До виходу</td><td>Очищення, збереження стану</td></tr>
+<tr><td><code>will-quit</code></td><td>Всі вікна закрито, виходимо</td><td>Фінальне очищення</td></tr>
+<tr><td><code>quit</code></td><td>Застосунок збирається закритись</td><td>Очищення в останній момент</td></tr>
+</table>
+<pre><span class="fn">app</span>.whenReady().<span class="fn">then</span>(<span class="fn">createWindow</span>);
+
+<span class="fn">app</span>.on(<span class="str">'window-all-closed'</span>, () =&gt; {
+  <span class="kw">if</span> (process.platform !== <span class="str">'darwin'</span>) <span class="fn">app</span>.quit();
+});
+
+<span class="fn">app</span>.on(<span class="str">'activate'</span>, () =&gt; {
+  <span class="kw">if</span> (<span class="cls">BrowserWindow</span>.getAllWindows().length === <span class="num">0</span>) <span class="fn">createWindow</span>();
+});</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Параметри BrowserWindow</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">const</span> win = <span class="kw">new</span> <span class="cls">BrowserWindow</span>({
+  width: <span class="num">1200</span>, height: <span class="num">800</span>,
+  minWidth: <span class="num">600</span>, minHeight: <span class="num">400</span>,
+  frame: <span class="kw">false</span>,          <span class="cm">// без рамки (власний заголовок)</span>
+  titleBarStyle: <span class="str">'hidden'</span>,  <span class="cm">// лише кнопки macOS</span>
+  show: <span class="kw">false</span>,           <span class="cm">// чекати до ready-to-show</span>
+  backgroundColor: <span class="str">'#1a1a1a'</span>,
+  webPreferences: {
+    preload: <span class="fn">path</span>.join(__dirname, <span class="str">'preload.js'</span>),
+    contextIsolation: <span class="kw">true</span>,
+    sandbox: <span class="kw">true</span>,
+    spellcheck: <span class="kw">false</span>,
+  },
+});
+
+win.once(<span class="str">'ready-to-show'</span>, () =&gt; win.<span class="fn">show</span>());  <span class="cm">// уникнути білого спалаху</span>
+win.<span class="fn">loadFile</span>(<span class="str">'index.html'</span>);</pre>
+<div class="tip">Завжди встановлюйте <code>show: false</code> і показуйте вікно на <code>ready-to-show</code>, щоб уникнути білого спалаху при запуску.</div>
+</div></div>
+</div>
+
+<!-- ===== NATIVE APIS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Нативні API <span class="badge b-key">Native</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Діалоги, меню і системний трей</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Діалог</span>
+<span class="kw">const</span> { dialog, Menu, Tray, nativeImage } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="kw">const</span> { filePaths } = <span class="kw">await</span> <span class="fn">dialog</span>.showOpenDialog(win, {
+  title: <span class="str">'Open File'</span>,
+  filters: [{ name: <span class="str">'JSON'</span>, extensions: [<span class="str">'json'</span>] }],
+  properties: [<span class="str">'openFile'</span>],
+});
+
+<span class="cm">// Меню застосунку</span>
+<span class="kw">const</span> menu = <span class="cls">Menu</span>.buildFromTemplate([
+  { label: <span class="str">'File'</span>, submenu: [
+    { label: <span class="str">'Open'</span>, accelerator: <span class="str">'CmdOrCtrl+O'</span>, <span class="fn">click</span>: openFile },
+    { type: <span class="str">'separator'</span> },
+    { role: <span class="str">'quit'</span> },
+  ]},
+]);
+<span class="cls">Menu</span>.setApplicationMenu(menu);
+
+<span class="cm">// Системний трей</span>
+<span class="kw">const</span> tray = <span class="kw">new</span> <span class="cls">Tray</span>(<span class="fn">nativeImage</span>.createFromPath(<span class="str">'icon.png'</span>));
+tray.setContextMenu(<span class="cls">Menu</span>.buildFromTemplate([
+  { label: <span class="str">'Show'</span>, <span class="fn">click</span>: () =&gt; win.<span class="fn">show</span>() },
+  { label: <span class="str">'Quit'</span>, <span class="fn">click</span>: () =&gt; <span class="fn">app</span>.quit() },
+]));</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Сповіщення і shell</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">const</span> { Notification, shell, clipboard } = <span class="fn">require</span>(<span class="str">'electron'</span>);
+
+<span class="cm">// Сповіщення ОС</span>
+<span class="kw">new</span> <span class="cls">Notification</span>({ title: <span class="str">'Done'</span>, body: <span class="str">'Export complete'</span> }).<span class="fn">show</span>();
+
+<span class="cm">// Відкрити URL у браузері за замовчуванням (безпечніше за loadURL)</span>
+<span class="kw">await</span> <span class="fn">shell</span>.openExternal(<span class="str">'https://example.com'</span>);
+
+<span class="cm">// Відкрити файл у стандартному застосунку ОС</span>
+<span class="kw">await</span> <span class="fn">shell</span>.openPath(<span class="str">'/path/to/file.pdf'</span>);
+
+<span class="cm">// Буфер обміну</span>
+<span class="fn">clipboard</span>.writeText(<span class="str">'copied!'</span>);
+<span class="kw">const</span> text = <span class="fn">clipboard</span>.readText();</pre>
+<div class="warn-box">Використовуйте <code>shell.openExternal</code> лише з перевіреними URL — передача ненадійного введення користувача може виконати довільні програми (наприклад, шляхи <code>file://</code>).</div>
+</div></div>
+</div>
+
+<!-- ===== PACKAGING & DISTRIBUTION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Пакування і розповсюдження <span class="badge b-key">Build</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Конфігурація electron-builder</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>electron-builder</strong> — стандартний інструмент для пакування Electron-застосунків. Він створює нативні платформові інсталятори (.dmg, .exe, .AppImage) і обробляє підпис коду.</p>
+<pre><span class="cm">// package.json</span>
+{
+  <span class="str">"build"</span>: {
+    <span class="str">"appId"</span>: <span class="str">"com.company.myapp"</span>,
+    <span class="str">"productName"</span>: <span class="str">"MyApp"</span>,
+    <span class="str">"directories"</span>: { <span class="str">"output"</span>: <span class="str">"dist"</span> },
+    <span class="str">"files"</span>: [<span class="str">"dist/**"</span>, <span class="str">"main.js"</span>, <span class="str">"preload.js"</span>],
+    <span class="str">"mac"</span>: {
+      <span class="str">"category"</span>: <span class="str">"public.app-category.productivity"</span>,
+      <span class="str">"hardenedRuntime"</span>: <span class="kw">true</span>,
+      <span class="str">"entitlements"</span>: <span class="str">"entitlements.mac.plist"</span>
+    },
+    <span class="str">"win"</span>: { <span class="str">"target"</span>: [<span class="str">"nsis"</span>] },
+    <span class="str">"linux"</span>: { <span class="str">"target"</span>: [<span class="str">"AppImage"</span>, <span class="str">"deb"</span>] },
+    <span class="str">"publish"</span>: { <span class="str">"provider"</span>: <span class="str">"github"</span> }
+  }
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Автооновлення з electron-updater</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">const</span> { autoUpdater } = <span class="fn">require</span>(<span class="str">'electron-updater'</span>);
+
+<span class="fn">autoUpdater</span>.checkForUpdatesAndNotify();
+
+<span class="cm">// Або ручний сценарій</span>
+<span class="fn">autoUpdater</span>.on(<span class="str">'update-available'</span>, () =&gt; {
+  win.webContents.<span class="fn">send</span>(<span class="str">'update-available'</span>);
+});
+<span class="fn">autoUpdater</span>.on(<span class="str">'update-downloaded'</span>, () =&gt; {
+  win.webContents.<span class="fn">send</span>(<span class="str">'update-downloaded'</span>);
+});
+
+<span class="cm">// Запускається з рендерера через IPC</span>
+<span class="fn">ipcMain</span>.on(<span class="str">'install-update'</span>, () =&gt; <span class="fn">autoUpdater</span>.quitAndInstall());</pre>
+<div class="tip">Вкажіть <code>"publish": { "provider": "github" }</code> у конфігурації electron-builder і опублікуйте GitHub Release — electron-updater виявить його автоматично.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Контрольний список безпеки</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Правило</th><th>Чому</th></tr>
+<tr><td><code>contextIsolation: true</code></td><td>Запобігає доступу рендерера до глобальних змінних Node</td></tr>
+<tr><td><code>sandbox: true</code></td><td>Ізоляція процесу рендерера на рівні ОС</td></tr>
+<tr><td><code>nodeIntegration: false</code> (за замовчуванням)</td><td>Немає Node у рендерері — використовуйте preload/IPC</td></tr>
+<tr><td>Валідуйте всі IPC-аргументи в головному процесі</td><td>Скомпрометований рендерер може надіслати будь-що</td></tr>
+<tr><td>Використовуйте <code>shell.openExternal</code> лише для довірених URL</td><td>Запобігає виконанню довільного коду</td></tr>
+<tr><td>CSP-заголовок через <code>ses.webRequest</code></td><td>Знижує ризик XSS у рендерері</td></tr>
+<tr><td>Підписуйте всі збірки</td><td>Обов'язково для macOS Gatekeeper / Windows SmartScreen</td></tr>
+</table>
+<pre><span class="cm">// Встановити CSP у головному процесі</span>
+session.defaultSession.webRequest.onHeadersReceived((details, cb) =&gt; {
+  cb({ responseHeaders: {
+    ...details.responseHeaders,
+    <span class="str">'Content-Security-Policy'</span>: [<span class="str">"default-src 'self'"</span>],
+  }});
+});</pre>
+</div></div>
+</div>

@@ -1,0 +1,310 @@
+<!-- ===== WEBRTC FUNDAMENTALS ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Архітектура WebRTC <span class="badge b-hot">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Огляд WebRTC та процес з'єднання</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>WebRTC</strong> (Web Real-Time Communication) забезпечує peer-to-peer передачу аудіо, відео та даних безпосередньо в браузері без плагінів. Використовує три основні API: <code>RTCPeerConnection</code>, <code>RTCDataChannel</code> та <code>getUserMedia</code>.</p>
+<p><strong>Процес з'єднання (Offer/Answer):</strong></p>
+<ol>
+  <li>Ініціатор створює <strong>Offer</strong> (SDP) через <code>createOffer()</code></li>
+  <li>Ініціатор встановлює його як локальний опис, надсилає SDP одержувачу через сигналізацію</li>
+  <li>Одержувач встановлює його як віддалений опис, створює <strong>Answer</strong></li>
+  <li>Одержувач встановлює відповідь як локальний опис, надсилає назад через сигналізацію</li>
+  <li>Обидві сторони обмінюються <strong>ICE-кандидатами</strong> через сигналізацію</li>
+  <li>Перевірки ICE-з'єднання завершено — P2P медіа передається</li>
+</ol>
+<pre><span class="cm">// Сторона ініціатора</span>
+<span class="kw">const</span> pc = <span class="kw">new</span> <span class="cls">RTCPeerConnection</span>(iceConfig);
+
+<span class="cm">// Додаємо локальні треки перед створенням offer</span>
+<span class="kw">const</span> stream = <span class="kw">await</span> navigator.mediaDevices.<span class="fn">getUserMedia</span>({ audio: <span class="kw">true</span>, video: <span class="kw">true</span> });
+stream.<span class="fn">getTracks</span>().forEach(track =&gt; pc.<span class="fn">addTrack</span>(track, stream));
+
+<span class="kw">const</span> offer = <span class="kw">await</span> pc.<span class="fn">createOffer</span>();
+<span class="kw">await</span> pc.<span class="fn">setLocalDescription</span>(offer);
+<span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'offer'</span>, sdp: offer.sdp });
+
+<span class="cm">// Після збору ICE-кандидата</span>
+pc.<span class="fn">onicecandidate</span> = ({ candidate }) =&gt; {
+  <span class="kw">if</span> (candidate) <span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'ice'</span>, candidate });
+};
+
+<span class="cm">// Отримуємо віддалені треки</span>
+pc.<span class="fn">ontrack</span> = ({ streams }) =&gt; { videoEl.srcObject = streams[<span class="num">0</span>]; };</pre>
+<pre><span class="cm">// Сторона одержувача</span>
+<span class="kw">const</span> pc = <span class="kw">new</span> <span class="cls">RTCPeerConnection</span>(iceConfig);
+<span class="kw">await</span> pc.<span class="fn">setRemoteDescription</span>(<span class="kw">new</span> <span class="cls">RTCSessionDescription</span>(offer));
+<span class="kw">const</span> answer = <span class="kw">await</span> pc.<span class="fn">createAnswer</span>();
+<span class="kw">await</span> pc.<span class="fn">setLocalDescription</span>(answer);
+<span class="fn">signalingChannel</span>.<span class="fn">send</span>({ type: <span class="str">'answer'</span>, sdp: answer.sdp });
+
+<span class="cm">// Додаємо отримані ICE-кандидати</span>
+<span class="kw">await</span> pc.<span class="fn">addIceCandidate</span>(<span class="kw">new</span> <span class="cls">RTCIceCandidate</span>(candidate));</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>ICE, STUN та TURN</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>ICE</strong> (Interactive Connectivity Establishment) — фреймворк, який WebRTC використовує для пошуку найкращого шляху між пірами. Він збирає та перевіряє <em>ICE-кандидатів</em> — можливі мережеві точки входу.</p>
+<table>
+<tr><th>Тип</th><th>Що робить</th><th>Коли потрібен</th></tr>
+<tr><td><strong>Host</strong></td><td>Пряма LAN IP/порт</td><td>Та сама мережа</td></tr>
+<tr><td><strong>Server Reflexive (srflx)</strong></td><td>Публічна IP через STUN</td><td>За NAT (більшість випадків)</td></tr>
+<tr><td><strong>Relay (relay)</strong></td><td>Трафік через TURN-сервер</td><td>Симетричний NAT / файрвол</td></tr>
+</table>
+<p><strong>STUN</strong> (Session Traversal Utilities for NAT) — дешевий, stateless-сервер. Повідомляє вашу публічну IP:порт, щоб ви могли поділитися нею як кандидатом.</p>
+<p><strong>TURN</strong> (Traversal Using Relays around NAT) — резервний relay-сервер, що пересилає весь медіатрафік. Дорогий, але завжди працює.</p>
+<pre><span class="kw">const</span> iceConfig = {
+  iceServers: [
+    { urls: <span class="str">'stun:stun.l.google.com:19302'</span> },
+    {
+      urls: <span class="str">'turn:turn.example.com:3478'</span>,
+      username: <span class="str">'user'</span>,
+      credential: <span class="str">'secret'</span>,
+    },
+  ],
+  iceTransportPolicy: <span class="str">'all'</span>, <span class="cm">// 'relay' — лише через TURN</span>
+};</pre>
+<div class="tip">~80% дзвінків з'єднуються через STUN (srflx). Завжди розгортайте TURN як резерв — симетричний NAT і корпоративні файрволи потребують його.</div>
+</div></div>
+</div>
+
+<!-- ===== SDP ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SDP — Session Description Protocol <span class="badge b-warn">Протокол</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Структура SDP та ключові поля</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SDP</strong> — текстовий формат (не протокол), що описує медіасесії: кодеки, пропускну здатність, напрямок, облікові дані ICE, відбиток DTLS. Передається у WebRTC offer/answer.</p>
+<pre><span class="cm"># Секція сесії</span>
+v=0                              <span class="cm"># версія</span>
+o=- 123456 2 IN IP4 127.0.0.1   <span class="cm"># origin</span>
+s=-                              <span class="cm"># назва сесії</span>
+t=0 0                            <span class="cm"># час (0 0 = постійно)</span>
+
+<span class="cm"># Медіасекція (аудіо)</span>
+m=audio 9 UDP/TLS/RTP/SAVPF 111  <span class="cm"># порт 9 = bundled</span>
+a=rtpmap:111 opus/48000/2        <span class="cm"># кодек Opus, 48kHz стерео</span>
+a=fmtp:111 minptime=10;useinbandfec=1
+a=sendrecv                        <span class="cm"># напрямок</span>
+a=ice-ufrag:Xd3r                  <span class="cm"># облікові дані ICE</span>
+a=ice-pwd:longpassword
+a=fingerprint:sha-256 AA:BB:...  <span class="cm"># відбиток DTLS-сертифіката</span>
+a=setup:actpass</pre>
+<table>
+<tr><th>Атрибут напрямку</th><th>Значення</th></tr>
+<tr><td><code>sendrecv</code></td><td>Надсилає та отримує (за замовчуванням)</td></tr>
+<tr><td><code>sendonly</code></td><td>Лише надсилає (джерело демонстрації екрана)</td></tr>
+<tr><td><code>recvonly</code></td><td>Лише отримує (глядач)</td></tr>
+<tr><td><code>inactive</code></td><td>Нічого (на утриманні)</td></tr>
+</table>
+<div class="tip">BUNDLE об'єднує кілька медіапотоків через один транспорт — одне ICE/DTLS-з'єднання, кілька m-секцій. Сучасний WebRTC завжди його використовує.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Кодеки та управління пропускною здатністю</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Кодек</th><th>Тип</th><th>Примітки</th></tr>
+<tr><td>Opus</td><td>Аудіо</td><td>За замовчуванням для VoIP — адаптивний 6–510 kbps, FEC, DTX</td></tr>
+<tr><td>G.711 (PCMU/PCMA)</td><td>Аудіо</td><td>Застарілий PSTN-кодек, 64 kbps, без стиснення</td></tr>
+<tr><td>G.722</td><td>Аудіо</td><td>Широкосмуговий (7 кГц), 64 kbps</td></tr>
+<tr><td>VP8 / VP9</td><td>Відео</td><td>Відкритий, Google — хороша сумісність</td></tr>
+<tr><td>H.264</td><td>Відео</td><td>Апаратне прискорення на мобільних, патентний тягар</td></tr>
+<tr><td>AV1</td><td>Відео</td><td>Найкраще стиснення, високе навантаження на CPU при кодуванні</td></tr>
+</table>
+<pre><span class="cm">// Надаємо перевагу Opus, видаляємо інші аудіокодеки</span>
+<span class="kw">function</span> <span class="fn">preferOpus</span>(sdp) {
+  <span class="kw">const</span> lines = sdp.split(<span class="str">'\r\n'</span>);
+  <span class="kw">const</span> opusLine = lines.find(l =&gt; l.includes(<span class="str">'opus/48000'</span>));
+  <span class="kw">const</span> payload = opusLine?.match(<span class="str">/a=rtpmap:(\d+)/</span>)?.[<span class="num">1</span>];
+  <span class="kw">if</span> (!payload) <span class="kw">return</span> sdp;
+  <span class="kw">return</span> sdp.replace(<span class="str">/m=audio (\d+) [^\r]+/</span>, `m=audio $1 UDP/TLS/RTP/SAVPF ${payload}`);
+}
+
+<span class="cm">// Встановлюємо максимальний бітрейт через RTCRtpSender</span>
+<span class="kw">const</span> sender = pc.<span class="fn">getSenders</span>().find(s =&gt; s.track?.kind === <span class="str">'video'</span>);
+<span class="kw">const</span> params = sender.<span class="fn">getParameters</span>();
+params.encodings[<span class="num">0</span>].maxBitrate = <span class="num">1_000_000</span>; <span class="cm">// 1 Mbps</span>
+<span class="kw">await</span> sender.<span class="fn">setParameters</span>(params);</pre>
+</div></div>
+</div>
+
+<!-- ===== SIP / VoIP ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">SIP та VoIP <span class="badge b-warn">Протокол</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Огляд SIP та потік виклику</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SIP</strong> (Session Initiation Protocol, RFC 3261) — текстовий протокол сигналізації для VoIP. Відповідає за <em>встановлення, зміну та завершення</em> сесій. Сам медіатрафік передається через RTP — SIP лише узгоджує його.</p>
+<p><strong>Ключові сутності SIP:</strong></p>
+<table>
+<tr><th>Сутність</th><th>Роль</th></tr>
+<tr><td>UA (User Agent)</td><td>Клієнт/телефон, що ініціює або приймає дзвінки</td></tr>
+<tr><td>Proxy Server</td><td>Маршрутизує SIP-повідомлення між UA</td></tr>
+<tr><td>Registrar</td><td>Відображає SIP URI → поточний IP:порт (через REGISTER)</td></tr>
+<tr><td>B2BUA</td><td>Back-to-back UA — завершує і повторно ініціює дзвінки (Asterisk, FreeSWITCH)</td></tr>
+</table>
+<pre><span class="cm"># Базовий SIP INVITE (вихідний дзвінок)</span>
+INVITE sip:bob@example.com SIP/2.0
+Via: SIP/2.0/UDP alice-pc:5060;branch=z9hG4bK776asdhds
+From: "Alice" &lt;sip:alice@example.com&gt;;tag=1928301774
+To: &lt;sip:bob@example.com&gt;
+Call-ID: a84b4c76e66710@pc33.atlanta.com
+CSeq: 314159 INVITE
+Content-Type: application/sdp
+Content-Length: [sdp length]
+
+[SDP тіло — узгодження кодеків]</pre>
+<p><strong>Базовий потік виклику:</strong></p>
+<ol>
+  <li><code>INVITE</code> → <code>100 Trying</code> → <code>180 Ringing</code> → <code>200 OK</code> → <code>ACK</code> (триетапне рукостискання)</li>
+  <li>Передача RTP-медіа</li>
+  <li><code>BYE</code> → <code>200 OK</code> (завершення)</li>
+</ol>
+<div class="tip">SIP використовує SDP для узгодження медіа — тіло INVITE містить SDP offer, 200 OK — SDP answer. Та сама модель offer/answer, що і в WebRTC.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Коди відповідей SIP</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Діапазон</th><th>Клас</th><th>Приклади</th></tr>
+<tr><td>1xx</td><td>Проміжні</td><td>100 Trying, 180 Ringing, 183 Session Progress</td></tr>
+<tr><td>2xx</td><td>Успіх</td><td>200 OK</td></tr>
+<tr><td>3xx</td><td>Перенаправлення</td><td>301 Moved Permanently, 302 Moved Temporarily</td></tr>
+<tr><td>4xx</td><td>Помилка клієнта</td><td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 486 Busy Here, 487 Request Terminated</td></tr>
+<tr><td>5xx</td><td>Помилка сервера</td><td>500 Internal Server Error, 503 Service Unavailable</td></tr>
+<tr><td>6xx</td><td>Глобальна відмова</td><td>603 Decline (явне відхилення користувачем)</td></tr>
+</table>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>RTP та RTCP</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>RTP</strong> (Real-time Transport Protocol) переносить медіа (аудіо/відео) через UDP. <strong>RTCP</strong> — супутній протокол управління для статистики QoS.</p>
+<table>
+<tr><th></th><th>RTP</th><th>RTCP</th></tr>
+<tr><td>Призначення</td><td>Транспорт медіа</td><td>Зворотній зв'язок QoS та синхронізація</td></tr>
+<tr><td>Порт</td><td>Парний (напр. 5004)</td><td>Непарний = порт RTP + 1</td></tr>
+<tr><td>Транспорт</td><td>UDP (зазвичай)</td><td>UDP</td></tr>
+<tr><td>Ключові поля</td><td>Seq#, мітка часу, SSRC, тип навантаження</td><td>SR/RR звіти, SDES, BYE, APP</td></tr>
+</table>
+<p><strong>SRTP</strong> (Secure RTP) — обов'язковий у WebRTC, шифрує медіанавантаження та автентифікує заголовки. Обмін ключами через DTLS-SRTP.</p>
+<div class="warn-box">WebRTC вимагає SRTP — звичайний RTP не допускається. DTLS-рукостискання отримує головний ключ SRTP. Відбиток у SDP автентифікує сертифікат.</div>
+</div></div>
+</div>
+
+<!-- ===== JANUS ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Janus WebRTC Server <span class="badge b-hot">Сервер</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Архітектура Janus та система плагінів</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Janus</strong> — відкритий WebRTC серверний шлюз (від Meetecho). Виступає як <em>selective forwarding unit (SFU)</em> та B2BUA — завершує WebRTC з одного боку та може з'єднуватись з SIP, RTP, записами тощо через плагіни.</p>
+<table>
+<tr><th>Плагін</th><th>Сценарій використання</th></tr>
+<tr><td>VideoRoom</td><td>Багатосторонні відеоконференції (SFU)</td></tr>
+<tr><td>VideoCall</td><td>Простий відеодзвінок 1:1</td></tr>
+<tr><td>SIP</td><td>Міст WebRTC ↔ SIP/PSTN</td></tr>
+<tr><td>Streaming</td><td>Трансляція RTP/RTSP-потоків до WebRTC-глядачів</td></tr>
+<tr><td>AudioBridge</td><td>Аудіо MCU — змішує кілька аудіопотоків</td></tr>
+<tr><td>RecordPlay</td><td>Запис і відтворення WebRTC-сесій</td></tr>
+<tr><td>TextRoom</td><td>Текстові повідомлення через DataChannels</td></tr>
+</table>
+<p><strong>Транспортні рівні:</strong> HTTP REST, WebSocket, RabbitMQ, MQTT — всі використовують однаковий JSON-based Janus API.</p>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Потік Janus API</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Кожна взаємодія з Janus: <strong>створити сесію</strong> → <strong>підключити хендл плагіна</strong> → <strong>надіслати повідомлення плагіна + JSEP</strong>.</p>
+<pre><span class="cm">// 1. Створюємо Janus-сесію</span>
+<span class="kw">const</span> janus = <span class="kw">new</span> <span class="cls">Janus</span>({
+  server: <span class="str">'wss://janus.example.com/ws'</span>,
+  success: () =&gt; {
+    <span class="cm">// 2. Підключаємось до плагіна VideoRoom</span>
+    janus.<span class="fn">attach</span>({
+      plugin: <span class="str">'janus.plugin.videoroom'</span>,
+      success: (handle) =&gt; { pluginHandle = handle; },
+      onmessage: (msg, jsep) =&gt; {
+        <span class="kw">if</span> (jsep) {
+          pluginHandle.<span class="fn">createAnswer</span>({
+            jsep,
+            tracks: [{ type: <span class="str">'audio'</span>, capture: <span class="kw">true</span> }, { type: <span class="str">'video'</span>, capture: <span class="kw">true</span> }],
+            success: (ourJsep) =&gt; pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str">'start'</span> }, jsep: ourJsep }),
+          });
+        }
+      },
+      onremotetrack: (track, mid, active) =&gt; {
+        <span class="kw">if</span> (active) {
+          <span class="kw">const</span> stream = <span class="kw">new</span> <span class="cls">MediaStream</span>([track]);
+          videoEl.srcObject = stream;
+        }
+      },
+    });
+  },
+});
+
+<span class="cm">// 3. Заходимо до кімнати</span>
+pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str">'join'</span>, room: <span class="num">1234</span>, ptype: <span class="str">'publisher'</span>, display: <span class="str">'Alice'</span> } });</pre>
+<div class="tip">Janus обробляє ICE, DTLS та SRTP всередині. Ваш застосунок працює лише з JSON-повідомленнями та JSEP (JSON-обгортки SDP) — Janus перекладає до/від нативного WebRTC.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>MCU vs SFU vs P2P</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>P2P</th><th>SFU</th><th>MCU</th></tr>
+<tr><td>Маршрутизація медіа</td><td>Прямо між пірами</td><td>Сервер вибірково пересилає потоки</td><td>Сервер змішує в один потік</td></tr>
+<tr><td>Завантаження клієнта (upload)</td><td>N-1 потоків</td><td>1 потік</td><td>1 потік</td></tr>
+<tr><td>Завантаження клієнта (download)</td><td>N-1 потоків</td><td>N-1 потоків</td><td>1 потік</td></tr>
+<tr><td>CPU сервера</td><td>Відсутнє</td><td>Низьке (без декодування)</td><td>Високе (декодування+кодування)</td></tr>
+<tr><td>Затримка</td><td>Найнижча</td><td>Низька</td><td>Вища</td></tr>
+<tr><td>Приклади</td><td>Нативний WebRTC</td><td>Janus VideoRoom, mediasoup, Livekit</td><td>Jitsi Videobridge MCU</td></tr>
+</table>
+<div class="tip">Janus VideoRoom — це SFU: пересилає потік кожного видавця всім підписникам без перекодування. Використовуйте плагін AudioBridge, якщо потрібне MCU-змішування аудіо.</div>
+</div></div>
+</div>
+
+<!-- ===== NETWORKING ===== -->
+<div class="section" data-cat="webrtc">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Основи мереж для VoIP <span class="badge b-info">Мережі</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Типи NAT та їх обхід</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>NAT (Network Address Translation) відображає приватні IP на публічну IP. Різна поведінка NAT впливає на можливість прямого з'єднання між пірами.</p>
+<table>
+<tr><th>Тип NAT</th><th>Поведінка</th><th>P2P можливий?</th></tr>
+<tr><td>Full Cone</td><td>Будь-який зовнішній хост може надіслати на відображений порт</td><td>Так (легко)</td></tr>
+<tr><td>Restricted Cone</td><td>Лише хости, яким ви надсилали, можуть відповісти</td><td>Так (STUN)</td></tr>
+<tr><td>Port-Restricted Cone</td><td>IP + порт мають збігатися</td><td>Так (STUN)</td></tr>
+<tr><td>Symmetric</td><td>Різне відображення для кожного призначення</td><td>Потрібен TURN</td></tr>
+</table>
+<p><strong>ICE trickle</strong> — кандидати надсилаються віддаленому піру в міру їх збору, не чекаючи всіх. Прискорює встановлення з'єднання.</p>
+<div class="warn-box">Симетричний NAT (поширений у корпоративних мережах) блокує обхід лише через STUN. Завжди надавайте TURN-сервери для production.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>UDP vs TCP для медіа та ключові порти</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Протокол</th><th>Транспорт</th><th>Чому</th></tr>
+<tr><td>RTP / SRTP</td><td>UDP</td><td>Низька затримка — втрачені пакети краще за запізнілі для медіа реального часу</td></tr>
+<tr><td>RTCP</td><td>UDP (той самий порт mux у WebRTC)</td><td>RTCP-mux об'єднує RTP+RTCP на один порт</td></tr>
+<tr><td>SIP</td><td>UDP або TCP або TLS (5060/5061)</td><td>5060 = відкритий текст, 5061 = TLS (SIPS)</td></tr>
+<tr><td>STUN</td><td>UDP 3478</td><td>Stateless, один round-trip</td></tr>
+<tr><td>TURN</td><td>UDP/TCP 3478, TLS 5349</td><td>TLS/TCP резерв для жорстких файрволів</td></tr>
+<tr><td>DTLS</td><td>UDP (через ICE)</td><td>TLS-еквівалент для UDP — захищає обмін ключами SRTP</td></tr>
+<tr><td>WebSocket (Janus)</td><td>TCP 8188 / 8989 (WSS)</td><td>Лише сигналізація — не медіа</td></tr>
+</table>
+<p><strong>Діапазон медіапортів:</strong> зазвичай 10000–60000 UDP — мають бути відкриті на серверних файрволах для Janus/TURN.</p>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>QoS, джитер та втрата пакетів</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Метрика</th><th>Норма</th><th>Погіршення</th><th>Пом'якшення</th></tr>
+<tr><td>Затримка (одностороння)</td><td>&lt;150 мс</td><td>&gt;300 мс</td><td>TURN relay поблизу користувачів, зменшити кількість хопів</td></tr>
+<tr><td>Джитер</td><td>&lt;30 мс</td><td>&gt;50 мс</td><td>Буфер джитера (адаптивний)</td></tr>
+<tr><td>Втрата пакетів</td><td>&lt;1%</td><td>&gt;5%</td><td>FEC (Opus вбудований), RTX (RTP повторна передача), NACK</td></tr>
+<tr><td>Бітрейт</td><td>Адаптивний</td><td>Обмежена пропускна здатність</td><td>BWE (REMB/TWCC), simulcast, SVC</td></tr>
+</table>
+<p><strong>Ключові механізми управління перевантаженням WebRTC:</strong></p>
+<ul>
+  <li><strong>REMB</strong> — Receiver Estimated Max Bitrate (старіший, RTCP зворотній зв'язок)</li>
+  <li><strong>TWCC</strong> — Transport-Wide Congestion Control (на стороні відправника, точніший)</li>
+  <li><strong>Simulcast</strong> — видавець надсилає кілька роздільних здатностей; SFU обирає для кожного підписника</li>
+  <li><strong>SVC</strong> — Scalable Video Coding — пошарове кодування (VP9/AV1 підтримують)</li>
+</ul>
+</div></div>
+</div>

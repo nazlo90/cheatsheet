@@ -23,6 +23,152 @@
 </div></div>
 </div>
 
+<!-- ===== DIRECTIVES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Directives <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>What is a directive & types</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>directive</strong> is a class decorated with <code>@Directive</code> that adds behaviour or structure to DOM elements. Components are a special kind of directive with a template.</p>
+<table>
+<tr><th>Type</th><th>Purpose</th><th>Examples</th></tr>
+<tr><td><strong>Component</strong></td><td>Directive + template + styles</td><td><code>@Component</code> — every component</td></tr>
+<tr><td><strong>Structural</strong></td><td>Changes DOM structure (adds/removes elements)</td><td><code>*ngIf</code>, <code>*ngFor</code>, <code>*ngSwitch</code>, <code>@if</code>, <code>@for</code></td></tr>
+<tr><td><strong>Attribute</strong></td><td>Changes appearance or behaviour of host element</td><td><code>NgClass</code>, <code>NgStyle</code>, <code>RouterLink</code>, custom</td></tr>
+</table>
+<pre><span class="cm">// Attribute directive — highlight on hover</span>
+@Directive({
+  selector: <span class="str">'[appHighlight]'</span>,
+  standalone: <span class="kw">true</span>
+})
+<span class="kw">export class</span> <span class="cls">HighlightDirective</span> {
+  @Input(<span class="str">'appHighlight'</span>) color = <span class="str">'yellow'</span>;
+
+  <span class="kw">private</span> el = inject(ElementRef);
+
+  @HostListener(<span class="str">'mouseenter'</span>) onEnter() {
+    <span class="kw">this</span>.el.nativeElement.style.backgroundColor = <span class="kw">this</span>.color;
+  }
+  @HostListener(<span class="str">'mouseleave'</span>) onLeave() {
+    <span class="kw">this</span>.el.nativeElement.style.backgroundColor = <span class="str">''</span>;
+  }
+}
+
+<span class="cm">&lt;!-- &lt;p [appHighlight]="'lightblue'"&gt;Hover me&lt;/p&gt; --&gt;</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Structural directives — microsyntax & custom</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Structural directives use <code>*</code> microsyntax sugar — <code>*ngIf="x"</code> desugars to <code>[ngIf]="x"</code> on a hidden <code>&lt;ng-template&gt;</code>. Custom structural directives inject <code>TemplateRef</code> and <code>ViewContainerRef</code>.</p>
+<pre><span class="cm">// Custom structural directive — *appUnless (opposite of *ngIf)</span>
+@Directive({ selector: <span class="str">'[appUnless]'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">UnlessDirective</span> {
+  <span class="kw">private</span> vcr = inject(ViewContainerRef);
+  <span class="kw">private</span> tmpl = inject(TemplateRef);
+  <span class="kw">private</span> hasView = <span class="kw">false</span>;
+
+  @Input() <span class="kw">set</span> <span class="fn">appUnless</span>(condition: boolean) {
+    <span class="kw">if</span> (!condition &amp;&amp; !<span class="kw">this</span>.hasView) {
+      <span class="kw">this</span>.vcr.createEmbeddedView(<span class="kw">this</span>.tmpl);
+      <span class="kw">this</span>.hasView = <span class="kw">true</span>;
+    } <span class="kw">else if</span> (condition &amp;&amp; <span class="kw">this</span>.hasView) {
+      <span class="kw">this</span>.vcr.clear();
+      <span class="kw">this</span>.hasView = <span class="kw">false</span>;
+    }
+  }
+}
+
+<span class="cm">&lt;!-- &lt;div *appUnless="isLoggedIn"&gt;Please log in&lt;/div&gt; --&gt;</span>
+
+<span class="cm">// Modern built-in equivalents (Angular 17+ template syntax)</span>
+<span class="cm">// @if (show) { &lt;p&gt;visible&lt;/p&gt; } @else { &lt;p&gt;hidden&lt;/p&gt; }</span>
+<span class="cm">// @for (item of items; track item.id) { &lt;li&gt;{{ item.name }}&lt;/li&gt; }</span>
+<span class="cm">// @switch (status) { @case ('active') { &lt;span&gt;Active&lt;/span&gt; } }</span></pre>
+<div class="tip">Prefer modern <code>@if</code>/<code>@for</code>/<code>@switch</code> (Angular 17+) over <code>*ngIf</code>/<code>*ngFor</code> — they compile more efficiently (no extra DOM wrapper) and have cleaner syntax.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>HostBinding, HostListener & exportAs</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// @HostBinding — bind directive property to host element attribute/class/style</span>
+@Directive({ selector: <span class="str">'[appActive]'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">ActiveDirective</span> {
+  @Input() appActive = <span class="kw">false</span>;
+
+  @HostBinding(<span class="str">'class.active'</span>) <span class="kw">get</span> <span class="fn">isActive</span>() { <span class="kw">return this</span>.appActive; }
+  @HostBinding(<span class="str">'attr.aria-selected'</span>) <span class="kw">get</span> <span class="fn">ariaSelected</span>() { <span class="kw">return this</span>.appActive; }
+  @HostBinding(<span class="str">'style.fontWeight'</span>) <span class="kw">get</span> <span class="fn">fw</span>() { <span class="kw">return this</span>.appActive ? <span class="str">'bold'</span> : <span class="str">'normal'</span>; }
+}
+
+<span class="cm">// exportAs — expose directive instance to template variable</span>
+@Directive({ selector: <span class="str">'[appTooltip]'</span>, exportAs: <span class="str">'tooltip'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">TooltipDirective</span> {
+  visible = <span class="kw">false</span>;
+  <span class="fn">show</span>() { <span class="kw">this</span>.visible = <span class="kw">true</span>; }
+  <span class="fn">hide</span>() { <span class="kw">this</span>.visible = <span class="kw">false</span>; }
+}
+
+<span class="cm">&lt;!-- &lt;span appTooltip #tip="tooltip" (click)="tip.show()"&gt;Hover&lt;/span&gt; --&gt;</span></pre>
+</div></div>
+</div>
+
+<!-- ===== PIPES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Pipes <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>What is a pipe & built-in pipes</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>A <strong>pipe</strong> is a template transformation function — it takes an input value and optional arguments and returns a transformed value. Used with the <code>|</code> operator in templates.</p>
+<table>
+<tr><th>Pipe</th><th>Example</th><th>Output</th></tr>
+<tr><td><code>date</code></td><td><code>{{ today | date:'dd/MM/yyyy' }}</code></td><td><code>20/04/2026</code></td></tr>
+<tr><td><code>currency</code></td><td><code>{{ 1234.5 | currency:'USD' }}</code></td><td><code>$1,234.50</code></td></tr>
+<tr><td><code>number</code></td><td><code>{{ 3.14159 | number:'1.2-2' }}</code></td><td><code>3.14</code></td></tr>
+<tr><td><code>percent</code></td><td><code>{{ 0.25 | percent }}</code></td><td><code>25%</code></td></tr>
+<tr><td><code>uppercase / lowercase</code></td><td><code>{{ 'hello' | uppercase }}</code></td><td><code>HELLO</code></td></tr>
+<tr><td><code>titlecase</code></td><td><code>{{ 'hello world' | titlecase }}</code></td><td><code>Hello World</code></td></tr>
+<tr><td><code>json</code></td><td><code>{{ obj | json }}</code></td><td>pretty-printed JSON</td></tr>
+<tr><td><code>slice</code></td><td><code>{{ items | slice:0:3 }}</code></td><td>first 3 items</td></tr>
+<tr><td><code>keyvalue</code></td><td><code>*ngFor="let p of obj | keyvalue"</code></td><td>key/value pairs</td></tr>
+<tr><td><code>async</code></td><td><code>{{ users$ | async }}</code></td><td>unwrapped Observable/Promise</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Pure vs impure pipes & custom pipe</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>Pure pipe (default)</th><th>Impure pipe</th></tr>
+<tr><td>Re-runs when</td><td>Input reference changes</td><td>Every change detection cycle</td></tr>
+<tr><td>Performance</td><td>Memoized — skipped if input unchanged ✓</td><td>Called constantly ✗</td></tr>
+<tr><td>Use for</td><td>Formatting, sorting stable data</td><td>Filtering mutable arrays, <code>async</code> pipe</td></tr>
+<tr><td>Declaration</td><td><code>pure: true</code> (default)</td><td><code>pure: false</code></td></tr>
+</table>
+<pre><span class="cm">// Custom pure pipe — format file size</span>
+@Pipe({ name: <span class="str">'fileSize'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">FileSizePipe</span> <span class="kw">implements</span> PipeTransform {
+  transform(bytes: number, decimals = <span class="num">2</span>): string {
+    <span class="kw">if</span> (!bytes) <span class="kw">return</span> <span class="str">'0 B'</span>;
+    <span class="kw">const</span> k = <span class="num">1024</span>;
+    <span class="kw">const</span> units = [<span class="str">'B'</span>, <span class="str">'KB'</span>, <span class="str">'MB'</span>, <span class="str">'GB'</span>];
+    <span class="kw">const</span> i = Math.floor(Math.log(bytes) / Math.log(k));
+    <span class="kw">return</span> `${(bytes / k ** i).toFixed(decimals)} ${units[i]}`;
+  }
+}
+<span class="cm">&lt;!-- {{ 1048576 | fileSize }} → '1.00 MB' --&gt;</span>
+
+<span class="cm">// Custom impure pipe — filter mutable array</span>
+@Pipe({ name: <span class="str">'filterBy'</span>, standalone: <span class="kw">true</span>, pure: <span class="kw">false</span> })
+<span class="kw">export class</span> <span class="cls">FilterByPipe</span> <span class="kw">implements</span> PipeTransform {
+  transform&lt;T&gt;(items: T[], key: keyof T, value: unknown): T[] {
+    <span class="kw">return</span> items.filter(item =&gt; item[key] === value);
+  }
+}
+<span class="cm">&lt;!-- {{ users | filterBy:'role':'admin' }} --&gt;</span>
+
+<span class="cm">// Pipe with DI — inject services inside pipes</span>
+@Pipe({ name: <span class="str">'translate'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">TranslatePipe</span> <span class="kw">implements</span> PipeTransform {
+  <span class="kw">private</span> i18n = inject(I18nService);
+  transform(key: string): string { <span class="kw">return this</span>.i18n.get(key); }
+}</pre>
+<div class="warn-box">Avoid impure pipes on large lists — they run on <em>every</em> CD cycle. Prefer pure pipes + immutable data, or use a <code>computed()</code> signal for reactive filtering.</div>
+</div></div>
+</div>
+
 <!-- ===== DI ===== -->
 <div class="section">
 <div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Dependency Injection <span class="badge b-ng">Angular</span></div></div>
@@ -55,11 +201,76 @@ constructor(@SkipSelf() <span class="kw">private</span> parent: MyService) {}
 <span class="cm">// @Host — stop at host element boundary</span>
 constructor(@Host() <span class="kw">private</span> svc: MyService) {}
 
-<span class="cm">// Factory provider</span>
+<span class="cm">// Factory provider — use when creation needs logic or async init</span>
 { provide: Logger, useFactory: (http: HttpClient) =&gt; <span class="kw">new</span> RemoteLogger(http), deps: [HttpClient] }
 
 <span class="cm">// Multi-provider (interceptors, validators)</span>
 { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: <span class="kw">true</span> }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Factory provider — patterns & async init</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>useFactory</strong> gives full control over instance creation — accepts injected deps, can contain conditional logic, and is the only provider type that supports async initialization via <code>APP_INITIALIZER</code>.</p>
+<pre><span class="cm">// 1. Conditional factory — pick implementation based on environment</span>
+<span class="kw">const</span> loggerProvider = {
+  provide: Logger,
+  useFactory: (env: Environment) =&gt;
+    env.production ? <span class="kw">new</span> RemoteLogger() : <span class="kw">new</span> ConsoleLogger(),
+  deps: [Environment]
+};
+
+<span class="cm">// 2. Async factory via APP_INITIALIZER — blocks app bootstrap until resolved</span>
+<span class="kw">export function</span> <span class="fn">initializeApp</span>(configService: ConfigService) {
+  <span class="kw">return</span> () =&gt; configService.load();  <span class="cm">// returns Promise or Observable</span>
+}
+
+providers: [
+  ConfigService,
+  {
+    provide: APP_INITIALIZER,
+    useFactory: initializeApp,
+    deps: [ConfigService],
+    multi: <span class="kw">true</span>
+  }
+]
+
+<span class="cm">// 3. InjectionToken factory (Angular 14+ functional style)</span>
+<span class="kw">const</span> BASE_URL = <span class="kw">new</span> InjectionToken&lt;string&gt;(<span class="str">'BASE_URL'</span>, {
+  providedIn: <span class="str">'root'</span>,
+  factory: () =&gt; inject(DOCUMENT).location.origin
+});</pre>
+<div class="warn-box">All deps in the <code>deps</code> array must be registered in the same or parent injector. For optional deps use <code>new Optional()</code> in the deps array: <code>deps: [HttpClient, new Optional(), SomeOptionalDep]</code></div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Multi-providers — collecting multiple implementations</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>multi: true</strong> tells Angular to accumulate all providers for a token into an array instead of replacing the previous one. The injected value is <code>T[]</code>.</p>
+<pre><span class="cm">// Built-in multi-provider tokens</span>
+<span class="cm">// HTTP_INTERCEPTORS   → HttpInterceptor[]</span>
+<span class="cm">// APP_INITIALIZER     → (() => Promise|Observable)[]</span>
+<span class="cm">// NG_VALIDATORS       → Validator[]</span>
+
+<span class="cm">// Custom plugin token</span>
+<span class="kw">interface</span> <span class="cls">DashboardWidget</span> { render(): string; }
+<span class="kw">const</span> DASHBOARD_WIDGETS = <span class="kw">new</span> InjectionToken&lt;DashboardWidget[]&gt;(<span class="str">'DASHBOARD_WIDGETS'</span>);
+
+providers: [
+  { provide: DASHBOARD_WIDGETS, useClass: SalesWidget,   multi: <span class="kw">true</span> },
+  { provide: DASHBOARD_WIDGETS, useClass: UsersWidget,   multi: <span class="kw">true</span> },
+  { provide: DASHBOARD_WIDGETS, useClass: RevenueWidget, multi: <span class="kw">true</span> },
+]
+
+<span class="cm">// Inject as array</span>
+<span class="kw">class</span> <span class="cls">DashboardComponent</span> {
+  widgets = inject(DASHBOARD_WIDGETS);  <span class="cm">// DashboardWidget[]</span>
+}
+
+<span class="cm">// Custom NG_VALIDATORS multi-provider</span>
+@Directive({ selector: <span class="str">'[appForbiddenName]'</span>, providers: [
+  { provide: NG_VALIDATORS, useExisting: ForbiddenNameDirective, multi: <span class="kw">true</span> }
+]})
+<span class="kw">class</span> <span class="cls">ForbiddenNameDirective</span> <span class="kw">implements</span> Validator {
+  validate(control: AbstractControl): ValidationErrors | null { <span class="cm">/* ... */</span> }
+}</pre>
+<div class="tip">Use <code>useExisting</code> (not <code>useClass</code>) when registering a directive as a validator — <code>useClass</code> creates a second instance; <code>useExisting</code> reuses the one Angular already created.</div>
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>Functional inject() API (Angular 14+)</h3><span class="arrow">▶</span></div>
 <div class="cb">
@@ -459,19 +670,44 @@ users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</s
 </div></div>
 <div class="card"><div class="ch" onclick="T(this)"><h3>@defer — deferred loading (Angular 17+)</h3><span class="arrow">▶</span></div>
 <div class="cb">
-<pre><span class="cm">// Load only when visible</span>
-<span class="cm">// @defer (on viewport; prefetch on idle) {</span>
-<span class="cm">//   &lt;chart-component [data]="data" /&gt;</span>
-<span class="cm">// } @loading (minimum 150ms) {</span>
-<span class="cm">//   &lt;skeleton /&gt;</span>
-<span class="cm">// } @placeholder (minimum 500ms) {</span>
-<span class="cm">//   &lt;div class="placeholder"&gt;Chart will load soon&lt;/div&gt;</span>
-<span class="cm">// } @error {</span>
-<span class="cm">//   &lt;p&gt;Failed to load chart&lt;/p&gt;</span>
-<span class="cm">// }</span>
+<p><code>@defer</code> lazily loads a component/block and its dependencies — compiler-driven, not runtime. The chunk is only downloaded when the trigger fires.</p>
+<table>
+<tr><th>Trigger</th><th>When it fires</th><th>Typical use</th></tr>
+<tr><td><code>on idle</code></td><td>Browser is idle (<code>requestIdleCallback</code>)</td><td>Below-fold content, analytics widgets</td></tr>
+<tr><td><code>on viewport</code></td><td>Placeholder enters the viewport (<code>IntersectionObserver</code>)</td><td>Charts, images, infinite-scroll items</td></tr>
+<tr><td><code>on interaction</code></td><td>User clicks or touches the placeholder</td><td>Rich editors, dialogs opened on click</td></tr>
+<tr><td><code>on hover</code></td><td>User hovers over the placeholder</td><td>Tooltips, preview panels</td></tr>
+<tr><td><code>on immediate</code></td><td>As soon as possible after render</td><td>Non-critical but above-fold content</td></tr>
+<tr><td><code>on timer(Xms)</code></td><td>After a fixed delay</td><td>Splash screens, delayed banners</td></tr>
+<tr><td><code>when (expr)</code></td><td>When the boolean expression becomes true</td><td>Feature flags, auth gates, data-driven</td></tr>
+</table>
+<pre><span class="cm">// Full @defer anatomy</span>
+@defer (on viewport; prefetch on idle) {
+  &lt;heavy-chart [data]="data" /&gt;
+} @loading (minimum 150ms) {
+  &lt;skeleton-loader /&gt;
+} @placeholder (minimum 500ms) {
+  &lt;div class="chart-placeholder"&gt;Chart loading soon&lt;/div&gt;
+} @error {
+  &lt;p&gt;Failed to load. &lt;button (click)="retry()"&gt;Retry&lt;/button&gt;&lt;/p&gt;
+}
 
-<span class="cm">// Triggers: on idle, on viewport, on interaction, on hover, on immediate</span>
-<span class="cm">// when (condition)</span></pre>
+<span class="cm">// when() — data-driven trigger</span>
+@defer (when userLoaded) {
+  &lt;user-profile [user]="user" /&gt;
+}
+
+<span class="cm">// Trigger on named element reference</span>
+&lt;button #loadBtn&gt;Load Comments&lt;/button&gt;
+@defer (on interaction(loadBtn)) {
+  &lt;comments-section /&gt;
+}
+
+<span class="cm">// Prefetch trigger can differ from render trigger</span>
+@defer (on interaction; prefetch on hover) {
+  &lt;rich-editor /&gt;
+}</pre>
+<div class="tip"><code>@placeholder</code> is shown before the trigger fires. <code>@loading</code> is shown while the chunk downloads. Use <code>minimum</code> to prevent flash — Angular shows it for at least that duration even if the chunk loads faster.</div>
 </div></div>
 </div>
 
@@ -687,6 +923,125 @@ nx g @nx/angular:lib shared/ui-buttons --tags="scope:shared,type:ui"</pre>
 <tr><td><code>CanLoad</code></td><td>Can module be lazy loaded?</td></tr>
 <tr><td><code>Resolve</code></td><td>Pre-fetch data before activating</td></tr>
 <tr><td><code>CanActivateChild</code></td><td>Protect child routes</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== MONOLITH VS MICRO FRONTEND ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Monolith vs Micro Frontend <span class="badge b-key">Architecture</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Comparison — when to choose each</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Monolith (Single SPA)</th><th>Micro Frontend (MFE)</th></tr>
+<tr><td>Deployment</td><td>One build, one deploy</td><td>Each team deploys independently</td></tr>
+<tr><td>Shared code</td><td>Easy — single codebase</td><td>Complex — shared libs must be versioned</td></tr>
+<tr><td>Team scale</td><td>Works well up to ~10 engineers</td><td>Needed when multiple autonomous teams</td></tr>
+<tr><td>Bundle size</td><td>One large bundle (code-splitting helps)</td><td>Smaller per-MFE chunks; shared deps tricky</td></tr>
+<tr><td>UI consistency</td><td>Easy — shared component library</td><td>Hard — risk of design divergence</td></tr>
+<tr><td>Tech flexibility</td><td>Locked to one stack</td><td>Each MFE can use a different framework</td></tr>
+<tr><td>Local dev</td><td>Run one app</td><td>Must run shell + affected remotes</td></tr>
+<tr><td>Complexity</td><td>Low ✓</td><td>High — orchestration, contracts, routing</td></tr>
+<tr><td>When to choose</td><td>Single team, greenfield, early stage</td><td>Multiple teams, separate release cadences, large org</td></tr>
+</table>
+<div class="warn-box">MFEs add real complexity. Don't adopt them because they "scale" — adopt only when independent deployability actually solves a team/org problem. A well-structured monorepo (Nx) often gives 80% of the benefit without the runtime overhead.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>MFE integration strategies</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Strategy</th><th>How</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><strong>Build-time integration</strong></td><td>Publish MFEs as npm packages; shell installs them</td><td>Simple; TypeScript types; tree-shaking</td><td>Must rebuild shell to update MFE ✗</td></tr>
+<tr><td><strong>Runtime Module Federation</strong></td><td>Shell loads remote JS chunks at runtime (Webpack 5 / Native Federation)</td><td>True independent deploy; lazy loading</td><td>Shared dep version conflicts; complex config</td></tr>
+<tr><td><strong>iframe</strong></td><td>Each MFE in its own iframe</td><td>Perfect isolation; any tech stack</td><td>No shared DOM, poor UX, performance issues</td></tr>
+<tr><td><strong>Web Components</strong></td><td>Each MFE exposes Custom Elements</td><td>Framework-agnostic</td><td>Angular DI doesn't cross boundary; styling issues</td></tr>
+</table>
+<div class="tip">Angular 20+ ships <strong>Native Federation</strong> (esbuild-based, no Webpack) as the recommended MFE approach. Use <code>@angular-architects/native-federation</code> for Angular 17–19.</div>
+</div></div>
+</div>
+
+<!-- ===== ANGULAR OBSERVABILITY ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Observability <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Three pillars: Logs · Metrics · Traces</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Observability</strong> = ability to understand what's happening inside your Angular app from its external outputs — without deploying new code.</p>
+<table>
+<tr><th>Pillar</th><th>What it captures</th><th>Tools / Angular approach</th></tr>
+<tr><td><strong>Logs</strong></td><td>Discrete events: errors, user actions, API calls</td><td>Sentry, DataDog logs, custom ErrorHandler</td></tr>
+<tr><td><strong>Metrics</strong></td><td>Numeric measurements over time: LCP, CLS, error rate, API latency</td><td>Web Vitals API, Prometheus + Grafana, DataDog RUM</td></tr>
+<tr><td><strong>Traces</strong></td><td>End-to-end request flows: Angular → API → DB</td><td>OpenTelemetry, Jaeger, Zipkin, DataDog APM</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Global ErrorHandler + HTTP interceptor logging</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Custom global error handler — catches all unhandled errors</span>
+@Injectable()
+<span class="kw">export class</span> <span class="cls">GlobalErrorHandler</span> <span class="kw">implements</span> ErrorHandler {
+  <span class="kw">private</span> logger = inject(LoggingService);
+
+  handleError(error: unknown): <span class="kw">void</span> {
+    <span class="kw">const</span> err = error <span class="kw">instanceof</span> Error ? error : <span class="kw">new</span> Error(String(error));
+    <span class="kw">this</span>.logger.captureException(err);
+    console.error(<span class="str">'[GlobalError]'</span>, err);
+  }
+}
+
+providers: [{ provide: ErrorHandler, useClass: GlobalErrorHandler }]
+
+<span class="cm">// HTTP interceptor — log every request/response with timing</span>
+@Injectable()
+<span class="kw">export class</span> <span class="cls">LoggingInterceptor</span> <span class="kw">implements</span> HttpInterceptor {
+  intercept(req: HttpRequest&lt;unknown&gt;, next: HttpHandler): Observable&lt;HttpEvent&lt;unknown&gt;&gt; {
+    <span class="kw">const</span> start = Date.now();
+    <span class="kw">return</span> next.handle(req).pipe(
+      tap(event =&gt; {
+        <span class="kw">if</span> (event <span class="kw">instanceof</span> HttpResponse)
+          console.log(`[${req.method}] ${req.url} → ${event.status} (${Date.now() - start}ms)`);
+      }),
+      catchError(err =&gt; {
+        console.error(`[${req.method}] ${req.url} FAILED`, err);
+        <span class="kw">return throwError</span>(() =&gt; err);
+      })
+    );
+  }
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Web Vitals & Core Web Vitals thresholds</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Measure Core Web Vitals in Angular app</span>
+<span class="kw">import</span> { onCLS, onLCP, onINP, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+<span class="kw">function</span> <span class="fn">sendToAnalytics</span>({ name, value, id }: Metric) {
+  navigator.sendBeacon(<span class="str">'/analytics'</span>, JSON.stringify({ name, value, id }));
+}
+
+onCLS(sendToAnalytics);   <span class="cm">// Cumulative Layout Shift</span>
+onLCP(sendToAnalytics);   <span class="cm">// Largest Contentful Paint</span>
+onINP(sendToAnalytics);   <span class="cm">// Interaction to Next Paint</span>
+onFCP(sendToAnalytics);   <span class="cm">// First Contentful Paint</span>
+onTTFB(sendToAnalytics);  <span class="cm">// Time to First Byte</span>
+
+<span class="cm">// Track navigation timing per route</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="cls">RouteTimingService</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> router: Router) {
+    <span class="kw">let</span> navStart = <span class="num">0</span>;
+    router.events.pipe(
+      filter(e =&gt; e <span class="kw">instanceof</span> NavigationStart || e <span class="kw">instanceof</span> NavigationEnd)
+    ).subscribe(e =&gt; {
+      <span class="kw">if</span> (e <span class="kw">instanceof</span> NavigationStart) navStart = Date.now();
+      <span class="kw">if</span> (e <span class="kw">instanceof</span> NavigationEnd)
+        console.log(`Route ${e.url} loaded in ${Date.now() - navStart}ms`);
+    });
+  }
+}</pre>
+<table>
+<tr><th>Metric</th><th>Good</th><th>Needs work</th><th>What it measures</th></tr>
+<tr><td>LCP</td><td>&lt; 2.5s</td><td>&gt; 4s</td><td>Largest visible element rendered</td></tr>
+<tr><td>INP</td><td>&lt; 200ms</td><td>&gt; 500ms</td><td>Responsiveness to user interactions</td></tr>
+<tr><td>CLS</td><td>&lt; 0.1</td><td>&gt; 0.25</td><td>Visual stability (unexpected layout shifts)</td></tr>
+<tr><td>FCP</td><td>&lt; 1.8s</td><td>&gt; 3s</td><td>First text/image painted</td></tr>
+<tr><td>TTFB</td><td>&lt; 800ms</td><td>&gt; 1.8s</td><td>Server response time</td></tr>
 </table>
 </div></div>
 </div>

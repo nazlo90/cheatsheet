@@ -1,7 +1,7 @@
 :root{--bg:#0f1117;--surface:#1a1d27;--card:#21253a;--border:#2e3352;--accent:#6c8fff;--accent2:#a78bfa;--accent3:#34d399;--text:#e2e8f0;--muted:#8892a4;--warn:#fbbf24;--danger:#f87171;--code-bg:#141720;--radius:10px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.7;display:flex}
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:252px;background:var(--surface);border-right:1px solid var(--border);z-index:100;padding:0.75rem 0;display:flex;flex-direction:column}
+.sidebar{position:fixed;left:0;top:52px;bottom:0;width:252px;background:var(--surface);border-right:1px solid var(--border);z-index:100;padding:0.75rem 0;display:flex;flex-direction:column}
 #navList{overflow-y:auto;flex:1;min-height:0}
 .nav-cat{font-size:10px;font-weight:700;letter-spacing:0.1em;color:#3d4470;text-transform:uppercase;padding:0.85rem 1.25rem 0.25rem}
 .nav-item{display:flex;align-items:center;gap:8px;padding:0.35rem 1.25rem;cursor:pointer;border-left:3px solid transparent;color:var(--muted);font-size:12.5px;text-decoration:none;transition:color .1s,background .1s}
@@ -9,7 +9,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(108,143,255,.08)}
 .nav-num{font-size:10px;background:#1a1d27;border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--muted);min-width:22px;text-align:center;flex-shrink:0}
 .nav-item.active .nav-num{color:var(--accent);border-color:var(--accent)}
-.main{margin-left:252px;padding:2rem 2.5rem;max-width:920px;width:100%}
+.main{margin-left:252px;padding:2rem 2.5rem;max-width:920px;width:100%;padding-top:calc(52px + 2rem)}
 .page-header{margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)}
 .page-header h1{font-size:24px;font-weight:700;margin-bottom:0.3rem}
 .page-header p{color:var(--muted);font-size:13px}
@@ -80,9 +80,13 @@ mark.hl{background:rgba(108,143,255,.28);color:#fff;border-radius:2px;padding:0 
 .sr-more{padding:.45rem 1rem;color:#4a5580;font-size:10px;text-align:center;letter-spacing:.04em;border-top:1px solid var(--border)}
 
 /* ── MOBILE TOPBAR ── */
-.topbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);border-bottom:1px solid var(--border);z-index:200;align-items:center;padding:0 1rem;gap:12px}
+.topbar{display:flex;position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);border-bottom:1px solid var(--border);z-index:200;align-items:center;padding:0 1rem;gap:12px}
 .topbar-logo{font-size:13px;font-weight:700;color:var(--accent);flex:1;letter-spacing:.05em}
-.menu-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:6px 9px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.menu-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:6px 9px;display:none;flex-direction:column;gap:4px;flex-shrink:0}
+.lang-switcher{display:flex;gap:4px;flex-shrink:0}
+.lang-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:11px;font-weight:700;padding:3px 9px;letter-spacing:.04em;transition:color .1s,border-color .1s,background .1s}
+.lang-btn:hover{color:var(--text);border-color:var(--muted)}
+.lang-btn.active{background:rgba(108,143,255,.15);color:var(--accent);border-color:var(--accent)}
 .menu-btn span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;transition:all .2s}
 .menu-btn.open span:nth-child(1){transform:translateY(6px) rotate(45deg)}
 .menu-btn.open span:nth-child(2){opacity:0;transform:scaleX(0)}
@@ -99,8 +103,8 @@ mark.hl{background:rgba(108,143,255,.28);color:#fff;border-radius:2px;padding:0 
 @media(max-width:768px){
   body{flex-direction:column}
 
-  /* show topbar */
-  .topbar{display:flex}
+  /* show hamburger on mobile */
+  .menu-btn{display:flex}
 
   /* sidebar becomes a drawer */
   .sidebar{

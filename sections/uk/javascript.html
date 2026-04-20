@@ -1,0 +1,549 @@
+<!-- ===== HOISTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Hoisting & var / let / const <span class="badge b-hot">Розминка</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Правила Hoisting та TDZ</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Hoisting</strong> — це поведінка JS, яка переміщує оголошення на початок їхньої області видимості перед виконанням — тому змінні та функції можна використовувати до відповідного рядка коду.</p>
+<p>JS-рушій виконує двопрохідне сканування: спочатку збирає оголошення, потім виконує код. Підіймаються лише оголошення — не ініціалізації.</p>
+<table>
+<tr><th>Оголошення</th><th>Підіймається?</th><th>Ініціалізоване?</th><th>Доступне до?</th></tr>
+<tr><td><code>var x</code></td><td>Так</td><td>Так (undefined)</td><td>Так → undefined</td></tr>
+<tr><td><code>let x</code></td><td>Так</td><td>Ні (TDZ)</td><td>Ні – ReferenceError</td></tr>
+<tr><td><code>const x</code></td><td>Так</td><td>Ні (TDZ)</td><td>Ні – ReferenceError</td></tr>
+<tr><td>function declaration</td><td>Так</td><td>Так (повне тіло)</td><td>Так ✓</td></tr>
+<tr><td><code>class</code></td><td>Так</td><td>Ні (TDZ)</td><td>Ні – ReferenceError</td></tr>
+</table>
+<pre><span class="fn">console</span>.log(x);  <span class="cm">// undefined</span>
+<span class="kw">var</span> x = <span class="num">5</span>;
+
+<span class="fn">greet</span>();          <span class="cm">// працює — функція повністю підіймається</span>
+<span class="kw">function</span> <span class="fn">greet</span>() { <span class="fn">console</span>.log(<span class="str">"Hello"</span>); }
+
+<span class="fn">sayHi</span>();          <span class="cm">// TypeError — var підіймається, значення = undefined</span>
+<span class="kw">var</span> sayHi = <span class="kw">function</span>() {};</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>var vs let vs const + особливість циклу</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>var</th><th>let</th><th>const</th></tr>
+<tr><td>Область видимості</td><td>Функція</td><td>Блок</td><td>Блок</td></tr>
+<tr><td>Повторне оголошення</td><td>Так</td><td>Ні</td><td>Ні</td></tr>
+<tr><td>Повторне присвоєння</td><td>Так</td><td>Так</td><td>Ні (прив'язка)</td></tr>
+<tr><td>TDZ</td><td>Ні</td><td>Так</td><td>Так</td></tr>
+</table>
+<pre><span class="kw">for</span> (<span class="kw">var</span> i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) setTimeout(() =&gt; <span class="fn">console</span>.log(i), <span class="num">0</span>);
+<span class="cm">// 3 3 3 — спільна прив'язка</span>
+<span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) setTimeout(() =&gt; <span class="fn">console</span>.log(i), <span class="num">0</span>);
+<span class="cm">// 0 1 2 — нова прив'язка для кожної ітерації</span></pre>
+<div class="warn-box"><code>const</code> забороняє повторне присвоєння прив'язки, але не мутацію. <code>const obj = {}; obj.x = 1</code> є допустимим.</div>
+</div></div>
+</div>
+
+<!-- ===== EVENT LOOP ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Event Loop <span class="badge b-core">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Call Stack → Мікрозадачі → Макрозадачі</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Event loop</strong> — це механізм, який дозволяє JS (однопотоковому) обробляти асинхронні операції — він постійно перевіряє, чи порожній call stack, а потім обробляє задачі з черги.</p>
+<ol>
+<li><strong>Call Stack</strong> — тут виконується синхронний код</li>
+<li><strong>Черга мікрозадач</strong> — <code>Promise.then/catch/finally</code>, <code>queueMicrotask()</code>, <code>MutationObserver</code></li>
+<li><strong>Черга макрозадач</strong> — <code>setTimeout</code>, <code>setInterval</code>, події UI, I/O (по одній за тік циклу)</li>
+</ol>
+<div class="warn-box">Після кожної макрозадачі <em>вся</em> черга мікрозадач повністю спустошується перед наступною макрозадачею.</div>
+<pre><span class="fn">console</span>.log(<span class="str">'1'</span>);
+setTimeout(() =&gt; <span class="fn">console</span>.log(<span class="str">'2'</span>), <span class="num">0</span>);
+Promise.resolve().then(() =&gt; <span class="fn">console</span>.log(<span class="str">'3'</span>));
+<span class="fn">console</span>.log(<span class="str">'4'</span>);
+<span class="cm">// Результат: 1 → 4 → 3 → 2</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Складний приклад + async/await</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>setTimeout(() =&gt; {
+  <span class="fn">console</span>.log(<span class="str">'A'</span>);
+  Promise.resolve().then(() =&gt; <span class="fn">console</span>.log(<span class="str">'B'</span>));
+}, <span class="num">0</span>);
+Promise.resolve()
+  .then(() =&gt; { <span class="fn">console</span>.log(<span class="str">'C'</span>); <span class="kw">return</span> Promise.resolve(); })
+  .then(() =&gt; <span class="fn">console</span>.log(<span class="str">'D'</span>));
+<span class="fn">console</span>.log(<span class="str">'E'</span>);
+<span class="cm">// E → C → D → A → B</span></pre>
+<pre><span class="kw">async function</span> <span class="fn">main</span>() {
+  <span class="fn">console</span>.log(<span class="str">'start'</span>);
+  <span class="kw">await</span> Promise.resolve();
+  <span class="fn">console</span>.log(<span class="str">'after await'</span>); <span class="cm">// мікрозадача</span>
+}
+<span class="fn">main</span>();
+<span class="fn">console</span>.log(<span class="str">'sync'</span>);
+<span class="cm">// start → sync → after await</span></pre>
+</div></div>
+</div>
+
+<!-- ===== THIS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">this, Контекст та Замикання <span class="badge b-core">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>5 правил для this + call/apply/bind</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Ключове слово <code><strong>this</strong></code> посилається на об'єкт, який зараз виконує функцію — його значення визначається тим, <em>як</em> функцію викликано, а не де вона оголошена.</p>
+<table>
+<tr><th>Контекст</th><th>Значення this</th></tr>
+<tr><td>Глобальний (не суворий режим)</td><td><code>window</code> / <code>global</code></td></tr>
+<tr><td>Глобальний (strict mode)</td><td><code>undefined</code></td></tr>
+<tr><td>Метод об'єкта</td><td>Об'єкт перед крапкою</td></tr>
+<tr><td>Конструктор (<code>new</code>)</td><td>Щойно створений об'єкт</td></tr>
+<tr><td>Стрілкова функція</td><td>Лексичний — з охоплюючої області видимості на момент визначення</td></tr>
+<tr><td><code>call/apply/bind</code></td><td>Явно встановлений першим аргументом</td></tr>
+</table>
+<pre><span class="kw">function</span> <span class="fn">greet</span>(hi, punct) { <span class="kw">return</span> <span class="str">`${hi}, ${<span class="kw">this</span>.name}${punct}`</span>; }
+<span class="kw">const</span> p = { name: <span class="str">'Bob'</span> };
+<span class="fn">greet</span>.call(p, <span class="str">'Hi'</span>, <span class="str">'!'</span>);       <span class="cm">// негайно, аргументи розгорнуто</span>
+<span class="fn">greet</span>.apply(p, [<span class="str">'Hey'</span>, <span class="str">'.'</span>]);   <span class="cm">// негайно, аргументи масивом</span>
+<span class="kw">const</span> bound = <span class="fn">greet</span>.bind(p, <span class="str">'Hello'</span>); <span class="cm">// повертає нову функцію</span>
+bound(<span class="str">'?'</span>);</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Замикання — визначення та випадки використання</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Замикання зберігає доступ до змінних зовнішньої області видимості навіть після того, як зовнішня функція повернула результат.</p>
+<pre><span class="kw">function</span> <span class="fn">makeCounter</span>(init = <span class="num">0</span>) {
+  <span class="kw">let</span> count = init;
+  <span class="kw">return</span> { inc: () =&gt; ++count, dec: () =&gt; --count, val: () =&gt; count };
+}
+<span class="kw">const</span> c = <span class="fn">makeCounter</span>(<span class="num">10</span>);
+c.inc(); <span class="cm">// 11</span></pre>
+<div class="tip">Випадки використання: шаблон модуля, мемоізація, часткове застосування, обробники подій, інкапсуляція даних, фабричні функції.</div>
+</div></div>
+</div>
+
+<!-- ===== HOF ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Функції вищого порядку</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>HOF, каррування, мемоізація, композиція</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>HOF або <strong>приймає функцію як аргумент</strong>, або <strong>повертає функцію</strong>.</p>
+<pre><span class="cm">// Каррування: перетворює функцію з кількома аргументами на послідовність функцій з одним аргументом.</span>
+<span class="kw">const</span> add = a =&gt; b =&gt; a + b;
+<span class="kw">const</span> add5 = add(<span class="num">5</span>);
+add5(<span class="num">3</span>); <span class="cm">// 8</span>
+
+<span class="cm">// Загальне каррування: адаптує будь-яку функцію — збирає аргументи до досягнення арності, потім викликає.</span>
+<span class="kw">const</span> curry = fn =&gt; <span class="kw">function</span> curried(...args) {
+  <span class="kw">return</span> args.length &gt;= fn.length ? fn(...args) : (...more) =&gt; curried(...args, ...more);
+};
+
+<span class="cm">// Мемоізація: кешує значення за серіалізованими аргументами для уникнення повторних обчислень.</span>
+<span class="kw">function</span> <span class="fn">memoize</span>(fn) {
+  <span class="kw">const</span> cache = <span class="kw">new</span> Map();
+  <span class="kw">return function</span>(...args) {
+    <span class="kw">const</span> key = JSON.stringify(args);
+    <span class="kw">if</span> (cache.has(key)) <span class="kw">return</span> cache.get(key);
+    <span class="kw">const</span> r = fn.apply(<span class="kw">this</span>, args);
+    cache.set(key, r); <span class="kw">return</span> r;
+  };
+}
+
+<span class="cm">// Композиція та pipe: compose = справа-наліво (f(g(x))), pipe = зліва-направо (спочатку g, потім f).</span>
+<span class="kw">const</span> compose = (...fns) =&gt; x =&gt; fns.reduceRight((v, f) =&gt; f(v), x);
+<span class="kw">const</span> pipe    = (...fns) =&gt; x =&gt; fns.reduce((v, f) =&gt; f(v), x);</pre>
+</div></div>
+</div>
+
+<!-- ===== OBJECTS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Об'єкти та методи об'єктів</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Шаблони створення об'єктів</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Об'єктний літерал</span>
+<span class="kw">const</span> user = { name: <span class="str">'Alice'</span>, age: <span class="num">30</span> };
+
+<span class="cm">// Object.create — явно встановлює прототип</span>
+<span class="kw">const</span> proto = { greet() { <span class="kw">return</span> <span class="str">`Hi, ${<span class="kw">this</span>.name}`</span>; } };
+<span class="kw">const</span> obj = Object.create(proto);
+obj.name = <span class="str">'Bob'</span>;
+
+<span class="cm">// Фабрична функція</span>
+<span class="kw">const</span> makeUser = (name, age) =&gt; ({ name, age, greet() { <span class="kw">return</span> name; } });
+
+<span class="cm">// Функція-конструктор (до ES6)</span>
+<span class="kw">function</span> <span class="cls">User</span>(name) { <span class="kw">this</span>.name = name; }
+<span class="cls">User</span>.prototype.greet = <span class="kw">function</span>() { <span class="kw">return</span> <span class="kw">this</span>.name; };</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні статичні методи Object</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Метод</th><th>Опис</th></tr>
+<tr><td><code>Object.keys(obj)</code></td><td>Масив власних перелічуваних ключів</td></tr>
+<tr><td><code>Object.values(obj)</code></td><td>Масив власних перелічуваних значень</td></tr>
+<tr><td><code>Object.entries(obj)</code></td><td>Масив пар [ключ, значення]</td></tr>
+<tr><td><code>Object.assign(target, ...src)</code></td><td>Поверхневе злиття — мутує target</td></tr>
+<tr><td><code>Object.freeze(obj)</code></td><td>Робить усі властивості незмінними (поверхнево)</td></tr>
+<tr><td><code>Object.seal(obj)</code></td><td>Забороняє додавання/видалення, але дозволяє змінювати наявні</td></tr>
+<tr><td><code>Object.create(proto)</code></td><td>Створює з вказаним прототипом</td></tr>
+<tr><td><code>Object.fromEntries(pairs)</code></td><td>Перетворює пари [ключ, значення] на об'єкт</td></tr>
+<tr><td><code>Object.getOwnPropertyDescriptor</code></td><td>Отримує метадані властивості (writable, enumerable, configurable)</td></tr>
+<tr><td><code>Object.defineProperty</code></td><td>Визначає/змінює властивість через дескриптор</td></tr>
+</table>
+<pre><span class="cm">// Поширені шаблони</span>
+<span class="kw">const</span> copy = { ...obj };                           <span class="cm">// поверхневе клонування</span>
+<span class="kw">const</span> deep = JSON.parse(JSON.stringify(obj));       <span class="cm">// глибоке клонування (без функцій/Date)</span>
+<span class="kw">const</span> deep2 = structuredClone(obj);                <span class="cm">// сучасне глибоке клонування</span>
+<span class="kw">const</span> merged = Object.assign({}, obj1, obj2);      <span class="cm">// злиття</span>
+
+<span class="cm">// Деструктуризація з перейменуванням та значенням за замовчуванням</span>
+<span class="kw">const</span> { name: n = <span class="str">'anon'</span>, age = <span class="num">0</span> } = user;
+
+<span class="cm">// Опційний ланцюжок та оператор нульового злиття</span>
+user?.address?.city ?? <span class="str">'Unknown'</span>;</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Дескриптори властивостей та гетери/сетери</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre>Object.defineProperty(obj, <span class="str">'id'</span>, {
+  value: <span class="num">42</span>,
+  writable: <span class="kw">false</span>,
+  enumerable: <span class="kw">false</span>,
+  configurable: <span class="kw">false</span>
+});
+
+<span class="cm">// Гетер / Сетер</span>
+<span class="kw">const</span> circle = {
+  _r: <span class="num">5</span>,
+  <span class="kw">get</span> area() { <span class="kw">return</span> Math.PI * <span class="kw">this</span>._r ** <span class="num">2</span>; },
+  <span class="kw">set</span> radius(v) { <span class="kw">this</span>._r = v > <span class="num">0</span> ? v : <span class="kw">this</span>._r; }
+};</pre>
+</div></div>
+</div>
+
+<!-- ===== ARRAY METHODS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Методи масивів</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Повний довідник методів масивів</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Категорія</th><th>Метод</th><th>Повертає</th><th>Мутує?</th></tr>
+<tr><td>Перетворення</td><td><code>map(fn)</code></td><td>Новий масив</td><td>Ні</td></tr>
+<tr><td>Фільтрація</td><td><code>filter(fn)</code></td><td>Новий масив</td><td>Ні</td></tr>
+<tr><td>Редукція</td><td><code>reduce(fn, init)</code></td><td>Єдине значення</td><td>Ні</td></tr>
+<tr><td>Пошук</td><td><code>find(fn)</code> / <code>findIndex(fn)</code></td><td>Елемент / індекс</td><td>Ні</td></tr>
+<tr><td>Перевірка</td><td><code>some(fn)</code> / <code>every(fn)</code></td><td>Boolean</td><td>Ні</td></tr>
+<tr><td>Розгортання</td><td><code>flat(depth)</code> / <code>flatMap(fn)</code></td><td>Новий масив</td><td>Ні</td></tr>
+<tr><td>Сортування</td><td><code>sort(compareFn)</code></td><td>Той самий масив</td><td><strong>Так</strong></td></tr>
+<tr><td>Реверс</td><td><code>reverse()</code></td><td>Той самий масив</td><td><strong>Так</strong></td></tr>
+<tr><td>Мутація</td><td><code>push/pop/shift/unshift/splice</code></td><td>Різне</td><td><strong>Так</strong></td></tr>
+<tr><td>Зріз</td><td><code>slice(start, end)</code></td><td>Новий масив</td><td>Ні</td></tr>
+<tr><td>З'єднання</td><td><code>join(sep)</code></td><td>Рядок</td><td>Ні</td></tr>
+<tr><td>Перевірка наявності</td><td><code>includes(val)</code></td><td>Boolean</td><td>Ні</td></tr>
+<tr><td>Перебір</td><td><code>forEach(fn)</code></td><td>undefined</td><td>Ні</td></tr>
+<tr><td>Створення</td><td><code>Array.from(iter, fn)</code></td><td>Новий масив</td><td>Ні</td></tr>
+<tr><td>Заповнення</td><td><code>fill(val, start, end)</code></td><td>Той самий масив</td><td><strong>Так</strong></td></tr>
+</table>
+<pre><span class="cm">// Пастка: sort мутує масив І за замовчуванням сортує лексикографічно</span>
+[<span class="num">10</span>, <span class="num">9</span>, <span class="num">2</span>].sort();              <span class="cm">// [10, 2, 9] — неправильно!</span>
+[<span class="num">10</span>, <span class="num">9</span>, <span class="num">2</span>].sort((a, b) =&gt; a - b); <span class="cm">// [2, 9, 10] — правильно</span>
+
+<span class="cm">// flatMap = map + flat(1)</span>
+[[<span class="num">1</span>,<span class="num">2</span>],[<span class="num">3</span>]].flatMap(x =&gt; x); <span class="cm">// [1,2,3]</span>
+
+<span class="cm">// Незмінне сортування/реверс (ES2023)</span>
+arr.toSorted((a, b) =&gt; a - b);
+arr.toReversed();</pre>
+</div></div>
+</div>
+
+<!-- ===== MAP/SET ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Map / Set / WeakMap / WeakSet</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Map vs Object, Set vs Array</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Map</strong> — це сховище пар ключ-значення, що приймає будь-який тип як ключ (включно з об'єктами). <strong>Set</strong> — колекція унікальних значень. Обидва мають O(1) пошук — надавайте їм перевагу перед звичайними об'єктами/масивами, коли потрібна гнучкість ключів або унікальність.</p>
+<table>
+<tr><th></th><th>Map</th><th>Object</th></tr>
+<tr><td>Типи ключів</td><td>Будь-які (об'єкти, функції)</td><td>Лише рядки/Symbol</td></tr>
+<tr><td>Порядок</td><td>Порядок вставки гарантований</td><td>Здебільшого, з застереженнями</td></tr>
+<tr><td>Розмір</td><td>Властивість <code>.size</code></td><td>Ручний підрахунок</td></tr>
+<tr><td>Ключі прототипу</td><td>Відсутні</td><td>Можливі успадковані ключі</td></tr>
+<tr><td>Продуктивність</td><td>Краще для частого додавання/видалення</td><td>Добре для статичних структур</td></tr>
+</table>
+<table>
+<tr><th></th><th>Set</th><th>Array</th></tr>
+<tr><td>Дублікати</td><td>Не допускаються (унікальні значення)</td><td>Допускаються</td></tr>
+<tr><td>Порядок</td><td>Порядок вставки гарантований</td><td>Порядок вставки гарантований</td></tr>
+<tr><td>Розмір</td><td>Властивість <code>.size</code></td><td>Властивість <code>.length</code></td></tr>
+<tr><td>Пошук</td><td><code>.has()</code> — O(1)</td><td><code>.includes()</code> — O(n)</td></tr>
+<tr><td>Доступ за індексом</td><td>Не підтримується</td><td><code>arr[i]</code> — O(1)</td></tr>
+<tr><td>Випадок використання</td><td>Унікальні значення, швидка перевірка належності</td><td>Упорядкований список, доступ за індексом</td></tr>
+</table>
+<pre><span class="kw">const</span> map = <span class="kw">new</span> Map();
+map.set(<span class="str">'key'</span>, <span class="num">1</span>);
+map.set(objKey, <span class="str">'value'</span>); <span class="cm">// об'єкт як ключ!</span>
+map.get(<span class="str">'key'</span>);  map.has(<span class="str">'key'</span>);  map.delete(<span class="str">'key'</span>);
+map.size;
+<span class="kw">for</span> (<span class="kw">const</span> [k, v] <span class="kw">of</span> map) { ... }
+
+<span class="kw">const</span> set = <span class="kw">new</span> Set([<span class="num">1</span>, <span class="num">2</span>, <span class="num">2</span>, <span class="num">3</span>]);  <span class="cm">// {1, 2, 3}</span>
+set.add(<span class="num">4</span>);  set.has(<span class="num">2</span>);  set.delete(<span class="num">2</span>);
+
+<span class="cm">// Видалення дублікатів з масиву</span>
+<span class="kw">const</span> unique = [...<span class="kw">new</span> Set(arr)];</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>WeakMap & WeakSet — слабкі посилання</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>WeakMap</strong>/<strong>WeakSet</strong> зберігають <em>слабкі посилання</em> — ключі/елементи можуть бути зібрані збирачем сміття, коли більше немає інших посилань на них. Ключі мають бути об'єктами.</p>
+<table>
+<tr><th></th><th>WeakMap</th><th>WeakSet</th></tr>
+<tr><td>Ключі / Елементи</td><td>Лише об'єкти</td><td>Лише об'єкти</td></tr>
+<tr><td>GC при відсутності інших посилань</td><td>Так ✓</td><td>Так ✓</td></tr>
+<tr><td>Ітерування</td><td>Ні ✗</td><td>Ні ✗</td></tr>
+<tr><td><code>.size</code></td><td>Ні</td><td>Ні</td></tr>
+<tr><td>Випадок використання</td><td>Приватні дані, метадані DOM-вузлів</td><td>Відстеження оброблених об'єктів без витоків пам'яті</td></tr>
+</table>
+<pre><span class="kw">const</span> cache = <span class="kw">new</span> WeakMap();
+<span class="kw">function</span> <span class="fn">process</span>(obj) {
+  <span class="kw">if</span> (cache.has(obj)) <span class="kw">return</span> cache.get(obj);
+  <span class="kw">const</span> result = heavyWork(obj);
+  cache.set(obj, result); <span class="cm">// автоматично збирається GC, коли obj виходить з області видимості</span>
+  <span class="kw">return</span> result;
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== CLASSES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Класи (повний огляд)</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Синтаксис класів — повний довідник</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Клас</strong> — це синтаксичний цукор над прототипним успадкуванням — шаблон для створення об'єктів зі спільними методами, приватними полями та логікою конструктора. Під капотом це все одно ланцюжки прототипів.</p>
+<pre><span class="kw">class</span> <span class="cls">Animal</span> {
+  <span class="cm">// Поле класу (ES2022)</span>
+  #name;                          <span class="cm">// приватне поле</span>
+  species = <span class="str">'unknown'</span>;           <span class="cm">// публічне поле</span>
+  <span class="kw">static</span> count = <span class="num">0</span>;              <span class="cm">// статичне поле</span>
+
+  constructor(name) {
+    <span class="kw">this</span>.#name = name;
+    <span class="cls">Animal</span>.count++;
+  }
+
+  <span class="cm">// Гетер / Сетер</span>
+  <span class="kw">get</span> name() { <span class="kw">return</span> <span class="kw">this</span>.#name; }
+  <span class="kw">set</span> name(v) { <span class="kw">this</span>.#name = v; }
+
+  speak() { <span class="kw">return</span> <span class="str">`${<span class="kw">this</span>.#name} makes noise`</span>; }
+  <span class="kw">static</span> getCount() { <span class="kw">return</span> <span class="cls">Animal</span>.count; }
+}
+
+<span class="kw">class</span> <span class="cls">Dog</span> <span class="kw">extends</span> <span class="cls">Animal</span> {
+  #tricks = [];
+
+  constructor(name) {
+    <span class="kw">super</span>(name);           <span class="cm">// спочатку потрібно викликати super</span>
+  }
+
+  speak() {
+    <span class="kw">return</span> <span class="kw">super</span>.speak() + <span class="str">' — Woof!'</span>;
+  }
+
+  learn(trick) { <span class="kw">this</span>.#tricks.push(trick); }
+}
+
+<span class="cm">// instanceof працює через ланцюжок прототипів</span>
+<span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">'Rex'</span>) <span class="kw">instanceof</span> <span class="cls">Animal</span>; <span class="cm">// true</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Абстрактні класи, міксини та Symbol</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Симуляція абстрактного класу в TS</span>
+<span class="kw">abstract class</span> <span class="cls">Shape</span> {
+  <span class="kw">abstract</span> area(): number;
+  toString() { <span class="kw">return</span> <span class="str">`Area: ${<span class="kw">this</span>.area()}`</span>; }
+}
+
+<span class="cm">// Шаблон міксину (симуляція множинного успадкування)</span>
+<span class="kw">const</span> Serializable = (Base) =&gt; <span class="kw">class extends</span> Base {
+  serialize() { <span class="kw">return</span> JSON.stringify(<span class="kw">this</span>); }
+};
+<span class="kw">const</span> Validatable = (Base) =&gt; <span class="kw">class extends</span> Base {
+  validate() { <span class="kw">return</span> Object.keys(<span class="kw">this</span>).length > <span class="num">0</span>; }
+};
+<span class="kw">class</span> <span class="cls">User</span> <span class="kw">extends</span> Serializable(Validatable(<span class="cls">BaseModel</span>)) {}
+
+<span class="cm">// Symbol.iterator — робить об'єкт ітерованим</span>
+<span class="kw">class</span> <span class="cls">Range</span> {
+  constructor(<span class="kw">public</span> from: number, <span class="kw">public</span> to: number) {}
+  [Symbol.iterator]() {
+    <span class="kw">let</span> cur = <span class="kw">this</span>.from;
+    <span class="kw">return</span> { next: () =&gt; cur &lt;= <span class="kw">this</span>.to
+      ? { value: cur++, done: <span class="kw">false</span> }
+      : { value: undefined, done: <span class="kw">true</span> } };
+  }
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== PROMISES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Promise та async/await</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Стани Promise, ланцюжок, обробка помилок</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Promise — це об'єкт, що представляє кінцеве виконання або невдачу асинхронної операції. Стани: <strong>pending → fulfilled | rejected</strong> (незмінні після вирішення).</p>
+<pre><span class="cm">// Створення: огортає асинхронну операцію — викликає resolve при успіху, reject при помилці.</span>
+<span class="kw">const</span> p = <span class="kw">new</span> Promise((resolve, reject) =&gt; {
+  setTimeout(() =&gt; resolve(<span class="str">'done'</span>), <span class="num">1000</span>);
+});
+
+<span class="cm">// Ланцюжок — кожен .then повертає новий Promise</span>
+p.then(v =&gt; v.toUpperCase())
+ .then(v =&gt; <span class="fn">console</span>.log(v))
+ .catch(err =&gt; <span class="fn">console</span>.error(err))
+ .finally(() =&gt; <span class="fn">console</span>.log(<span class="str">'done'</span>));
+
+<span class="cm">// Статичні методи: комбінатори для координації кількох Promise — відрізняються обробкою відхилень.</span>
+Promise.all([p1, p2]);          <span class="cm">// fail-fast: відхиляється, якщо будь-який відхилено</span>
+Promise.allSettled([p1, p2]);   <span class="cm">// чекає всіх, повертає {status, value/reason}[]</span>
+Promise.any([p1, p2]);          <span class="cm">// перший виконаний</span>
+Promise.race([p1, p2]);         <span class="cm">// перший вирішений (виконаний АБО відхилений)</span>
+Promise.resolve(val);
+Promise.reject(err);</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>async/await — шаблони та обробка помилок</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Основи: async/await робить асинхронний код схожим на синхронний — завжди загортайте в try/catch.</span>
+<span class="kw">async function</span> <span class="fn">fetchUser</span>(id) {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`/api/users/${id}`</span>);
+    <span class="kw">if</span> (!res.ok) <span class="kw">throw new</span> Error(<span class="str">`HTTP ${res.status}`</span>);
+    <span class="kw">return await</span> res.json();
+  } <span class="kw">catch</span> (err) {
+    <span class="fn">console</span>.error(err);
+    <span class="kw">throw</span> err;  <span class="cm">// повторно кинути або повернути запасне значення</span>
+  }
+}
+
+<span class="cm">// Паралельно — не очікуйте по одному!</span>
+<span class="kw">const</span> [users, posts] = <span class="kw">await</span> Promise.all([
+  fetch(<span class="str">'/api/users'</span>).then(r =&gt; r.json()),
+  fetch(<span class="str">'/api/posts'</span>).then(r =&gt; r.json())
+]);
+
+<span class="cm">// Top-level await (ES2022, у модулях)</span>
+<span class="kw">const</span> config = <span class="kw">await</span> loadConfig();</pre>
+<div class="warn-box">Ніколи не використовуйте <code>await</code> всередині <code>forEach</code> — це не працює як очікується. Використовуйте <code>for...of</code> для послідовного виконання або <code>Promise.all(arr.map(...))</code> для паралельного.</div>
+</div></div>
+</div>
+
+<!-- ===== GENERATORS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Генератори та ітератори</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Функції-генератори</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Функція-генератор повертає об'єкт <strong>Generator</strong>. Виконання зупиняється на кожному <code>yield</code> і відновлюється при виклику <code>.next()</code>.</p>
+<pre><span class="kw">function</span>* <span class="fn">counter</span>(start = <span class="num">0</span>) {
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> reset = <span class="kw">yield</span> start;  <span class="cm">// може отримувати значення через .next(val)</span>
+    start = reset ?? start + <span class="num">1</span>;
+  }
+}
+<span class="kw">const</span> gen = counter(<span class="num">1</span>);
+gen.next();         <span class="cm">// { value: 1, done: false }</span>
+gen.next();         <span class="cm">// { value: 2, done: false }</span>
+gen.next(<span class="num">10</span>);       <span class="cm">// { value: 10, done: false } — скидання</span>
+
+<span class="cm">// Скінченний генератор</span>
+<span class="kw">function</span>* <span class="fn">range</span>(start, end, step = <span class="num">1</span>) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = start; i &lt; end; i += step) <span class="kw">yield</span> i;
+}
+[...range(<span class="num">0</span>, <span class="num">10</span>, <span class="num">2</span>)]; <span class="cm">// [0, 2, 4, 6, 8]</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Власні ітератори та асинхронні генератори</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Власний ітерований об'єкт</span>
+<span class="kw">const</span> iterable = {
+  [Symbol.iterator]() {
+    <span class="kw">let</span> n = <span class="num">0</span>;
+    <span class="kw">return</span> { next: () =&gt; n &lt; <span class="num">3</span>
+      ? { value: n++, done: <span class="kw">false</span> }
+      : { value: undefined, done: <span class="kw">true</span> } };
+  }
+};
+[...iterable]; <span class="cm">// [0, 1, 2]</span>
+
+<span class="cm">// Асинхронний генератор — пагінація API</span>
+<span class="kw">async function</span>* <span class="fn">paginate</span>(url) {
+  <span class="kw">let</span> page = <span class="num">1</span>;
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> data = <span class="kw">await</span> fetch(<span class="str">`${url}?page=${page++}`</span>).then(r =&gt; r.json());
+    <span class="kw">if</span> (!data.length) <span class="kw">return</span>;
+    <span class="kw">yield</span> data;
+  }
+}
+<span class="kw">for await</span> (<span class="kw">const</span> page <span class="kw">of</span> paginate(<span class="str">'/api/items'</span>)) {
+  <span class="fn">process</span>(page);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== SCOPE & COERCION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Область видимості, Приведення типів та Типи</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Типи, приведення та рівність</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Примітиви:</strong> <code>string</code>, <code>number</code>, <code>boolean</code>, <code>null</code>, <code>undefined</code>, <code>symbol</code>, <code>bigint</code>. Усе інше є об'єктом.</p>
+<pre><span class="kw">typeof</span> null     <span class="cm">// 'object' — історична помилка!</span>
+<span class="kw">typeof</span> []       <span class="cm">// 'object'</span>
+<span class="kw">typeof</span> NaN      <span class="cm">// 'number'</span>
+Array.isArray([]) <span class="cm">// true</span>
+
+<span class="cm">// == абстрактне — перетворює типи</span>
+<span class="num">0</span> == <span class="str">''</span>       <span class="cm">// true</span>
+null == undefined <span class="cm">// true</span>
+<span class="num">0</span> == <span class="kw">false</span>    <span class="cm">// true</span>
+
+<span class="cm">// Передача за значенням vs за посиланням</span>
+<span class="kw">let</span> a = <span class="num">5</span>; <span class="kw">let</span> b = a; b = <span class="num">10</span>; <span class="cm">// a=5 (копія)</span>
+<span class="kw">const</span> obj = {x:<span class="num">1</span>}; <span class="kw">const</span> ref = obj; ref.x = <span class="num">99</span>; <span class="cm">// obj.x=99 (посилання)</span></pre>
+</div></div>
+</div>
+
+<!-- ===== ES6+ ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Ключові можливості ES6+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Швидкий довідник</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// Деструктуризація, spread, rest</span>
+<span class="kw">const</span> { a, b: renamed } = obj;
+<span class="kw">const</span> [first, ...rest] = arr;
+<span class="kw">const</span> merged = { ...obj1, ...obj2 };
+
+<span class="cm">// Теґовані шаблонні літерали</span>
+<span class="kw">function</span> <span class="fn">tag</span>(strings, ...vals) { <span class="kw">return</span> strings.raw[<span class="num">0</span>]; }
+<span class="fn">tag</span><span class="str">`Hello ${name}`</span>;
+
+<span class="cm">// Опційний ланцюжок та оператор нульового злиття</span>
+user?.address?.city;
+value ?? <span class="str">'default'</span>;
+count ??= <span class="num">0</span>;      <span class="cm">// логічне присвоєння (ES2021)</span>
+
+<span class="cm">// Динамічний import</span>
+<span class="kw">const</span> module = <span class="kw">await import</span>(<span class="str">'./module.js'</span>);
+
+<span class="cm">// Symbol</span>
+<span class="kw">const</span> id = Symbol(<span class="str">'id'</span>);
+obj[id] = <span class="num">123</span>;  <span class="cm">// неперелічуваний ключ</span></pre>
+</div></div>
+</div>
+
+<!-- ===== BIG O ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Big O та структури даних</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Складність Array / Set / Map</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Нотація <strong>Big O</strong> описує складність у гіршому випадку за часом або пам'яттю зі зростанням розміру вхідних даних (n) — ігноруючи константи. O(1) — миттєво; O(n) — лінійно; O(n²) — квадратично.</p>
+<table>
+<tr><th>Операція</th><th>Array</th><th>Set</th><th>Map</th></tr>
+<tr><td>Доступ за індексом/ключем</td><td>O(1)</td><td>—</td><td>O(1)</td></tr>
+<tr><td>Пошук (has/includes)</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Вставка в кінець / додавання</td><td>O(1) амортизовано</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Вставка на початок</td><td>O(n)</td><td>—</td><td>—</td></tr>
+<tr><td>Видалення</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+<tr><td>Перебір</td><td>O(n)</td><td>O(n)</td><td>O(n)</td></tr>
+</table>
+<div class="tip">Використовуйте <code>Set</code> для пошуку унікальних значень (O(1) проти O(n) у Array). Складність алгоритму важливіша за стиль циклу.</div>
+</div></div>
+</div>

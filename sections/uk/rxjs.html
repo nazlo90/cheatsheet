@@ -1,0 +1,143 @@
+<!-- ===== RxJS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">RxJS Core <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Observable vs Promise + оператори</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Observable</strong> — ліниво обчислюваний потік, що може емітувати кілька значень з часом; нічого не робить до підписки. RxJS надає оператори для декларативного перетворення, фільтрації та комбінування потоків.</p>
+<table>
+<tr><th></th><th>Observable</th><th>Promise</th></tr>
+<tr><td>Виконання</td><td>Ліниве — починається при підписці</td><td>Нетерпляче — одразу</td></tr>
+<tr><td>Значення</td><td>Кілька з часом</td><td>Одне</td></tr>
+<tr><td>Скасовуваний</td><td>Так</td><td>Ні</td></tr>
+</table>
+<table>
+<tr><th>Категорія</th><th>Оператори</th></tr>
+<tr><td>Перетворення</td><td><code>map</code>, <code>scan</code>, <code>reduce</code></td></tr>
+<tr><td>Фільтрація</td><td><code>filter</code>, <code>take</code>, <code>debounceTime</code>, <code>distinctUntilChanged</code></td></tr>
+<tr><td>Комбінування</td><td><code>combineLatest</code>, <code>merge</code>, <code>forkJoin</code>, <code>withLatestFrom</code></td></tr>
+<tr><td>Вищого порядку</td><td><code>switchMap</code>, <code>mergeMap</code>, <code>concatMap</code>, <code>exhaustMap</code></td></tr>
+<tr><td>Помилки</td><td><code>catchError</code>, <code>retry</code>, <code>finalize</code></td></tr>
+<tr><td>Утиліти</td><td><code>tap</code>, <code>shareReplay</code>, <code>share</code></td></tr>
+</table>
+<pre><span class="cm">// Відписка — ЗАВЖДИ це робіть</span>
+data$.pipe(takeUntilDestroyed()).subscribe(...); <span class="cm">// Angular 16+</span></pre>
+</div></div>
+</div>
+
+<!-- ===== HIGHER ORDER OBS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Observable вищого порядку <span class="badge b-ng">RxJS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>switchMap vs mergeMap vs concatMap vs exhaustMap</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Оператори відображення вищого порядку</strong> підписуються на внутрішні Observable, що емітуються джерелом — вони відрізняються кількістю дозволених паралельних підписок та скасуванням попередніх.</p>
+<table>
+<tr><th>Оператор</th><th>Скасовує попередній?</th><th>Паралельний?</th><th>Найкраще для</th></tr>
+<tr><td><code>switchMap</code></td><td>Так ✓</td><td>Ні (макс. 1)</td><td>Пошук — важливий лише останній</td></tr>
+<tr><td><code>mergeMap</code></td><td>Ні</td><td>Так (необмежено)</td><td>Паралельні незалежні запити</td></tr>
+<tr><td><code>concatMap</code></td><td>Ні</td><td>Ні (черга)</td><td>Послідовне, зі збереженням порядку</td></tr>
+<tr><td><code>exhaustMap</code></td><td>Н/З (ігнорує нові)</td><td>Ні</td><td>Логін/відправка — без подвійного надсилання</td></tr>
+</table>
+<pre>search$.pipe(switchMap(q =&gt; http.get(<span class="str">`/api?q=${q}`</span>)));
+submit$.pipe(exhaustMap(() =&gt; http.post(<span class="str">'/submit'</span>, form)));
+queue$.pipe(concatMap(a =&gt; http.post(<span class="str">'/log'</span>, a)));
+files$.pipe(mergeMap(id =&gt; http.get(<span class="str">`/file/${id}`</span>)));</pre>
+</div></div>
+</div>
+
+<!-- ===== MEMORY LEAKS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Запобігання витокам пам'яті <span class="badge b-key">Ключове</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>3 патерни для запобігання витокам підписок</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Кожен <code>subscribe()</code>, що не прибирається, призводить до витоку пам'яті — коллбек зберігає посилання на компонент навіть після його знищення.</p>
+<pre><span class="cm">// ① async pipe — РЕКОМЕНДОВАНО для шаблонів (авто-відписка)</span>
+@Component({ template: <span class="str">`&lt;li *ngFor="let u of users$ | async"&gt;{{ u.name }}&lt;/li&gt;`</span> })
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users$ = <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>);
+  <span class="cm">// Немає subscribe(), не потребує очищення</span>
+}
+
+<span class="cm">// ② takeUntilDestroyed (Angular 16+) — РЕКОМЕНДОВАНО в тілі класу</span>
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  <span class="kw">private</span> destroyRef = inject(DestroyRef);
+
+  ngOnInit() {
+    interval(<span class="num">1000</span>).pipe(
+      takeUntilDestroyed(<span class="kw">this</span>.destroyRef)
+    ).subscribe(tick =&gt; <span class="kw">this</span>.update(tick));
+    <span class="cm">// автоматично завершується при знищенні компонента</span>
+  }
+}
+
+<span class="cm">// ③ Ручна відписка — запасний варіант для складних випадків</span>
+<span class="kw">class</span> <span class="cls">UserListComponent</span> <span class="kw">implements</span> OnDestroy {
+  <span class="kw">private</span> subs = <span class="kw">new</span> Subscription();
+
+  ngOnInit() {
+    <span class="kw">this</span>.subs.add(stream1$.subscribe(...));
+    <span class="kw">this</span>.subs.add(stream2$.subscribe(...));
+  }
+  ngOnDestroy() { <span class="kw">this</span>.subs.unsubscribe(); }  <span class="cm">// прибирає всі одразу</span>
+}
+
+<span class="cm">// Бонус — toSignal() також авто-відписується</span>
+users = toSignal(<span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>), { initialValue: [] });
+<span class="cm">// Немає subscribe, немає очищення — Angular управляє всередині</span></pre>
+<table>
+<tr><th>Патерн</th><th>Найкраще для</th><th>Версія Angular</th></tr>
+<tr><td>Pipe <code>async</code></td><td>Прив'язки в шаблоні</td><td>Всі</td></tr>
+<tr><td><code>takeUntilDestroyed()</code></td><td>Підписки в класі, guards, effects</td><td>16+</td></tr>
+<tr><td>Ручний <code>Subscription</code></td><td>Складне teardown, кілька підписок</td><td>Всі</td></tr>
+<tr><td><code>toSignal()</code></td><td>Перехід Observable → шаблон</td><td>16+</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== SUBJECTS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Subjects та Hot/Cold <span class="badge b-ng">RxJS</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Cold vs Hot + типи Subject</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Subject</strong> — це одночасно Observable і Observer; він транслює значення всім поточним підписникам. <strong>Cold</strong> Observable починає з чистого аркуша для кожного підписника; <strong>Hot</strong> Observable ділить одне виконання.</p>
+<table>
+<tr><th></th><th>Cold</th><th>Hot</th></tr>
+<tr><td>Починає емітувати</td><td>При підписці</td><td>Незалежно від підписників</td></tr>
+<tr><td>Мультикаст</td><td>Ні (unicast)</td><td>Так (спільне)</td></tr>
+<tr><td>Приклади</td><td><code>of()</code>, HTTP-запити</td><td>Subject, DOM-події, WebSocket</td></tr>
+</table>
+<table>
+<tr><th>Тип Subject</th><th>Початкове значення</th><th>Відтворює</th><th>Сценарій використання</th></tr>
+<tr><td><code>Subject</code></td><td>Немає</td><td>Ні</td><td>Події, дії</td></tr>
+<tr><td><code>BehaviorSubject(v)</code></td><td>Обов'язкове</td><td>Поточне для нових підписників</td><td>Стан — найпоширеніший</td></tr>
+<tr><td><code>ReplaySubject(n)</code></td><td>Немає</td><td>Останні n значень</td><td>Кешування, запізнілі підписники</td></tr>
+<tr><td><code>AsyncSubject</code></td><td>Немає</td><td>Останнє при завершенні</td><td>Один результат</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>shareReplay — пастка refCount</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><code>shareReplay</code> мультикастить та відтворює останні N значень. Опція <code>refCount</code> контролює, чи зберігається підписка на джерело коли кількість підписників падає до нуля.</p>
+<pre><span class="cm">// ⚠ ВИТІК ПАМ'ЯТІ — refCount: false (дефолт до RxJS 6.6)</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(
+  shareReplay({ bufferSize: <span class="num">1</span>, refCount: <span class="kw">false</span> })
+);
+<span class="cm">// Навіть після відписки всіх підписників, внутрішня підписка ЗАЛИШАЄТЬСЯ ВІДКРИТОЮ</span>
+<span class="cm">// Якщо надано в 'root', витікає на весь час життя застосунку — прийнятно</span>
+<span class="cm">// Якщо в компоненті, що знищується і відтворюється — нова підписка на джерело щоразу!</span>
+
+<span class="cm">// ✓ БЕЗПЕЧНО — refCount: true (рекомендовано)</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(
+  shareReplay({ bufferSize: <span class="num">1</span>, refCount: <span class="kw">true</span> })
+);
+<span class="cm">// Відписується від джерела, коли виходить останній підписник</span>
+<span class="cm">// АЛЕ: наступний підписник ініціює новий HTTP-запит (не справжнє кешування)</span>
+
+<span class="cm">// Правило: HTTP в root-сервісі → refCount: false нормально (синглтон)</span>
+<span class="cm">// HTTP в сервісі рівня компонента → refCount: true для уникнення витоків</span></pre>
+<table>
+<tr><th>Оператор</th><th>Буферизує</th><th>refCount за замовч.</th><th>Сценарій використання</th></tr>
+<tr><td><code>share()</code></td><td>0</td><td>true</td><td>Події, WebSocket — без відтворення</td></tr>
+<tr><td><code>shareReplay(1)</code></td><td>1</td><td>true (RxJS 7+)</td><td>Кешування останнього HTTP-результату</td></tr>
+<tr><td><code>shareReplay({bufferSize:1, refCount:false})</code></td><td>1</td><td>false</td><td>Кеш синглтона на рівні root</td></tr>
+</table>
+</div></div>
+</div>

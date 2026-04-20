@@ -1,0 +1,354 @@
+<!-- ===== CORE PRINCIPLES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Основні принципи розробки ПЗ</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>KISS, DRY, YAGNI, SoC, SRP</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Принцип</th><th>Значення</th><th>Приклад порушення</th><th>Виправлення</th></tr>
+<tr><td><strong>KISS</strong> — Keep It Simple, Stupid</td><td>Обирайте найпростіше рішення, що працює</td><td>6 рівнів абстракції для простого прапора</td><td>Використовуйте boolean; додавайте складність лише за потреби</td></tr>
+<tr><td><strong>DRY</strong> — Don't Repeat Yourself</td><td>Кожна одиниця знань має єдине авторитетне джерело</td><td>Однакова логіка валідації у 5 компонентах</td><td>Винесіть у спільний валідатор / сервіс</td></tr>
+<tr><td><strong>YAGNI</strong> — You Aren't Gonna Need It</td><td>Не реалізовуйте функціональність, доки вона не потрібна</td><td>Побудова системи плагінів до того, як хтось попросив</td><td>Реалізуйте лише те, що потрібно зараз</td></tr>
+<tr><td><strong>SoC</strong> — Separation of Concerns</td><td>Різні відповідальності — у різних модулях</td><td>Компонент отримує + форматує + валідує + рендерить</td><td>Розділіть на сервіс + pipe + валідатор + компонент</td></tr>
+<tr><td><strong>SRP</strong> — Single Responsibility</td><td>Один клас = одна причина для зміни</td><td><code>UserService</code> обробляє авторизацію + профіль + сповіщення</td><td>Розділіть на <code>AuthService</code>, <code>ProfileService</code>, <code>NotificationService</code></td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== OOP PILLARS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Стовпи ООП в Angular</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Інкапсуляція, Успадкування, Поліморфізм, Абстракція</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Стовп</th><th>Визначення</th><th>Приклад у Angular</th></tr>
+<tr><td>Інкапсуляція</td><td>Об'єднання даних і методів, обмеження доступу</td><td><code>private</code>/<code>protected</code> у сервісах; компонент інкапсулює свій стан</td></tr>
+<tr><td>Успадкування</td><td>Дочірній клас успадковує від батьківського</td><td><code>abstract class BaseComponent</code>; розширення для спільного <code>ngOnDestroy</code></td></tr>
+<tr><td>Поліморфізм</td><td>Один інтерфейс — багато реалізацій</td><td>DI з токенами інтерфейсів; декілька реалізацій <code>Logger</code></td></tr>
+<tr><td>Абстракція</td><td>Приховування складності за простим API</td><td><code>interface ApiService</code>; сервіс приховує складність HTTP</td></tr>
+</table>
+<pre><span class="cm">// Поліморфізм через DI-токени</span>
+<span class="kw">abstract class</span> <span class="cls">Logger</span> { <span class="kw">abstract</span> log(msg: string): <span class="kw">void</span>; }
+<span class="kw">class</span> <span class="cls">ConsoleLogger</span> <span class="kw">extends</span> <span class="cls">Logger</span> { log(m: string) { <span class="fn">console</span>.log(m); } }
+<span class="kw">class</span> <span class="cls">RemoteLogger</span>  <span class="kw">extends</span> <span class="cls">Logger</span> { log(m: string) { <span class="cm">/* відправити на сервер */</span> } }
+<span class="cm">// { provide: Logger, useClass: environment.production ? RemoteLogger : ConsoleLogger }</span></pre>
+</div></div>
+</div>
+
+<!-- ===== DESIGN PATTERNS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Патерни проектування</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Породжувальні, Структурні, Поведінкові</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Група</th><th>Патерни</th><th>Приклад у Angular</th></tr>
+<tr><td>Породжувальні</td><td>Singleton, Factory, Builder, Prototype</td><td><code>providedIn:'root'</code>; factory-провайдери; FormBuilder</td></tr>
+<tr><td>Структурні</td><td>Decorator, Adapter, Facade, Proxy, Composite</td><td><code>@Component</code>/<code>@Injectable</code>; Http Interceptors (Proxy); NgRx (Facade)</td></tr>
+<tr><td>Поведінкові</td><td>Observer, Strategy, Command, Chain of Responsibility</td><td>RxJS Subjects (Observer); DI з інтерфейсами (Strategy); NgRx Actions (Command)</td></tr>
+</table>
+<pre><span class="cm">// Патерн Strategy — взаємозамінні реалізації</span>
+<span class="kw">interface</span> <span class="cls">SortStrategy</span>&lt;T&gt; { sort(items: T[]): T[]; }
+<span class="kw">class</span> <span class="cls">AlphaSort</span> <span class="kw">implements</span> <span class="cls">SortStrategy</span>&lt;string&gt; { sort(i) { <span class="kw">return</span> [...i].sort(); } }
+<span class="kw">class</span> <span class="cls">DataService</span>&lt;T&gt; { constructor(<span class="kw">private</span> sorter: SortStrategy&lt;T&gt;) {} }
+
+<span class="cm">// Facade — приховуємо складність NgRx за сервісом</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">class</span> <span class="cls">UsersFacade</span> {
+  users$ = <span class="kw">this</span>.store.select(selectAllUsers);
+  load() { <span class="kw">this</span>.store.dispatch(loadUsers()); }
+  constructor(<span class="kw">private</span> store: Store) {}
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== SOLID ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Принципи SOLID</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Усі 5 з прикладами</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Принцип</th><th>Правило</th><th>Порушення</th><th>Виправлення</th></tr>
+<tr><td><strong>S</strong> — Single Responsibility</td><td>Один клас, одна причина для зміни</td><td>Компонент отримує + форматує + валідує</td><td>Розділіть на сервіс + pipe + валідатор</td></tr>
+<tr><td><strong>O</strong> — Open/Closed</td><td>Відкритий для розширення, закритий для модифікації</td><td><code>if (type==='card') ... else if...</code></td><td><code>interface PaymentMethod</code> + окремі класи</td></tr>
+<tr><td><strong>L</strong> — Liskov Substitution</td><td>Підкласи мають бути замінними для батьківського</td><td><code>Penguin extends Bird</code> ламає <code>fly()</code></td><td>Окремі <code>FlyingBird</code> + <code>Penguin</code></td></tr>
+<tr><td><strong>I</strong> — Interface Segregation</td><td>Не залежте від методів, які не використовуєте</td><td><code>Robot implements Worker</code> з методом <code>eat()</code></td><td>Розділіть на <code>Workable</code> + <code>Eatable</code></td></tr>
+<tr><td><strong>D</strong> — Dependency Inversion</td><td>Залежте від абстракцій, а не реалізацій</td><td><code>new FileStorage()</code> всередині сервісу</td><td>Впровадьте інтерфейс <code>Storage</code></td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== FUNCTIONAL PROGRAMMING & PARADIGMS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Функціональне програмування та парадигми <span class="badge b-key">Ключове</span></div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Огляд парадигм програмування</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Парадигма</strong> — це фундаментальний стиль побудови програм, що визначає підхід до стану, потоку управління та композиції. Більшість сучасних мов є мультипарадигменними.</p>
+<table>
+<tr><th>Парадигма</th><th>Основна ідея</th><th>Спосіб мислення</th><th>Приклади</th></tr>
+<tr><td><strong>Імперативна</strong></td><td>Говоримо машині <em>як</em> це зробити, крок за кроком</td><td>Послідовність інструкцій, що змінюють стан</td><td>Ранній C, асемблер, класичні цикли</td></tr>
+<tr><td><strong>Процедурна</strong></td><td>Імперативна + багаторазові процедури/функції</td><td>Групування кроків у іменовані підпрограми</td><td>C, Pascal, ранні JS-скрипти</td></tr>
+<tr><td><strong>Об'єктно-орієнтована (ООП)</strong></td><td>Інкапсуляція стану та поведінки в об'єктах</td><td>Моделювання предметної області через взаємодіючі об'єкти</td><td>Java, C#, Angular сервіси/компоненти</td></tr>
+<tr><td><strong>Функціональна (ФП)</strong></td><td>Перетворення даних через чисті функції, уникнення побічних ефектів</td><td>Пайплайни перетворень; дані незмінні</td><td>Haskell, Elm, RxJS, Redux, сучасний JS/TS</td></tr>
+<tr><td><strong>Декларативна</strong></td><td>Описуємо <em>що</em> хочемо, а не як</td><td>Виражаємо намір; приховуємо потік управління</td><td>SQL, HTML, Angular-шаблони, оператори RxJS</td></tr>
+<tr><td><strong>Реактивна</strong></td><td>Програми реагують на потоки даних у часі</td><td>Асинхронне поширення подій; все — це потік</td><td>RxJS, Signals, Redux Observable</td></tr>
+</table>
+<div class="tip">JavaScript / TypeScript є мультипарадигменними. Ви вільно поєднуєте ООП (класи, DI) з ФП (чисті pipes, незмінний стан NgRx) і реактивним підходом (RxJS) в одній Angular-кодовій базі.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні концепції ФП</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Концепція</th><th>Визначення</th><th>Чому це важливо</th></tr>
+<tr><td><strong>Чиста функція</strong></td><td>Ті самі вхідні дані → той самий результат; нуль побічних ефектів</td><td>Детермінована, тестована, кешована</td></tr>
+<tr><td><strong>Незмінність</strong></td><td>Дані ніколи не змінюються — перетворення породжують нові значення</td><td>Запобігає помилкам зі спільним станом; підтримує undo/redo; сприяє виявленню змін</td></tr>
+<tr><td><strong>Референційна прозорість</strong></td><td>Вираз можна замінити його значенням без зміни поведінки програми</td><td>Уможливлює мемоізацію та рівняннєву еквівалентність</td></tr>
+<tr><td><strong>Функції першого класу</strong></td><td>Функції є значеннями — їх можна зберігати, передавати як аргументи, повертати</td><td>Основа HOF, композиції, колбеків</td></tr>
+<tr><td><strong>Функції вищого порядку (HOF)</strong></td><td>Функція, що приймає або повертає іншу функцію</td><td><code>map</code>, <code>filter</code>, <code>reduce</code>, <code>pipe</code>, оператори RxJS</td></tr>
+<tr><td><strong>Побічні ефекти</strong></td><td>Будь-яка спостережувана зміна поза межами функції (запис у DOM, HTTP-запит, лог)</td><td>Ізолюйте побічні ефекти на межах; тримайте основну логіку чистою</td></tr>
+</table>
+<pre><span class="cm">// Нечиста — змінює зовнішній стан</span>
+<span class="kw">let</span> total = <span class="num">0</span>;
+<span class="kw">function</span> <span class="fn">addToTotal</span>(n: <span class="kw">number</span>) { total += n; }
+
+<span class="cm">// Чиста — без побічних ефектів, ті самі вхідні дані → той самий результат</span>
+<span class="kw">function</span> <span class="fn">add</span>(a: <span class="kw">number</span>, b: <span class="kw">number</span>): <span class="kw">number</span> { <span class="kw">return</span> a + b; }
+
+<span class="cm">// Незмінність — породжуємо нове значення замість мутації</span>
+<span class="kw">const</span> original = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>];
+<span class="kw">const</span> updated  = [...original, <span class="num">4</span>];  <span class="cm">// original не змінено</span></pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Композиція функцій, каррінг та часткове застосування</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Композиція</strong> з'єднує функції так, що вихід однієї стає входом наступної — будуючи складну поведінку з маленьких, повторно використовуваних частин.</p>
+<p><strong>Каррінг</strong> перетворює функцію з кількома аргументами на послідовність функцій з одним аргументом. <strong>Часткове застосування</strong> фіксує деякі аргументи наперед і повертає функцію для решти.</p>
+<pre><span class="cm">// Композиція — f(g(x))</span>
+<span class="kw">const</span> <span class="fn">compose</span> = &lt;T&gt;(...fns: Array&lt;(x: T) =&gt; T&gt;) =&gt;
+  (x: T) =&gt; fns.<span class="fn">reduceRight</span>((v, f) =&gt; <span class="fn">f</span>(v), x);
+
+<span class="kw">const</span> <span class="fn">pipe</span> = &lt;T&gt;(...fns: Array&lt;(x: T) =&gt; T&gt;) =&gt;
+  (x: T) =&gt; fns.<span class="fn">reduce</span>((v, f) =&gt; <span class="fn">f</span>(v), x);
+
+<span class="kw">const</span> <span class="fn">double</span>  = (n: <span class="kw">number</span>) =&gt; n * <span class="num">2</span>;
+<span class="kw">const</span> <span class="fn">addOne</span>  = (n: <span class="kw">number</span>) =&gt; n + <span class="num">1</span>;
+<span class="kw">const</span> transform = <span class="fn">pipe</span>(double, addOne);  <span class="cm">// (5) → 10 → 11</span>
+
+<span class="cm">// Каррінг</span>
+<span class="kw">const</span> <span class="fn">multiply</span> = (a: <span class="kw">number</span>) =&gt; (b: <span class="kw">number</span>) =&gt; a * b;
+<span class="kw">const</span> <span class="fn">triple</span>   = <span class="fn">multiply</span>(<span class="num">3</span>);  <span class="cm">// часткове застосування — b ще вільний</span>
+<span class="fn">triple</span>(<span class="num">4</span>);  <span class="cm">// 12</span>
+
+<span class="cm">// pipe у RxJS — це буквально композиція функцій</span>
+obs$.pipe(
+  <span class="fn">filter</span>(x =&gt; x &gt; <span class="num">0</span>),
+  <span class="fn">map</span>(x =&gt; x * <span class="num">2</span>),
+  <span class="fn">take</span>(<span class="num">5</span>)
+);</pre>
+<div class="tip">RxJS <code>pipe()</code>, Angular <code>pipe</code> у шаблонах, та ланцюжки <code>Array.prototype</code> (<code>.filter().map().reduce()</code>) — усе це функціональна композиція у дії.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Функтори, монади та їх практичні аналоги у JS</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Це абстрактні ФП-патерни — ви вже використовуєте їх щодня у JS, просто без формальних назв.</p>
+<table>
+<tr><th>Концепція</th><th>Формальне значення</th><th>Аналог у JS / TS</th><th>Що роблять <code>map</code>/<code>flatMap</code></th></tr>
+<tr><td><strong>Функтор</strong></td><td>Контейнер з методом <code>map</code>, що зберігає структуру</td><td><code>Array</code>, <code>Promise</code> (then), <code>Observable</code></td><td><code>map</code> перетворює внутрішнє значення, повертає той самий тип контейнера</td></tr>
+<tr><td><strong>Монада</strong></td><td>Контейнер з методом <code>flatMap</code> (chain) для уникнення вкладеного обгортання</td><td><code>Array.flatMap</code>, <code>Promise.then</code> що повертає Promise, RxJS <code>mergeMap/switchMap</code></td><td><code>flatMap</code> розгортає один рівень перед повторним обгортанням — запобігає <code>Array&lt;Array&lt;T&gt;&gt;</code> або <code>Promise&lt;Promise&lt;T&gt;&gt;</code></td></tr>
+<tr><td><strong>Maybe / Option</strong></td><td>Контейнер, що є або значенням, або «нічим» (уникає null)</td><td>Перевірки на <code>null</code>, опціональне ланцюгування <code>?.</code>, TypeScript <code>T | undefined</code></td><td>Перетворення лише за наявності значення; пропуск при null/undefined</td></tr>
+</table>
+<pre><span class="cm">// Array як Функтор</span>
+[<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>].<span class="fn">map</span>(x =&gt; x * <span class="num">2</span>);  <span class="cm">// [2, 4, 6]  — залишається Array</span>
+
+<span class="cm">// Array як Монада — flatMap запобігає Array&lt;Array&gt;</span>
+[[<span class="num">1</span>, <span class="num">2</span>], [<span class="num">3</span>, <span class="num">4</span>]].<span class="fn">flatMap</span>(x =&gt; x);  <span class="cm">// [1, 2, 3, 4]</span>
+
+<span class="cm">// Promise як Монада</span>
+<span class="fn">fetch</span>(<span class="str">'/api/user'</span>)
+  .<span class="fn">then</span>(res =&gt; res.<span class="fn">json</span>())   <span class="cm">// повертає Promise — ланцюжок розгортає його</span>
+  .<span class="fn">then</span>(user =&gt; user.name);  <span class="cm">// не Promise&lt;Promise&lt;User&gt;&gt;</span>
+
+<span class="cm">// RxJS Observable як Монада</span>
+userId$.pipe(
+  <span class="fn">switchMap</span>(id =&gt; <span class="fn">this</span>.http.<span class="fn">get</span>(<span class="str">`/users/</span>${id}<span class="str">`</span>))  <span class="cm">// flatMap у світі Observable</span>
+);</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>ФП проти ООП — коли що використовувати</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>ФП</th><th>ООП</th></tr>
+<tr><td>Стан</td><td>Уникається або ізолюється; перевага незмінних даних</td><td>Інкапсульований всередині об'єктів; змінюється через методи</td></tr>
+<tr><td>Повторне використання</td><td>Композиція функцій, HOF, каррінг</td><td>Успадкування, інтерфейси, поліморфізм</td></tr>
+<tr><td>Паралелізм</td><td>Простіший — немає спільного мутабельного стану</td><td>Складніший — потрібні блокування / синхронізація</td></tr>
+<tr><td>Тестованість</td><td>Чисті функції тривіально тестуються ізольовано</td><td>Потребує моків/стабів для ізоляції залежностей</td></tr>
+<tr><td>Моделювання предметної області</td><td>Менш природне для сутностей з багатою ідентичністю</td><td>Природно підходить для моделювання реальних сутностей</td></tr>
+<tr><td>Застосування в Angular</td><td>Чисті pipes, редюсери/селектори NgRx, пайплайни RxJS</td><td>Сервіси, компоненти, DI, хуки життєвого циклу</td></tr>
+</table>
+<div class="tip">В Angular: використовуйте ООП для сервісів/компонентів (зі станом, з DI); використовуйте стиль ФП для редюсерів, селекторів, pipes та перетворення даних — ізолюйте побічні ефекти в effects/resolvers.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>ФП-патерни у TypeScript та Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// 1. Чистий pipe — без побічних ефектів, чисте перетворення</span>
+@Pipe({ name: <span class="str">'formatPrice'</span>, pure: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">FormatPricePipe</span> <span class="kw">implements</span> <span class="cls">PipeTransform</span> {
+  transform(value: <span class="kw">number</span>, currency = <span class="str">'USD'</span>): <span class="kw">string</span> {
+    <span class="kw">return new</span> Intl.NumberFormat(<span class="str">'en-US'</span>, { style: <span class="str">'currency'</span>, currency }).<span class="fn">format</span>(value);
+  }
+}
+
+<span class="cm">// 2. NgRx редюсер — чиста функція: (стан, дія) → новий стан</span>
+<span class="kw">const</span> cartReducer = <span class="fn">createReducer</span>(initialState,
+  <span class="fn">on</span>(addItem, (state, { item }) =&gt; ({
+    ...state,
+    items: [...state.items, item]  <span class="cm">// незмінне оновлення</span>
+  }))
+);
+
+<span class="cm">// 3. Селектор як мемоізована чиста функція</span>
+<span class="kw">const</span> selectTotal = <span class="fn">createSelector</span>(
+  selectItems,
+  items =&gt; items.<span class="fn">reduce</span>((sum, i) =&gt; sum + i.price, <span class="num">0</span>)
+);
+
+<span class="cm">// 4. Типізований помічник pipe() для перетворення даних</span>
+<span class="kw">const</span> getActiveUserNames = <span class="fn">pipe</span>(
+  (users: User[]) =&gt; users.<span class="fn">filter</span>(u =&gt; u.active),
+  (users: User[]) =&gt; users.<span class="fn">map</span>(u =&gt; u.name)
+);</pre>
+<div class="warn-box">Виявлення змін Angular покладається на ідентичність об'єктів для <code>OnPush</code>. Завжди повертайте <strong>нові</strong> посилання з редюсерів і селекторів — ніколи не мутуйте на місці. Це незмінність ФП на практиці.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Рекурсія та оптимізація хвостових викликів</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>Рекурсія</strong> замінює явні цикли у ФП — функція викликає саму себе з меншою підзадачею. Чисто функціональні мови покладаються на неї.</p>
+<p><strong>Оптимізація хвостових викликів (TCO)</strong>: якщо рекурсивний виклик є <em>останньою</em> операцією, рушій може повторно використати поточний стек-фрейм замість додавання нового — запобігаючи переповненню стека. ES6 вимагає TCO у строгому режимі (V8 відмовився від цього; для глибокої рекурсії у JS надавайте перевагу ітерації або трамплінам).</p>
+<pre><span class="cm">// Не хвостово-рекурсивна — стек зростає O(n)</span>
+<span class="kw">function</span> <span class="fn">factorial</span>(n: <span class="kw">number</span>): <span class="kw">number</span> {
+  <span class="kw">return</span> n &lt;= <span class="num">1</span> ? <span class="num">1</span> : n * <span class="fn">factorial</span>(n - <span class="num">1</span>);
+}
+
+<span class="cm">// Хвостово-рекурсивна (патерн акумулятора)</span>
+<span class="kw">function</span> <span class="fn">factTCO</span>(n: <span class="kw">number</span>, acc = <span class="num">1</span>): <span class="kw">number</span> {
+  <span class="kw">return</span> n &lt;= <span class="num">1</span> ? acc : <span class="fn">factTCO</span>(n - <span class="num">1</span>, n * acc);
+}
+
+<span class="cm">// Безпечна глибока рекурсія у JS — патерн трамплін</span>
+<span class="kw">function</span> <span class="fn">trampoline</span>&lt;T&gt;(fn: (...args: <span class="kw">any</span>[]) =&gt; T | (() =&gt; T)) {
+  <span class="kw">return</span> <span class="kw">function</span>(...args: <span class="kw">any</span>[]) {
+    <span class="kw">let</span> result: <span class="kw">any</span> = <span class="fn">fn</span>(...args);
+    <span class="kw">while</span> (<span class="kw">typeof</span> result === <span class="str">'function'</span>) result = <span class="fn">result</span>();
+    <span class="kw">return</span> result;
+  };
+}</pre>
+</div></div>
+
+</div>
+
+<!-- ===== MFE & NX ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Мікрофронтенди та Nx</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Мікрофронтенди — концепції</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Розширення мікросервісного підходу на фронтенд — кожна команда володіє незалежно розгортуваним UI-зрізом зі своїм технологічним стеком, CI/CD та деплоєм.</p>
+<table>
+<tr><th>Підхід</th><th>Як працює</th><th>Переваги</th><th>Недоліки</th></tr>
+<tr><td><strong>Module Federation</strong> (Webpack 5)</td><td>Віддалені модулі завантажуються під час виконання через спільний чанк</td><td>Справжній незалежний деплой; композиція під час виконання</td><td>Складна конфігурація Webpack; проблеми зі спільними залежностями</td></tr>
+<tr><td><strong>Web Components</strong></td><td>Кастомні елементи надають фреймворк-незалежний UI</td><td>Незалежний від фреймворку</td><td>Обмежений Angular DI; проблеми з інкапсуляцією стилів</td></tr>
+<tr><td><strong>Single-SPA</strong></td><td>Оркестрація мікроаплікацій на основі роутера</td><td>Зрілий; підтримка декількох фреймворків</td><td>Великий overhead бандлу; складний lifecycle</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Методи комунікації між MFE</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Мікрофронтенди ізольовані за своєю природою — вони спілкуються через чітко визначені контракти, а не через спільні внутрішності.</p>
+<table>
+<tr><th>Метод</th><th>Як працює</th><th>Найкраще для</th><th>Недоліки</th></tr>
+<tr><td><strong>Custom Events</strong></td><td><code>dispatchEvent</code> на <code>window</code>; інші слухають через <code>addEventListener</code></td><td>Слабке зв'язування, будь-який фреймворк</td><td>Відсутність типізації; важко відстежити</td></tr>
+<tr><td><strong>Спільний стан (shell-сервіс)</strong></td><td>Shell надає сервіс/стор; MFE імпортують його як спільний синглтон</td><td>Складний спільний стан (авторизація, кошик)</td><td>Тісне зв'язування з shell; версія спільної залежності має збігатися</td></tr>
+<tr><td><strong>URL / Query Params</strong></td><td>Стан закодований у URL; MFE читають через роутер</td><td>Стан навігації, глибокі посилання</td><td>Обмежений обсяг даних; не для тимчасових даних</td></tr>
+<tr><td><strong>localStorage / sessionStorage</strong></td><td>Ключ-значення сховище спільне для одного origin</td><td>Auth-токени, прості прапори</td><td>Проблеми синхронізації; немає реактивності; ризик XSS</td></tr>
+<tr><td><strong>BroadcastChannel API</strong></td><td>Нативний браузерний канал між вкладками/iframe одного origin</td><td>Синхронізація між вкладками, logout при авторизації</td><td>Тільки однаковий origin; немає історії</td></tr>
+<tr><td><strong>Web Component props/events</strong></td><td>Атрибути/властивості як вхід; кастомні події як вихід</td><td>Фреймворк-незалежні MFE</td><td>Складні об'єкти потребують серіалізації</td></tr>
+</table>
+<pre><span class="cm">// 1. Custom Event — MFE-відправник</span>
+window.dispatchEvent(<span class="kw">new</span> CustomEvent(<span class="str">'mfe:cart:updated'</span>, {
+  detail: { itemCount: <span class="num">3</span> }, bubbles: <span class="kw">true</span>
+}));
+
+<span class="cm">// 1. Custom Event — MFE-слухач</span>
+window.addEventListener(<span class="str">'mfe:cart:updated'</span>, (e: CustomEvent) =&gt; {
+  <span class="kw">this</span>.cartCount = e.detail.itemCount;
+});
+
+<span class="cm">// 2. BroadcastChannel — вихід з системи між вкладками</span>
+<span class="kw">const</span> channel = <span class="kw">new</span> BroadcastChannel(<span class="str">'auth'</span>);
+channel.postMessage({ type: <span class="str">'logout'</span> });
+channel.onmessage = (e) =&gt; { <span class="kw">if</span> (e.data.type === <span class="str">'logout'</span>) router.navigate([<span class="str">'/login'</span>]); };
+
+<span class="cm">// 3. Спільний синглтон-сервіс через Module Federation</span>
+<span class="cm">// webpack.config — позначити як спільну залежність-синглтон</span>
+shared: { <span class="str">'@myorg/auth-state'</span>: { singleton: <span class="kw">true</span>, strictVersion: <span class="kw">true</span> } }</pre>
+<div class="tip">Правило: використовуйте <strong>Custom Events</strong> для простих сповіщень, <strong>спільний синглтон</strong> для складного реактивного стану, <strong>URL</strong> для стану навігації. Уникайте прямих імпортів між MFE — це порушує незалежність деплою.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Module Federation з Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// webpack.config.js shell-аплікації</span>
+<span class="kw">new</span> ModuleFederationPlugin({
+  remotes: {
+    checkout: <span class="str">'checkout@http://localhost:3001/remoteEntry.js'</span>,
+    catalog:  <span class="str">'catalog@http://localhost:3002/remoteEntry.js'</span>
+  },
+  shared: { <span class="str">'@angular/core'</span>: { singleton: <span class="kw">true</span>, strictVersion: <span class="kw">true</span> } }
+});
+
+<span class="cm">// webpack.config.js аплікації Checkout (remote)</span>
+<span class="kw">new</span> ModuleFederationPlugin({
+  name: <span class="str">'checkout'</span>,
+  filename: <span class="str">'remoteEntry.js'</span>,
+  exposes: { <span class="str">'./CheckoutModule'</span>: <span class="str">'./src/app/checkout/checkout.module.ts'</span> }
+});
+
+<span class="cm">// Ліниве завантаження remote у роутингу shell</span>
+{
+  path: <span class="str">'checkout'</span>,
+  loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'checkout/CheckoutModule'</span>)
+    .then(m =&gt; m.CheckoutModule)
+}</pre>
+<div class="tip">Використовуйте пакет <code>@angular-architects/module-federation</code> для спрощення налаштування. Головний виклик: спільний стан між MFE — використовуйте custom events, <code>localStorage</code> або спільний сервіс у shell.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Nx — інструментарій монорепозиторію</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Nx — це розумна система збірки та інструмент монорепозиторію, що допомагає керувати кількома аплікаціями та спільними бібліотеками в одному репозиторії.</p>
+<pre><span class="cm">// Структура workspace</span>
+<span class="cm">// apps/</span>
+<span class="cm">//   shell/          ← головний Angular-додаток</span>
+<span class="cm">//   admin/          ← admin MFE</span>
+<span class="cm">//   checkout/       ← checkout MFE</span>
+<span class="cm">// libs/</span>
+<span class="cm">//   shared/ui/      ← спільні UI-компоненти</span>
+<span class="cm">//   shared/data/    ← спільний стан/сервіси</span>
+<span class="cm">//   feature/auth/   ← бібліотека фічі авторизації</span>
+
+<span class="cm">// Основні команди</span>
+<span class="cm">// nx serve shell</span>
+<span class="cm">// nx build checkout --prod</span>
+<span class="cm">// nx test shared-ui</span>
+<span class="cm">// nx affected --target=test    ← запускати тести лише для змінених файлів</span>
+<span class="cm">// nx graph                      ← візуалізація залежностей</span></pre>
+<table>
+<tr><th>Функція Nx</th><th>Що робить</th></tr>
+<tr><td>Кеш обчислень</td><td>Кешує результати збірки/тестів; пропускає, якщо нічого не змінилось</td></tr>
+<tr><td>Affected-команди</td><td>Збирає/тестує лише код, на який вплинула зміна</td></tr>
+<tr><td>Обмеження меж</td><td>Lint-правила для заборони залежностей бібліотек від аплікацій</td></tr>
+<tr><td>Генератори</td><td>Стандартизоване створення аплікацій, бібліотек, компонентів</td></tr>
+<tr><td>Розподілений кеш</td><td>Спільний кеш між CI-машинами (Nx Cloud)</td></tr>
+</table>
+<pre><span class="cm">// nx.json — обмеження меж між бібліотеками</span>
+{
+  <span class="str">"@nx/enforce-module-boundaries"</span>: [{
+    <span class="str">"sourceTag"</span>: <span class="str">"scope:shell"</span>,
+    <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"scope:shared"</span>]
+  }]
+}</pre>
+</div></div>
+</div>

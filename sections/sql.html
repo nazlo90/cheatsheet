@@ -473,3 +473,88 @@ CustomerRevenue <span class="kw">AS</span> (
     </div>
   </div>
 </div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Transaction Isolation Levels (SQL Standard)</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Anomalies &amp; Isolation Levels</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <p>The transaction isolation level defines which anomalies are possible when transactions run concurrently. The higher the level — the safer, but slower.</p>
+      <table>
+        <tr><th>Anomaly</th><th>Description</th></tr>
+        <tr><td><strong>Dirty Read</strong></td><td>A transaction reads uncommitted changes of another transaction</td></tr>
+        <tr><td><strong>Non-repeatable Read</strong></td><td>Re-reading the same row returns a different value (another transaction modified and committed)</td></tr>
+        <tr><td><strong>Phantom Read</strong></td><td>A repeated query returns new rows (another transaction inserted and committed)</td></tr>
+        <tr><td><strong>Lost Update</strong></td><td>Two transactions read, modify and write — one update is lost</td></tr>
+      </table>
+      <table>
+        <tr><th>Isolation Level</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th></tr>
+        <tr><td><strong>READ UNCOMMITTED</strong></td><td>Possible ✗</td><td>Possible ✗</td><td>Possible ✗</td></tr>
+        <tr><td><strong>READ COMMITTED</strong></td><td>Protected ✓</td><td>Possible ✗</td><td>Possible ✗</td></tr>
+        <tr><td><strong>REPEATABLE READ</strong></td><td>Protected ✓</td><td>Protected ✓</td><td>Possible ✗</td></tr>
+        <tr><td><strong>SERIALIZABLE</strong></td><td>Protected ✓</td><td>Protected ✓</td><td>Protected ✓</td></tr>
+      </table>
+      <div class="warn-box"><strong>Defaults:</strong> PostgreSQL — READ COMMITTED; SQL Server — READ COMMITTED; MySQL InnoDB — REPEATABLE READ; Oracle — READ COMMITTED.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Details per level + examples</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- READ UNCOMMITTED — sees uncommitted changes (dirty reads)</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED</span>;
+
+<span class="cm">-- READ COMMITTED — default in most DBMS</span>
+<span class="cm">-- Two identical SELECTs in the same transaction may return different results</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL READ COMMITTED</span>;
+<span class="cm">-- T1: SELECT balance FROM accounts WHERE id=1  → 1000</span>
+<span class="cm">-- T2: UPDATE accounts SET balance=500 WHERE id=1; COMMIT;</span>
+<span class="cm">-- T1: SELECT balance FROM accounts WHERE id=1  → 500 (non-repeatable read!)</span>
+
+<span class="cm">-- REPEATABLE READ — rows read within the transaction do not change</span>
+<span class="cm">-- But new INSERTs from another transaction may appear — phantom reads</span>
+<span class="cm">-- Note: PostgreSQL resolves phantom reads via MVCC even at this level</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL REPEATABLE READ</span>;
+
+<span class="cm">-- SERIALIZABLE — full protection; transactions appear sequential</span>
+<span class="kw">SET TRANSACTION ISOLATION LEVEL SERIALIZABLE</span>;
+
+<span class="cm">-- PostgreSQL snapshot isolation</span>
+<span class="kw">BEGIN</span>;
+<span class="kw">SET TRANSACTION ISOLATION LEVEL REPEATABLE READ</span>;
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> orders <span class="kw">WHERE</span> user_id = <span class="num">42</span>;
+<span class="cm">-- we see the snapshot at the transaction start time</span>
+<span class="kw">COMMIT</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>MVCC &amp; Practical Tips</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <p><strong>MVCC (Multi-Version Concurrency Control)</strong> — PostgreSQL and MySQL InnoDB store multiple row versions instead of read locks. Readers do not block writers and vice versa.</p>
+      <table>
+        <tr><th>Scenario</th><th>Recommended Level</th><th>Reason</th></tr>
+        <tr><td>Reports / analytics (read-only)</td><td>REPEATABLE READ or SERIALIZABLE</td><td>Consistent snapshot for the entire query</td></tr>
+        <tr><td>OLTP (orders, payments)</td><td>READ COMMITTED + explicit locks</td><td>Balance between safety and performance</td></tr>
+        <tr><td>Financial operations</td><td>SERIALIZABLE</td><td>Protection against lost updates and phantom reads</td></tr>
+        <tr><td>Counters / queues</td><td>READ COMMITTED + <code>SELECT FOR UPDATE</code></td><td>Optimistic or pessimistic locking</td></tr>
+      </table>
+      <pre><span class="cm">-- Pessimistic lock — locks the row for update</span>
+<span class="kw">BEGIN</span>;
+<span class="kw">SELECT</span> balance <span class="kw">FROM</span> accounts <span class="kw">WHERE</span> id = <span class="num">1</span> <span class="kw">FOR UPDATE</span>;
+<span class="kw">UPDATE</span> accounts <span class="kw">SET</span> balance = balance - <span class="num">100</span> <span class="kw">WHERE</span> id = <span class="num">1</span>;
+<span class="kw">COMMIT</span>;
+
+<span class="cm">-- Optimistic lock — check version before updating</span>
+<span class="kw">UPDATE</span> accounts
+<span class="kw">SET</span> balance = <span class="num">900</span>, version = version + <span class="num">1</span>
+<span class="kw">WHERE</span> id = <span class="num">1</span> <span class="kw">AND</span> version = <span class="num">5</span>;
+<span class="cm">-- if 0 rows updated — conflict, retry the transaction</span></pre>
+      <div class="tip">For most OLTP tasks <strong>READ COMMITTED + SELECT FOR UPDATE</strong> on critical resources is sufficient. Use SERIALIZABLE sparingly — it can significantly reduce throughput under load.</div>
+    </div>
+  </div>
+</div>

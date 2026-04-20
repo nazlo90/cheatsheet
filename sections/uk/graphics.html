@@ -1,0 +1,16 @@
+<!-- ===== GRAPHICS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">D3 / SVG / Canvas / WebGL / PixiJS</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Порівняння та коли використовувати</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Технологія</th><th>Тип</th><th>Найкраще для</th><th>Обмеження</th></tr>
+<tr><td>SVG</td><td>Векторний DOM</td><td>Графіки, діаграми, іконки (&lt;5k елементів)</td><td>Повільно з великою кількістю елементів</td></tr>
+<tr><td>Canvas 2D</td><td>Растровий JS API</td><td>Ігри, частинки, великі набори даних</td><td>Немає доступу до окремих елементів</td></tr>
+<tr><td>D3.js</td><td>Прив'язка даних + SVG/Canvas</td><td>Кастомна інтерактивна візуалізація даних</td><td>Крута крива навчання</td></tr>
+<tr><td>WebGL</td><td>GPU-прискорення</td><td>3D, масиви даних, шейдери, VR/AR</td><td>Дуже складний (GLSL)</td></tr>
+<tr><td>PixiJS</td><td>Абстракція WebGL</td><td>Ігри, анімовані UI, 2D-рушій</td><td>Не для 3D</td></tr>
+</table>
+<div class="tip">&lt;1k елементів → SVG; 1k–100k → Canvas; 100k+ або 3D → WebGL/PixiJS. Використовуйте API <code>.join()</code> D3 (v5+) замість ручного enter/exit.</div>
+</div></div>
+</div>

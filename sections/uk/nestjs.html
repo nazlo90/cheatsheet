@@ -1,0 +1,430 @@
+<!-- ===== NESTJS FUNDAMENTALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Архітектура NestJS <span class="badge b-hot">Основне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Модулі, Контролери, Провайдери</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>NestJS організовує код у <strong>Модулі</strong>. Кожен модуль інкапсулює окрему функціональну частину. Фреймворк зв'язує залежності через свій IoC-контейнер.</p>
+<table>
+<tr><th>Будівельний блок</th><th>Декоратор</th><th>Роль</th></tr>
+<tr><td>Module</td><td><code>@Module()</code></td><td>Об'єднує провайдери та контролери; визначає, що експортується</td></tr>
+<tr><td>Controller</td><td><code>@Controller()</code></td><td>Обробляє вхідні запити, зіставляє маршрути, повертає відповіді</td></tr>
+<tr><td>Provider / Service</td><td><code>@Injectable()</code></td><td>Бізнес-логіка; впроваджується через DI конструктора</td></tr>
+<tr><td>Guard</td><td><code>@UseGuards()</code></td><td>Перевірка авторизації перед виконанням обробника</td></tr>
+<tr><td>Pipe</td><td><code>@UsePipes()</code></td><td>Валідація / перетворення даних запиту</td></tr>
+<tr><td>Interceptor</td><td><code>@UseInterceptors()</code></td><td>AOP: логування, кешування, формування відповіді</td></tr>
+<tr><td>Filter</td><td><code>@UseFilters()</code></td><td>Обробка виключень — перетворює помилки на HTTP-відповіді</td></tr>
+</table>
+<pre><span class="cm">// users.module.ts</span>
+<span class="kw">import</span> { <span class="cls">Module</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+<span class="kw">import</span> { <span class="cls">UsersController</span> } <span class="kw">from</span> <span class="str">'./users.controller'</span>;
+<span class="kw">import</span> { <span class="cls">UsersService</span> } <span class="kw">from</span> <span class="str">'./users.service'</span>;
+
+<span class="fn">@Module</span>({
+  controllers: [<span class="cls">UsersController</span>],
+  providers:   [<span class="cls">UsersService</span>],
+  exports:     [<span class="cls">UsersService</span>],  <span class="cm">// робить його доступним для модулів, що імпортують цей</span>
+})
+<span class="kw">export class</span> <span class="cls">UsersModule</span> {}</pre>
+<div class="tip">Тримайте модулі в межах окремих функціональних областей. <code>AppModule</code> — кореневий; функціональні модулі імпортуються до нього (або ліниво — для мікросервісів).</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Контролер і декоратори маршрутів</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { <span class="cls">Controller</span>, <span class="cls">Get</span>, <span class="cls">Post</span>, <span class="cls">Body</span>, <span class="cls">Param</span>, <span class="cls">Query</span>,
+         <span class="cls">HttpCode</span>, <span class="cls">HttpStatus</span>, <span class="cls">Delete</span>, <span class="cls">Patch</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+<span class="kw">import</span> { <span class="cls">UsersService</span> } <span class="kw">from</span> <span class="str">'./users.service'</span>;
+<span class="kw">import</span> { <span class="cls">CreateUserDto</span> } <span class="kw">from</span> <span class="str">'./dto/create-user.dto'</span>;
+
+<span class="fn">@Controller</span>(<span class="str">'users'</span>)   <span class="cm">// префікс → /users</span>
+<span class="kw">export class</span> <span class="cls">UsersController</span> {
+  <span class="kw">constructor</span>(<span class="kw">private readonly</span> usersService: <span class="cls">UsersService</span>) {}
+
+  <span class="fn">@Get</span>()
+  <span class="fn">findAll</span>(<span class="fn">@Query</span>(<span class="str">'role'</span>) role?: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findAll</span>(role);
+  }
+
+  <span class="fn">@Get</span>(<span class="str">':id'</span>)
+  <span class="fn">findOne</span>(<span class="fn">@Param</span>(<span class="str">'id'</span>) id: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">findOne</span>(+id);
+  }
+
+  <span class="fn">@Post</span>()
+  <span class="fn">@HttpCode</span>(<span class="cls">HttpStatus</span>.CREATED)
+  <span class="fn">create</span>(<span class="fn">@Body</span>() dto: <span class="cls">CreateUserDto</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">create</span>(dto);
+  }
+
+  <span class="fn">@Patch</span>(<span class="str">':id'</span>)
+  <span class="fn">update</span>(<span class="fn">@Param</span>(<span class="str">'id'</span>) id: <span class="kw">string</span>, <span class="fn">@Body</span>() dto: <span class="cls">Partial</span>&lt;<span class="cls">CreateUserDto</span>&gt;) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">update</span>(+id, dto);
+  }
+
+  <span class="fn">@Delete</span>(<span class="str">':id'</span>)
+  <span class="fn">@HttpCode</span>(<span class="cls">HttpStatus</span>.NO_CONTENT)
+  <span class="fn">remove</span>(<span class="fn">@Param</span>(<span class="str">'id'</span>) id: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.usersService.<span class="fn">remove</span>(+id);
+  }
+}</pre>
+<div class="warn-box">Контролери NestJS мають бути тонкими — розміщуйте бізнес-логіку в сервісах. Контролери лише зв'язують HTTP із викликами сервісів.</div>
+</div></div>
+</div>
+
+<!-- ===== DEPENDENCY INJECTION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Впровадження залежностей та Провайдери <span class="badge b-key">DI</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Типи провайдерів та власні токени</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><em>Провайдер</em> — це будь-що, зареєстроване в масиві <code>providers</code> модуля. IoC-контейнер вирішує їх за токеном.</p>
+<pre><span class="cm">// Стандартний провайдер класу (скорочена форма)</span>
+providers: [<span class="cls">UsersService</span>]
+
+<span class="cm">// Еквівалентна повна форма</span>
+providers: [{ provide: <span class="cls">UsersService</span>, useClass: <span class="cls">UsersService</span> }]
+
+<span class="cm">// Value провайдер — об'єкт конфігурації, константи</span>
+providers: [{ provide: <span class="str">'CONFIG'</span>, useValue: { db: <span class="str">'postgres://...'</span> } }]
+
+<span class="cm">// Factory провайдер — асинхронна ініціалізація (з'єднання з БД тощо)</span>
+providers: [{
+  provide: <span class="str">'DB_CONN'</span>,
+  useFactory: <span class="kw">async</span> (cfg: <span class="cls">ConfigService</span>) =&gt; {
+    <span class="kw">return await</span> <span class="fn">createConnection</span>(cfg.<span class="fn">get</span>(<span class="str">'DATABASE_URL'</span>));
+  },
+  inject: [<span class="cls">ConfigService</span>],
+}]
+
+<span class="cm">// Впровадження токена-значення або некласового токена</span>
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">AppService</span> {
+  <span class="kw">constructor</span>(<span class="fn">@Inject</span>(<span class="str">'CONFIG'</span>) <span class="kw">private</span> cfg: <span class="kw">any</span>) {}
+}</pre>
+<div class="tip">Використовуйте об'єкти <code>InjectionToken</code> замість рядків для типобезпечності: <code>const CONFIG = new InjectionToken&lt;Config&gt;('CONFIG')</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Скоупи: Singleton vs Request vs Transient</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Скоуп</th><th>Час життя</th><th>Коли використовувати</th></tr>
+<tr><td><code>DEFAULT</code> (singleton)</td><td>Час життя застосунку, спільний екземпляр</td><td>Stateless-сервіси, репозиторії</td></tr>
+<tr><td><code>REQUEST</code></td><td>Один екземпляр на HTTP-запит</td><td>Контекст на рівні запиту (користувач, тенант)</td></tr>
+<tr><td><code>TRANSIENT</code></td><td>Новий екземпляр при кожному впровадженні</td><td>Stateful-утиліти, що не повинні ділити стан</td></tr>
+</table>
+<pre><span class="kw">import</span> { <span class="cls">Injectable</span>, <span class="cls">Scope</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+
+<span class="fn">@Injectable</span>({ scope: <span class="cls">Scope</span>.REQUEST })
+<span class="kw">export class</span> <span class="cls">RequestScopedService</span> {}</pre>
+<div class="warn-box">REQUEST-скоупні провайдери «спливають» вгору — будь-який провайдер, що впроваджує REQUEST-скоупний, сам стає REQUEST-скоупним. Це впливає на продуктивність; надавайте перевагу singleton + <code>AsyncLocalStorage</code> для контексту на рівні запиту.</div>
+</div></div>
+</div>
+
+<!-- ===== VALIDATION & PIPES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Валідація та Pipes <span class="badge b-hot">Практичне</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>DTO з class-validator + ValidationPipe</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// create-user.dto.ts</span>
+<span class="kw">import</span> { <span class="cls">IsEmail</span>, <span class="cls">IsString</span>, <span class="cls">MinLength</span>, <span class="cls">IsOptional</span>, <span class="cls">IsEnum</span> } <span class="kw">from</span> <span class="str">'class-validator'</span>;
+<span class="kw">import</span> { <span class="cls">Transform</span> } <span class="kw">from</span> <span class="str">'class-transformer'</span>;
+
+<span class="kw">export enum</span> <span class="cls">Role</span> { ADMIN = <span class="str">'admin'</span>, USER = <span class="str">'user'</span> }
+
+<span class="kw">export class</span> <span class="cls">CreateUserDto</span> {
+  <span class="fn">@IsString</span>()
+  <span class="fn">@MinLength</span>(<span class="num">2</span>)
+  name: <span class="kw">string</span>;
+
+  <span class="fn">@IsEmail</span>()
+  <span class="fn">@Transform</span>(({ value }) =&gt; value.<span class="fn">toLowerCase</span>())
+  email: <span class="kw">string</span>;
+
+  <span class="fn">@IsOptional</span>()
+  <span class="fn">@IsEnum</span>(<span class="cls">Role</span>)
+  role?: <span class="cls">Role</span>;
+}
+
+<span class="cm">// main.ts — увімкнути глобально</span>
+app.<span class="fn">useGlobalPipes</span>(<span class="kw">new</span> <span class="cls">ValidationPipe</span>({
+  whitelist: <span class="kw">true</span>,       <span class="cm">// видаляти невідомі властивості</span>
+  forbidNonWhitelisted: <span class="kw">true</span>,
+  transform: <span class="kw">true</span>,       <span class="cm">// автоматично приводити payload до класів DTO</span>
+}));</pre>
+<div class="warn-box">Завжди встановлюйте <code>whitelist: true</code>, щоб запобігти передачі клієнтами зайвих полів, які можуть випадково перезаписати властивості.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Власний Pipe та ParseIntPipe</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { <span class="cls">PipeTransform</span>, <span class="cls">Injectable</span>, <span class="cls">ArgumentMetadata</span>, <span class="cls">BadRequestException</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">ParsePositiveIntPipe</span> <span class="kw">implements</span> <span class="cls">PipeTransform</span> {
+  <span class="fn">transform</span>(value: <span class="kw">string</span>, metadata: <span class="cls">ArgumentMetadata</span>) {
+    <span class="kw">const</span> n = <span class="fn">parseInt</span>(value, <span class="num">10</span>);
+    <span class="kw">if</span> (<span class="fn">isNaN</span>(n) || n &lt;= <span class="num">0</span>) <span class="kw">throw new</span> <span class="cls">BadRequestException</span>(<span class="str">'Must be a positive integer'</span>);
+    <span class="kw">return</span> n;
+  }
+}
+
+<span class="cm">// Використання</span>
+<span class="fn">@Get</span>(<span class="str">':id'</span>)
+<span class="fn">findOne</span>(<span class="fn">@Param</span>(<span class="str">'id'</span>, <span class="cls">ParsePositiveIntPipe</span>) id: <span class="kw">number</span>) { ... }
+
+<span class="cm">// Вбудовані pipes</span>
+<span class="cm">// ParseIntPipe, ParseBoolPipe, ParseUUIDPipe, ParseEnumPipe, DefaultValuePipe</span></pre>
+</div></div>
+</div>
+
+<!-- ===== GUARDS & AUTH ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Guards та Автентифікація <span class="badge b-key">Безпека</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>JWT Auth Guard з Passport</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// jwt.strategy.ts</span>
+<span class="kw">import</span> { <span class="cls">PassportStrategy</span> } <span class="kw">from</span> <span class="str">'@nestjs/passport'</span>;
+<span class="kw">import</span> { <span class="cls">Strategy</span>, <span class="cls">ExtractJwt</span> } <span class="kw">from</span> <span class="str">'passport-jwt'</span>;
+
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">JwtStrategy</span> <span class="kw">extends</span> <span class="fn">PassportStrategy</span>(<span class="cls">Strategy</span>) {
+  <span class="kw">constructor</span>(config: <span class="cls">ConfigService</span>) {
+    <span class="kw">super</span>({
+      jwtFromRequest: <span class="cls">ExtractJwt</span>.<span class="fn">fromAuthHeaderAsBearerToken</span>(),
+      secretOrKey:    config.<span class="fn">get</span>(<span class="str">'JWT_SECRET'</span>),
+    });
+  }
+  <span class="fn">validate</span>(payload: { sub: <span class="kw">number</span>; email: <span class="kw">string</span> }) {
+    <span class="kw">return</span> { id: payload.sub, email: payload.email }; <span class="cm">// прикріплюється до req.user</span>
+  }
+}
+
+<span class="cm">// jwt-auth.guard.ts</span>
+<span class="kw">import</span> { <span class="cls">AuthGuard</span> } <span class="kw">from</span> <span class="str">'@nestjs/passport'</span>;
+<span class="kw">export class</span> <span class="cls">JwtAuthGuard</span> <span class="kw">extends</span> <span class="fn">AuthGuard</span>(<span class="str">'jwt'</span>) {}
+
+<span class="cm">// Використання в контролері</span>
+<span class="fn">@UseGuards</span>(<span class="cls">JwtAuthGuard</span>)
+<span class="fn">@Get</span>(<span class="str">'profile'</span>)
+<span class="fn">getProfile</span>(<span class="fn">@Request</span>() req) { <span class="kw">return</span> req.user; }</pre>
+<div class="tip">Зареєструйте <code>JwtStrategy</code> як провайдер і імпортуйте <code>PassportModule</code> + <code>JwtModule.registerAsync()</code> у <code>AuthModule</code>.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Рольовий доступ через власний Guard та Reflector</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// roles.decorator.ts</span>
+<span class="kw">export const</span> <span class="cls">Roles</span> = (...roles: <span class="kw">string</span>[]) =&gt; <span class="fn">SetMetadata</span>(<span class="str">'roles'</span>, roles);
+
+<span class="cm">// roles.guard.ts</span>
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">RolesGuard</span> <span class="kw">implements</span> <span class="cls">CanActivate</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> reflector: <span class="cls">Reflector</span>) {}
+
+  <span class="fn">canActivate</span>(ctx: <span class="cls">ExecutionContext</span>): <span class="kw">boolean</span> {
+    <span class="kw">const</span> required = <span class="kw">this</span>.reflector.<span class="fn">getAllAndOverride</span>&lt;<span class="kw">string</span>[]&gt;(<span class="str">'roles'</span>, [
+      ctx.<span class="fn">getHandler</span>(), ctx.<span class="fn">getClass</span>(),
+    ]);
+    <span class="kw">if</span> (!required) <span class="kw">return true</span>;
+    <span class="kw">const</span> { user } = ctx.<span class="fn">switchToHttp</span>().<span class="fn">getRequest</span>();
+    <span class="kw">return</span> required.<span class="fn">some</span>(r =&gt; user.roles?.includes(r));
+  }
+}
+
+<span class="cm">// Використання</span>
+<span class="fn">@UseGuards</span>(<span class="cls">JwtAuthGuard</span>, <span class="cls">RolesGuard</span>)
+<span class="fn">@Roles</span>(<span class="str">'admin'</span>)
+<span class="fn">@Delete</span>(<span class="str">':id'</span>)
+<span class="fn">remove</span>(<span class="fn">@Param</span>(<span class="str">'id'</span>) id: <span class="kw">string</span>) { ... }</pre>
+</div></div>
+</div>
+
+<!-- ===== INTERCEPTORS & FILTERS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Interceptors, Filters та Обробка виключень <span class="badge b-grn">AOP</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Interceptor для трансформації відповіді</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { <span class="cls">Injectable</span>, <span class="cls">NestInterceptor</span>, <span class="cls">ExecutionContext</span>, <span class="cls">CallHandler</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+<span class="kw">import</span> { <span class="cls">Observable</span> } <span class="kw">from</span> <span class="str">'rxjs'</span>;
+<span class="kw">import</span> { map } <span class="kw">from</span> <span class="str">'rxjs/operators'</span>;
+
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">TransformInterceptor</span> <span class="kw">implements</span> <span class="cls">NestInterceptor</span> {
+  <span class="fn">intercept</span>(ctx: <span class="cls">ExecutionContext</span>, next: <span class="cls">CallHandler</span>): <span class="cls">Observable</span>&lt;<span class="kw">any</span>&gt; {
+    <span class="kw">return</span> next.<span class="fn">handle</span>().<span class="fn">pipe</span>(<span class="fn">map</span>(data =&gt; ({ data, success: <span class="kw">true</span> })));
+  }
+}
+
+<span class="cm">// Logging interceptor — вимірювання часу виконання обробника</span>
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">LoggingInterceptor</span> <span class="kw">implements</span> <span class="cls">NestInterceptor</span> {
+  <span class="fn">intercept</span>(ctx: <span class="cls">ExecutionContext</span>, next: <span class="cls">CallHandler</span>): <span class="cls">Observable</span>&lt;<span class="kw">any</span>&gt; {
+    <span class="kw">const</span> now = Date.<span class="fn">now</span>();
+    <span class="kw">return</span> next.<span class="fn">handle</span>().<span class="fn">pipe</span>(<span class="fn">tap</span>(() =&gt; <span class="fn">console</span>.log(<span class="str">`Handler took </span>${Date.<span class="fn">now</span>() - now}<span class="str">ms`</span>)));
+  }
+}</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Фільтри виключень</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { <span class="cls">ExceptionFilter</span>, <span class="cls">Catch</span>, <span class="cls">ArgumentsHost</span>, <span class="cls">HttpException</span> } <span class="kw">from</span> <span class="str">'@nestjs/common'</span>;
+
+<span class="fn">@Catch</span>(<span class="cls">HttpException</span>)
+<span class="kw">export class</span> <span class="cls">HttpExceptionFilter</span> <span class="kw">implements</span> <span class="cls">ExceptionFilter</span> {
+  <span class="fn">catch</span>(exception: <span class="cls">HttpException</span>, host: <span class="cls">ArgumentsHost</span>) {
+    <span class="kw">const</span> ctx  = host.<span class="fn">switchToHttp</span>();
+    <span class="kw">const</span> res  = ctx.<span class="fn">getResponse</span>();
+    <span class="kw">const</span> req  = ctx.<span class="fn">getRequest</span>();
+    <span class="kw">const</span> status = exception.<span class="fn">getStatus</span>();
+
+    res.<span class="fn">status</span>(status).<span class="fn">json</span>({
+      statusCode: status,
+      timestamp:  <span class="kw">new</span> <span class="cls">Date</span>().<span class="fn">toISOString</span>(),
+      path:       req.url,
+      message:    exception.<span class="fn">message</span>,
+    });
+  }
+}
+
+<span class="cm">// Перехоплювати все — корисно для необроблених помилок</span>
+<span class="fn">@Catch</span>()
+<span class="kw">export class</span> <span class="cls">AllExceptionsFilter</span> <span class="kw">implements</span> <span class="cls">ExceptionFilter</span> { ... }
+
+<span class="cm">// Зареєструвати глобально у main.ts</span>
+app.<span class="fn">useGlobalFilters</span>(<span class="kw">new</span> <span class="cls">HttpExceptionFilter</span>());</pre>
+<div class="tip">Nest постачається з вбудованими HTTP-виключеннями: <code>NotFoundException</code>, <code>BadRequestException</code>, <code>UnauthorizedException</code>, <code>ForbiddenException</code>, <code>ConflictException</code> тощо.</div>
+</div></div>
+</div>
+
+<!-- ===== TYPEORM & DATABASE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Робота з базою даних через TypeORM <span class="badge b-key">Дані</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Entity, Repository та транзакції</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// user.entity.ts</span>
+<span class="kw">import</span> { <span class="cls">Entity</span>, <span class="cls">PrimaryGeneratedColumn</span>, <span class="cls">Column</span>, <span class="cls">CreateDateColumn</span> } <span class="kw">from</span> <span class="str">'typeorm'</span>;
+
+<span class="fn">@Entity</span>(<span class="str">'users'</span>)
+<span class="kw">export class</span> <span class="cls">User</span> {
+  <span class="fn">@PrimaryGeneratedColumn</span>()
+  id: <span class="kw">number</span>;
+
+  <span class="fn">@Column</span>({ unique: <span class="kw">true</span> })
+  email: <span class="kw">string</span>;
+
+  <span class="fn">@Column</span>()
+  name: <span class="kw">string</span>;
+
+  <span class="fn">@CreateDateColumn</span>()
+  createdAt: <span class="cls">Date</span>;
+}
+
+<span class="cm">// users.service.ts</span>
+<span class="fn">@Injectable</span>()
+<span class="kw">export class</span> <span class="cls">UsersService</span> {
+  <span class="kw">constructor</span>(
+    <span class="fn">@InjectRepository</span>(<span class="cls">User</span>)
+    <span class="kw">private</span> repo: <span class="cls">Repository</span>&lt;<span class="cls">User</span>&gt;,
+    <span class="kw">private</span> dataSource: <span class="cls">DataSource</span>,
+  ) {}
+
+  <span class="fn">findAll</span>() { <span class="kw">return</span> <span class="kw">this</span>.repo.<span class="fn">find</span>(); }
+
+  <span class="cm">// Транзакція через DataSource</span>
+  <span class="kw">async</span> <span class="fn">transferCredits</span>(fromId: <span class="kw">number</span>, toId: <span class="kw">number</span>, amount: <span class="kw">number</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.dataSource.<span class="fn">transaction</span>(<span class="kw">async</span> manager =&gt; {
+      <span class="kw">await</span> manager.<span class="fn">decrement</span>(<span class="cls">User</span>, { id: fromId }, <span class="str">'credits'</span>, amount);
+      <span class="kw">await</span> manager.<span class="fn">increment</span>(<span class="cls">User</span>, { id: toId },   <span class="str">'credits'</span>, amount);
+    });
+  }
+}</pre>
+<div class="warn-box">Ніколи не використовуйте <code>synchronize: true</code> у production — це виконує автоміграцію при запуску та може призвести до втрати даних. Натомість використовуйте міграції TypeORM CLI.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>QueryBuilder та зв'язки</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Складний запит за допомогою QueryBuilder</span>
+<span class="kw">const</span> users = <span class="kw">await</span> <span class="kw">this</span>.repo
+  .<span class="fn">createQueryBuilder</span>(<span class="str">'user'</span>)
+  .<span class="fn">leftJoinAndSelect</span>(<span class="str">'user.posts'</span>, <span class="str">'post'</span>)
+  .<span class="fn">where</span>(<span class="str">'user.role = :role'</span>, { role: <span class="str">'admin'</span> })
+  .<span class="fn">andWhere</span>(<span class="str">'post.published = true'</span>)
+  .<span class="fn">orderBy</span>(<span class="str">'user.createdAt'</span>, <span class="str">'DESC'</span>)
+  .<span class="fn">take</span>(<span class="num">10</span>)
+  .<span class="fn">getMany</span>();
+
+<span class="cm">// Зв'язки на рівні entity</span>
+<span class="fn">@OneToMany</span>(() =&gt; <span class="cls">Post</span>, post =&gt; post.author)
+posts: <span class="cls">Post</span>[];
+
+<span class="fn">@ManyToOne</span>(() =&gt; <span class="cls">User</span>, user =&gt; user.posts)
+<span class="fn">@JoinColumn</span>()
+author: <span class="cls">User</span>;</pre>
+<div class="tip">Жадібне завантаження всіх зв'язків за замовчуванням спричиняє N+1 запити. Використовуйте опцію <code>relations</code> у <code>find()</code> або явний <code>leftJoinAndSelect</code> у QueryBuilder.</div>
+</div></div>
+</div>
+
+<!-- ===== CONFIG & ENV ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Конфігурація та Середовище <span class="badge b-grn">Ops</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ConfigModule та типізована конфігурація</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="cm">// app.module.ts</span>
+<span class="kw">import</span> { <span class="cls">ConfigModule</span> } <span class="kw">from</span> <span class="str">'@nestjs/config'</span>;
+
+<span class="fn">@Module</span>({
+  imports: [
+    <span class="cls">ConfigModule</span>.<span class="fn">forRoot</span>({
+      isGlobal: <span class="kw">true</span>,     <span class="cm">// не потрібно імпортувати у кожен модуль</span>
+      envFilePath: <span class="str">'.env'</span>,
+      validationSchema: Joi.<span class="fn">object</span>({
+        PORT:         Joi.<span class="fn">number</span>().<span class="fn">default</span>(<span class="num">3000</span>),
+        DATABASE_URL: Joi.<span class="fn">string</span>().<span class="fn">required</span>(),
+        JWT_SECRET:   Joi.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">32</span>).<span class="fn">required</span>(),
+      }),
+    }),
+  ],
+})
+<span class="kw">export class</span> <span class="cls">AppModule</span> {}
+
+<span class="cm">// Типізований простір імен конфігурації</span>
+<span class="kw">export</span> <span class="kw">const</span> dbConfig = <span class="fn">registerAs</span>(<span class="str">'db'</span>, () =&gt; ({
+  url:  process.env.DATABASE_URL,
+  pool: <span class="fn">parseInt</span>(process.env.DB_POOL ?? <span class="str">'5'</span>, <span class="num">10</span>),
+}));
+
+<span class="cm">// Впровадження в сервіс</span>
+<span class="fn">@Inject</span>(<span class="fn">dbConfig</span>.<span class="cls">KEY</span>) <span class="kw">private</span> db: <span class="cls">ConfigType</span>&lt;<span class="kw">typeof</span> dbConfig&gt;</pre>
+<div class="warn-box">Перевіряйте всі змінні середовища при запуску за допомогою <code>validationSchema</code>. Краще одразу падати з помилкою, ніж отримати збій у runtime через відсутню змінну.</div>
+</div></div>
+</div>
+
+<!-- ===== TESTING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Тестування NestJS <span class="badge b-key">Якість</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Модульне тестування з Test.createTestingModule</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre><span class="kw">import</span> { <span class="cls">Test</span>, <span class="cls">TestingModule</span> } <span class="kw">from</span> <span class="str">'@nestjs/testing'</span>;
+<span class="kw">import</span> { <span class="cls">UsersService</span> } <span class="kw">from</span> <span class="str">'./users.service'</span>;
+<span class="kw">import</span> { <span class="fn">getRepositoryToken</span> } <span class="kw">from</span> <span class="str">'@nestjs/typeorm'</span>;
+
+<span class="fn">describe</span>(<span class="str">'UsersService'</span>, () =&gt; {
+  <span class="kw">let</span> service: <span class="cls">UsersService</span>;
+  <span class="kw">const</span> mockRepo = { <span class="fn">find</span>: jest.<span class="fn">fn</span>(), <span class="fn">findOne</span>: jest.<span class="fn">fn</span>(), <span class="fn">save</span>: jest.<span class="fn">fn</span>() };
+
+  <span class="fn">beforeEach</span>(<span class="kw">async</span> () =&gt; {
+    <span class="kw">const</span> module: <span class="cls">TestingModule</span> = <span class="kw">await</span> <span class="cls">Test</span>.<span class="fn">createTestingModule</span>({
+      providers: [
+        <span class="cls">UsersService</span>,
+        { provide: <span class="fn">getRepositoryToken</span>(<span class="cls">User</span>), useValue: mockRepo },
+      ],
+    }).<span class="fn">compile</span>();
+
+    service = module.<span class="fn">get</span>&lt;<span class="cls">UsersService</span>&gt;(<span class="cls">UsersService</span>);
+  });
+
+  <span class="fn">it</span>(<span class="str">'should return all users'</span>, <span class="kw">async</span> () =&gt; {
+    mockRepo.find.<span class="fn">mockResolvedValue</span>([{ id: <span class="num">1</span>, name: <span class="str">'Alice'</span> }]);
+    <span class="kw">const</span> result = <span class="kw">await</span> service.<span class="fn">findAll</span>();
+    <span class="fn">expect</span>(result).<span class="fn">toHaveLength</span>(<span class="num">1</span>);
+  });
+});</pre>
+<div class="tip">Для інтеграційних та e2e-тестів використовуйте <code>supertest</code> разом із повноцінним <code>NestApplication</code>. Тримайте модульні тести зосередженими на сервісах; нехай e2e-тести покривають HTTP-шар.</div>
+</div></div>
+</div>

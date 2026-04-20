@@ -1,0 +1,466 @@
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">C# Система типів &amp; Value vs Reference Types <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Value types vs Reference types</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Аспект</th><th>Value Types</th><th>Reference Types</th></tr>
+        <tr><td>Зберігання</td><td>Стек (зазвичай)</td><td>Купа (Heap)</td></tr>
+        <tr><td>Присвоєння</td><td>Копіює дані</td><td>Копіює посилання</td></tr>
+        <tr><td>Null за замовчуванням</td><td>Ні (потрібен nullable&lt;T&gt;)</td><td>Так</td></tr>
+        <tr><td>Приклади</td><td>int, bool, struct, enum</td><td>class, string, array, delegate</td></tr>
+        <tr><td>Наслідування</td><td>Неявно sealed</td><td>Підтримує наслідування</td></tr>
+      </table>
+      <pre><span class="cm">// Value type — семантика копіювання</span>
+<span class="kw">int</span> a = <span class="num">5</span>;
+<span class="kw">int</span> b = a;
+b = <span class="num">10</span>; <span class="cm">// a залишається 5</span>
+
+<span class="cm">// Reference type — спільне посилання</span>
+<span class="kw">var</span> list1 = <span class="kw">new</span> <span class="cls">List</span>&lt;<span class="kw">int</span>&gt; { <span class="num">1</span>, <span class="num">2</span> };
+<span class="kw">var</span> list2 = list1;
+list2.<span class="fn">Add</span>(<span class="num">3</span>); <span class="cm">// list1 також містить 3</span></pre>
+      <div class="warn-box">Boxing відбувається, коли value type присвоюється <code>object</code> — виділяє пам'ять на купі. Уникайте на критичних шляхах виконання.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Nullable value types &amp; null-coalescing оператори</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">int</span>? age = <span class="kw">null</span>;
+age ??= <span class="num">18</span>;           <span class="cm">// присвоїти якщо null</span>
+<span class="kw">int</span> val = age ?? <span class="num">0</span>;   <span class="cm">// значення за замовчуванням</span>
+<span class="kw">string</span>? name = <span class="kw">null</span>;
+<span class="kw">int</span> len = name?.<span class="fn">Length</span> ?? <span class="num">0</span>; <span class="cm">// null-умовний доступ</span></pre>
+      <table>
+        <tr><th>Оператор</th><th>Значення</th></tr>
+        <tr><td><code>??</code></td><td>Повертає ліве, якщо не null, інакше праве</td></tr>
+        <tr><td><code>??=</code></td><td>Присвоює праве лівому лише якщо ліве є null</td></tr>
+        <tr><td><code>?.</code></td><td>Null-умовний доступ до члена</td></tr>
+        <tr><td><code>?[]</code></td><td>Null-умовний індексний доступ</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Classes, Structs &amp; Records <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>class vs struct vs record</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Характеристика</th><th>class</th><th>struct</th><th>record</th></tr>
+        <tr><td>Тип</td><td>Reference</td><td>Value</td><td>Reference (record class) / Value (record struct)</td></tr>
+        <tr><td>Наслідування</td><td>Так</td><td>Ні</td><td>Так (record)</td></tr>
+        <tr><td>Рівність</td><td>За посиланням</td><td>За значенням (поле за полем)</td><td>За значенням (автогенерована)</td></tr>
+        <tr><td>Незмінність</td><td>Вручну</td><td>Вручну</td><td>Вбудована через <code>init</code></td></tr>
+        <tr><td>Найкраще для</td><td>Сутності, сервіси</td><td>Невеликі об'єкти-значення</td><td>DTO, незмінні дані</td></tr>
+      </table>
+      <pre><span class="cm">// Record — незмінний за замовчуванням, рівність за значенням</span>
+<span class="kw">record</span> <span class="cls">Point</span>(<span class="kw">int</span> X, <span class="kw">int</span> Y);
+
+<span class="kw">var</span> p1 = <span class="kw">new</span> <span class="cls">Point</span>(<span class="num">1</span>, <span class="num">2</span>);
+<span class="kw">var</span> p2 = p1 <span class="kw">with</span> { X = <span class="num">10</span> }; <span class="cm">// неруйнівна мутація</span>
+<span class="fn">Console</span>.<span class="fn">WriteLine</span>(p1 == p2); <span class="cm">// False</span>
+
+<span class="cm">// Struct — розміщується на стеку, семантика значень</span>
+<span class="kw">readonly struct</span> <span class="cls">Vector2</span>(<span class="kw">float</span> X, <span class="kw">float</span> Y);</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Модифікатори доступу</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>Модифікатор</th><th>Доступний з</th></tr>
+        <tr><td><code>public</code></td><td>Звідусіль</td></tr>
+        <tr><td><code>private</code></td><td>Лише той самий клас</td></tr>
+        <tr><td><code>protected</code></td><td>Той самий клас + похідні класи</td></tr>
+        <tr><td><code>internal</code></td><td>Той самий складальний модуль (assembly)</td></tr>
+        <tr><td><code>protected internal</code></td><td>Той самий assembly АБО похідний клас</td></tr>
+        <tr><td><code>private protected</code></td><td>Той самий assembly І похідний клас</td></tr>
+        <tr><td><code>file</code> (C# 11)</td><td>Лише той самий файл вихідного коду</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Interfaces &amp; Abstract Classes <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Interface vs Abstract class</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>Interface</th><th>Abstract class</th></tr>
+        <tr><td>Множинне наслідування</td><td>Так (дозволено декілька)</td><td>Ні (лише одне)</td></tr>
+        <tr><td>Стан (поля)</td><td>Ні (лише властивості)</td><td>Так</td></tr>
+        <tr><td>Конструктор</td><td>Ні</td><td>Так</td></tr>
+        <tr><td>Реалізація за замовчуванням</td><td>Так (C# 8+)</td><td>Так</td></tr>
+        <tr><td>Використовувати коли</td><td>Визначити можливість/контракт</td><td>Спільна базова поведінка</td></tr>
+      </table>
+      <pre><span class="kw">interface</span> <span class="cls">IRepository</span>&lt;T&gt;
+{
+    <span class="cls">Task</span>&lt;T?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id);
+    <span class="cls">Task</span>&lt;<span class="cls">IEnumerable</span>&lt;T&gt;&gt; <span class="fn">GetAllAsync</span>();
+    <span class="cls">Task</span> <span class="fn">SaveAsync</span>(T entity);
+}
+
+<span class="kw">abstract class</span> <span class="cls">BaseService</span>&lt;T&gt;
+{
+    <span class="kw">protected readonly</span> <span class="cls">IRepository</span>&lt;T&gt; _repo;
+    <span class="kw">protected</span> <span class="cls">BaseService</span>(<span class="cls">IRepository</span>&lt;T&gt; repo) =&gt; _repo = repo;
+    <span class="kw">public abstract</span> <span class="cls">Task</span> <span class="fn">ValidateAsync</span>(T entity);
+}</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Generics &amp; Constraints</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Обмеження узагальнених типів</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Обмеження</th><th>Значення</th></tr>
+        <tr><td><code>where T : class</code></td><td>T має бути reference type</td></tr>
+        <tr><td><code>where T : struct</code></td><td>T має бути value type</td></tr>
+        <tr><td><code>where T : new()</code></td><td>T має мати публічний конструктор без параметрів</td></tr>
+        <tr><td><code>where T : SomeBase</code></td><td>T має успадковувати SomeBase</td></tr>
+        <tr><td><code>where T : IFoo</code></td><td>T має реалізовувати IFoo</td></tr>
+        <tr><td><code>where T : notnull</code></td><td>T має бути non-nullable</td></tr>
+        <tr><td><code>where T : unmanaged</code></td><td>T є некерованим типом (без посилань)</td></tr>
+      </table>
+      <pre><span class="kw">public</span> T <span class="fn">Create</span>&lt;T&gt;() <span class="kw">where</span> T : <span class="kw">class</span>, <span class="cls">IEntity</span>, <span class="kw">new</span>()
+    =&gt; <span class="kw">new</span> T();</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">LINQ <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Відкладене vs негайне виконання</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Відкладене (ліниве)</th><th>Негайне (нетерпляче)</th></tr>
+        <tr><td>Where, Select, OrderBy, GroupBy, Skip, Take</td><td>ToList, ToArray, ToDictionary, Count, First, Any, Sum, Max</td></tr>
+        <tr><td>Запит будується, але ще не виконується</td><td>Запит виконується одразу</td></tr>
+      </table>
+      <pre><span class="kw">var</span> query = users
+    .<span class="fn">Where</span>(u =&gt; u.IsActive)        <span class="cm">// відкладено</span>
+    .<span class="fn">OrderBy</span>(u =&gt; u.Name)           <span class="cm">// відкладено</span>
+    .<span class="fn">Select</span>(u =&gt; <span class="kw">new</span> { u.Id, u.Name }); <span class="cm">// відкладено</span>
+
+<span class="kw">var</span> result = query.<span class="fn">ToList</span>(); <span class="cm">// виконується тут</span></pre>
+      <div class="warn-box">Перебір відкладеного запиту кілька разів звертається до джерела кілька разів. Викличте <code>ToList()</code> для матеріалізації, якщо потрібне повторне використання.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Поширені оператори LINQ</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">// Проєкція</span>
+users.<span class="fn">Select</span>(u =&gt; u.Name);
+users.<span class="fn">SelectMany</span>(u =&gt; u.Orders); <span class="cm">// розгладити вкладені</span>
+
+<span class="cm">// Фільтрація</span>
+users.<span class="fn">Where</span>(u =&gt; u.Age &gt; <span class="num">18</span>);
+users.<span class="fn">OfType</span>&lt;<span class="cls">AdminUser</span>&gt;();
+
+<span class="cm">// Агрегація</span>
+orders.<span class="fn">Sum</span>(o =&gt; o.Total);
+orders.<span class="fn">GroupBy</span>(o =&gt; o.CustomerId)
+      .<span class="fn">Select</span>(g =&gt; <span class="kw">new</span> { g.Key, Total = g.<span class="fn">Sum</span>(o =&gt; o.Total) });
+
+<span class="cm">// Об'єднання</span>
+users.<span class="fn">Join</span>(orders, u =&gt; u.Id, o =&gt; o.UserId,
+    (u, o) =&gt; <span class="kw">new</span> { u.Name, o.Total });
+
+<span class="cm">// Операції над множинами</span>
+a.<span class="fn">Union</span>(b); a.<span class="fn">Intersect</span>(b); a.<span class="fn">Except</span>(b);</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Синтаксис запитів vs синтаксис методів</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">// Синтаксис методів (fluent)</span>
+<span class="kw">var</span> r1 = users
+    .<span class="fn">Where</span>(u =&gt; u.IsActive)
+    .<span class="fn">Select</span>(u =&gt; u.Name);
+
+<span class="cm">// Синтаксис запитів (компілюється в той самий IL)</span>
+<span class="kw">var</span> r2 = <span class="kw">from</span> u <span class="kw">in</span> users
+          <span class="kw">where</span> u.IsActive
+          <span class="kw">select</span> u.Name;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Async / Await &amp; Task <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Основи async/await</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">// async-метод повертає Task/Task&lt;T&gt;/ValueTask&lt;T&gt;</span>
+<span class="kw">public async</span> <span class="cls">Task</span>&lt;<span class="cls">User</span>&gt; <span class="fn">GetUserAsync</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> data = <span class="kw">await</span> _db.<span class="fn">QueryAsync</span>(id); <span class="cm">// звільняє потік</span>
+    <span class="kw">return</span> <span class="kw">new</span> <span class="cls">User</span>(data);
+}
+
+<span class="cm">// Запуск кількох задач паралельно</span>
+<span class="kw">var</span> (user, orders) = <span class="kw">await</span> (<span class="cls">Task</span>, <span class="cls">Task</span>).WhenAll(
+    <span class="fn">GetUserAsync</span>(id),
+    <span class="fn">GetOrdersAsync</span>(id));
+
+<span class="cm">// ValueTask — уникнути алокації для швидких синхронних шляхів</span>
+<span class="kw">public async</span> <span class="cls">ValueTask</span>&lt;<span class="kw">int</span>&gt; <span class="fn">ReadCachedAsync</span>()
+{
+    <span class="kw">if</span> (_cache.TryGetValue(<span class="kw">out var</span> v)) <span class="kw">return</span> v;
+    <span class="kw">return await</span> _db.<span class="fn">ReadAsync</span>();
+}</pre>
+      <div class="warn-box">Ніколи не використовуйте <code>async void</code>, крім обробників подій — винятки неможливо перехопити, і процес аварійно завершиться.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>ConfigureAwait &amp; запобігання дедлокам</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th></th><th>ConfigureAwait(true)</th><th>ConfigureAwait(false)</th></tr>
+        <tr><td>Відновлюється на</td><td>Початковому контексті синхронізації</td><td>Потоці з пулу потоків</td></tr>
+        <tr><td>Використовується в</td><td>UI / ASP.NET Classic</td><td>Бібліотеки, фонові сервіси</td></tr>
+      </table>
+      <pre><span class="cm">// У коді бібліотеки — уникнути захоплення контексту</span>
+<span class="kw">var</span> data = <span class="kw">await</span> _http.<span class="fn">GetAsync</span>(url).<span class="fn">ConfigureAwait</span>(<span class="kw">false</span>);
+
+<span class="cm">// CancellationToken — завжди передавати далі</span>
+<span class="kw">public async</span> <span class="cls">Task</span> <span class="fn">DoWorkAsync</span>(<span class="cls">CancellationToken</span> ct)
+{
+    <span class="kw">await</span> _service.<span class="fn">ProcessAsync</span>(ct);
+}</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Обробка винятків &amp; IDisposable</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>try / catch / finally</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="kw">try</span>
+{
+    <span class="kw">await</span> _db.<span class="fn">SaveAsync</span>(entity);
+}
+<span class="kw">catch</span> (<span class="cls">DbUpdateConcurrencyException</span> ex)
+{
+    _logger.<span class="fn">LogWarning</span>(ex, <span class="str">"Concurrency conflict for {Id}"</span>, entity.Id);
+    <span class="kw">throw</span>; <span class="cm">// повторне кидання зберігає стек викликів</span>
+}
+<span class="kw">catch</span> (<span class="cls">Exception</span> ex) <span class="kw">when</span> (ex.<span class="fn">Message</span>.<span class="fn">Contains</span>(<span class="str">"timeout"</span>)) <span class="cm">// фільтр винятку</span>
+{
+    <span class="kw">throw new</span> <span class="cls">ServiceUnavailableException</span>(<span class="str">"DB timeout"</span>, ex);
+}
+<span class="kw">finally</span>
+{
+    _conn.<span class="fn">Close</span>(); <span class="cm">// виконується завжди</span>
+}</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>IDisposable &amp; using</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">// using-оператор — викликає Dispose() при виході з блоку</span>
+<span class="kw">using var</span> conn = <span class="kw">new</span> <span class="cls">SqlConnection</span>(connStr);
+<span class="kw">await</span> conn.<span class="fn">OpenAsync</span>();
+
+<span class="cm">// Правильна реалізація IDisposable</span>
+<span class="kw">public class</span> <span class="cls">FileProcessor</span> : <span class="cls">IDisposable</span>
+{
+    <span class="kw">private</span> <span class="cls">Stream</span>? _stream;
+    <span class="kw">private bool</span> _disposed;
+
+    <span class="kw">public void</span> <span class="fn">Dispose</span>()
+    {
+        <span class="kw">if</span> (_disposed) <span class="kw">return</span>;
+        _stream?.<span class="fn">Dispose</span>();
+        _disposed = <span class="kw">true</span>;
+    }
+}</pre>
+      <div class="tip">Надавайте перевагу <code>await using</code> для <code>IAsyncDisposable</code> (наприклад, EF Core DbContext).</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Delegates, Events &amp; Lambdas</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Func, Action, Predicate</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Тип</th><th>Сигнатура</th><th>Випадок використання</th></tr>
+        <tr><td><code>Action&lt;T&gt;</code></td><td>T → void</td><td>Зворотні виклики з побічним ефектом</td></tr>
+        <tr><td><code>Func&lt;T, TResult&gt;</code></td><td>T → TResult</td><td>Перетворення</td></tr>
+        <tr><td><code>Predicate&lt;T&gt;</code></td><td>T → bool</td><td>Умови фільтрації</td></tr>
+        <tr><td><code>Comparison&lt;T&gt;</code></td><td>T, T → int</td><td>Власне сортування</td></tr>
+      </table>
+      <pre><span class="cls">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>, <span class="kw">int</span>&gt; add = (a, b) =&gt; a + b;
+<span class="cls">Action</span>&lt;<span class="kw">string</span>&gt; log = msg =&gt; <span class="cls">Console</span>.<span class="fn">WriteLine</span>(msg);
+<span class="cls">Predicate</span>&lt;<span class="kw">int</span>&gt; isEven = n =&gt; n % <span class="num">2</span> == <span class="num">0</span>;
+
+<span class="cm">// Патерн події</span>
+<span class="kw">public event</span> <span class="cls">EventHandler</span>&lt;<span class="cls">OrderEventArgs</span>&gt;? OrderPlaced;
+OrderPlaced?.Invoke(<span class="kw">this</span>, <span class="kw">new</span> <span class="cls">OrderEventArgs</span>(order));</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Колекції &amp; Структури даних</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Вибір правильної колекції</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Колекція</th><th>Доступ</th><th>Вставка/Видалення</th><th>Найкраще для</th></tr>
+        <tr><td><code>List&lt;T&gt;</code></td><td>O(1) за індексом</td><td>O(n) середина, O(1) кінець</td><td>Загальний впорядкований список</td></tr>
+        <tr><td><code>Dictionary&lt;K,V&gt;</code></td><td>O(1) за ключем</td><td>O(1)</td><td>Швидкий пошук за ключем</td></tr>
+        <tr><td><code>HashSet&lt;T&gt;</code></td><td>O(1)</td><td>O(1)</td><td>Унікальні елементи, операції над множинами</td></tr>
+        <tr><td><code>SortedDictionary&lt;K,V&gt;</code></td><td>O(log n)</td><td>O(log n)</td><td>Впорядкований доступ за ключем</td></tr>
+        <tr><td><code>Queue&lt;T&gt;</code></td><td>O(1) спереду</td><td>O(1)</td><td>FIFO обробка</td></tr>
+        <tr><td><code>Stack&lt;T&gt;</code></td><td>O(1) зверху</td><td>O(1)</td><td>LIFO, скасування, DFS</td></tr>
+        <tr><td><code>LinkedList&lt;T&gt;</code></td><td>O(n)</td><td>O(1) у вузлі</td><td>Часті вставки посередині</td></tr>
+        <tr><td><code>ConcurrentDictionary&lt;K,V&gt;</code></td><td>O(1)</td><td>O(1) потокобезпечно</td><td>Багатопотоковий доступ</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Pattern Matching (C# 8–12) <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>switch-вирази &amp; патерни</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">// Типовий патерн + патерн властивостей</span>
+<span class="kw">string</span> <span class="fn">Describe</span>(<span class="kw">object</span> obj) =&gt; obj <span class="kw">switch</span>
+{
+    <span class="cls">Circle</span> { Radius: &gt; <span class="num">10</span> } c =&gt; <span class="str">$"Large circle r={c.Radius}"</span>,
+    <span class="cls">Circle</span> c                  =&gt; <span class="str">$"Small circle r={c.Radius}"</span>,
+    <span class="cls">Rectangle</span> { Width: <span class="kw">var</span> w, Height: <span class="kw">var</span> h } =&gt; <span class="str">$"Rect {w}x{h}"</span>,
+    <span class="kw">null</span>                       =&gt; <span class="str">"null"</span>,
+    _                          =&gt; <span class="str">"unknown"</span>
+};
+
+<span class="cm">// Реляційні та логічні патерни</span>
+<span class="kw">string</span> <span class="fn">Category</span>(<span class="kw">int</span> score) =&gt; score <span class="kw">switch</span>
+{
+    &gt;= <span class="num">90</span>           =&gt; <span class="str">"A"</span>,
+    &gt;= <span class="num">70</span> <span class="kw">and</span> &lt; <span class="num">90</span> =&gt; <span class="str">"B"</span>,
+    &gt;= <span class="num">50</span>           =&gt; <span class="str">"C"</span>,
+    _               =&gt; <span class="str">"F"</span>
+};</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Управління пам'яттю &amp; Span&lt;T&gt;</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Span&lt;T&gt;, Memory&lt;T&gt;, ArrayPool</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">// Span — лише для стека, зріз без копіювання над суміжною пам'яттю</span>
+<span class="kw">void</span> <span class="fn">Process</span>(<span class="cls">Span</span>&lt;<span class="kw">byte</span>&gt; data)
+{
+    <span class="kw">var</span> header = data[..<span class="num">4</span>];
+    <span class="kw">var</span> body   = data[<span class="num">4</span>..];
+}
+
+<span class="cm">// Memory&lt;T&gt; — безпечно для купи, придатне через async-межі</span>
+<span class="kw">async</span> <span class="cls">Task</span> <span class="fn">ReadAsync</span>(<span class="cls">Memory</span>&lt;<span class="kw">byte</span>&gt; buffer)
+{
+    <span class="kw">await</span> _stream.<span class="fn">ReadAsync</span>(buffer);
+}
+
+<span class="cm">// ArrayPool — повторне використання буферів, зменшення навантаження на GC</span>
+<span class="kw">var</span> pool = <span class="cls">ArrayPool</span>&lt;<span class="kw">byte</span>&gt;.Shared;
+<span class="kw">byte</span>[] buf = pool.<span class="fn">Rent</span>(<span class="num">4096</span>);
+<span class="kw">try</span> { <span class="cm">/* використати buf */</span> }
+<span class="kw">finally</span> { pool.<span class="fn">Return</span>(buf); }</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Dependency Injection &amp; .NET DI Container <span class="badge b-key">Співбесіда</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Терміни існування сервісів</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Термін існування</th><th>Створюється</th><th>Для чого</th></tr>
+        <tr><td><code>Singleton</code></td><td>Один раз на весь застосунок</td><td>Безстанові сервіси, кеші, конфігурація</td></tr>
+        <tr><td><code>Scoped</code></td><td>Один раз на запит/область</td><td>DbContext, unit-of-work</td></tr>
+        <tr><td><code>Transient</code></td><td>При кожному впровадженні</td><td>Легкі безстанові допоміжні класи</td></tr>
+      </table>
+      <pre><span class="cm">// Реєстрація</span>
+builder.Services.<span class="fn">AddSingleton</span>&lt;<span class="cls">ICache</span>, <span class="cls">MemoryCache</span>&gt;();
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="cls">IUnitOfWork</span>, <span class="cls">UnitOfWork</span>&gt;();
+builder.Services.<span class="fn">AddTransient</span>&lt;<span class="cls">IEmailSender</span>, <span class="cls">SmtpEmailSender</span>&gt;();
+
+<span class="cm">// Впровадження через конструктор</span>
+<span class="kw">public class</span> <span class="cls">OrderService</span>(<span class="cls">IUnitOfWork</span> uow, <span class="cls">ILogger</span>&lt;<span class="cls">OrderService</span>&gt; log)
+{
+    <span class="kw">private readonly</span> <span class="cls">IUnitOfWork</span> _uow = uow;
+}</pre>
+      <div class="warn-box">Ніколи не впроваджуйте Scoped-сервіс у Singleton — він буде захоплений і повторно використаний між запитами (антипатерн "captive dependency").</div>
+    </div>
+  </div>
+</div>

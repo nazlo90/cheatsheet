@@ -1,0 +1,373 @@
+<!-- ===== REST ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">REST & HTTP</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Методи та коди статусу</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Метод</th><th>Призначення</th><th>Ідемпотентний?</th></tr>
+<tr><td>GET</td><td>Читання</td><td>Так</td></tr>
+<tr><td>POST</td><td>Створення</td><td>Ні</td></tr>
+<tr><td>PUT</td><td>Повна заміна</td><td>Так</td></tr>
+<tr><td>PATCH</td><td>Часткове оновлення</td><td>Так</td></tr>
+<tr><td>DELETE</td><td>Видалення</td><td>Так</td></tr>
+<tr><td>OPTIONS</td><td>CORS preflight, перелік методів</td><td>Так</td></tr>
+</table>
+<table>
+<tr><th>Діапазон</th><th>Основні коди</th></tr>
+<tr><td>2xx Успіх</td><td>200 OK, 201 Created, 204 No Content</td></tr>
+<tr><td>3xx Перенаправлення</td><td>301 Moved, 304 Not Modified</td></tr>
+<tr><td>4xx Помилка клієнта</td><td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Unprocessable, 429 Too Many Requests</td></tr>
+<tr><td>5xx Помилка сервера</td><td>500 Internal, 502 Bad Gateway, 503 Unavailable</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== CI/CD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">CI/CD <span class="badge b-grn">DevOps</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Концепції CI/CD</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>CI (Continuous Integration)</strong> — автоматичне збирання та тестування при кожному push/PR. Виявляє проблеми на ранніх етапах. <strong>CD (Continuous Delivery/Deployment)</strong> — автоматичне розгортання в середовища після проходження CI.</p>
+<table>
+<tr><th>Етап</th><th>Що відбувається</th></tr>
+<tr><td>Тригер</td><td>Push до гілки / відкриття PR / створення тегу</td></tr>
+<tr><td>Встановлення</td><td><code>npm ci</code> — чиста, відтворювана установка</td></tr>
+<tr><td>Лінтинг</td><td>ESLint, Stylelint — перевірка якості коду</td></tr>
+<tr><td>Тестування</td><td>Юніт-тести (Jasmine/Vitest), звіт покриття</td></tr>
+<tr><td>Збирання</td><td><code>ng build --prod</code> — продакшн-бандл</td></tr>
+<tr><td>E2E</td><td>Playwright на staging</td></tr>
+<tr><td>Розгортання</td><td>Push до staging / prod (Kubernetes, S3 тощо)</td></tr>
+<tr><td>Сповіщення</td><td>Slack/email при успіху або помилці</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GitHub Actions — приклад для Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># .github/workflows/ci.yml</span>
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: <span class="str">'20'</span>
+          cache: <span class="str">'npm'</span>
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --no-watch --browsers=ChromeHeadless --coverage
+      - run: npm run build -- --configuration=production
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  deploy-staging:
+    needs: build-and-test
+    if: github.ref == <span class="str">'refs/heads/develop'</span>
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging
+        run: |
+          aws s3 sync dist/app s3://my-app-staging
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CF_ID }} --paths <span class="str">"/*"</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>GitLab CI — приклад для Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># .gitlab-ci.yml</span>
+stages: [install, test, build, deploy]
+
+variables:
+  NODE_IMAGE: node:20-alpine
+
+install:
+  stage: install
+  image: $NODE_IMAGE
+  script: npm ci
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths: [node_modules/]
+
+test:
+  stage: test
+  image: $NODE_IMAGE
+  script:
+    - npm run lint
+    - npm test -- --no-watch --browsers=ChromeHeadless
+  coverage: <span class="str">'/Statements.*?(\d+(?:\.\d+)?)%/'</span>
+
+build:
+  stage: build
+  image: $NODE_IMAGE
+  script: npm run build -- --configuration=production
+  artifacts:
+    paths: [dist/]
+    expire_in: 1 week
+
+deploy_staging:
+  stage: deploy
+  script: ./scripts/deploy-staging.sh
+  environment: staging
+  only: [develop]</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Найкращі практики CI/CD для фронтенду</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong><code>npm ci</code></strong> замість <code>npm install</code> — використовує точний lockfile, швидше та відтворювано</li>
+<li><strong>Кешування node_modules</strong> за хешем lockfile — пропускати встановлення, якщо нічого не змінилось</li>
+<li><strong>Запускати тести у headless Chrome</strong> — <code>--browsers=ChromeHeadless</code></li>
+<li><strong>Швидке завершення при помилці</strong> — лінтинг перед тестами, тести перед збиранням</li>
+<li><strong>Окремо staging та production</strong> — розгортати staging при злитті до develop, prod при тегу/релізі</li>
+<li><strong>Змінні середовища через secrets</strong> — ніколи не комітити API-ключі</li>
+<li><strong>Nx affected</strong> — у монорепо тестувати/збирати лише змінені пакети</li>
+<li><strong>Бюджет розміру бандлу</strong> — налаштовувати в <code>angular.json</code>, завершувати CI при перевищенні</li>
+</ul>
+<pre><span class="cm">// angular.json — бюджет бандлу</span>
+<span class="str">"budgets"</span>: [
+  { <span class="str">"type"</span>: <span class="str">"initial"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"500kb"</span>, <span class="str">"maximumError"</span>: <span class="str">"1mb"</span> },
+  { <span class="str">"type"</span>: <span class="str">"anyComponentStyle"</span>, <span class="str">"maximumWarning"</span>: <span class="str">"2kb"</span> }
+]</pre>
+</div></div>
+</div>
+
+<!-- ===== MONITORING ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Моніторинг <span class="badge b-key">Must Know</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Три стовпи: Метрики · Логи · Трейси</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Observability</strong> = здатність розуміти стан системи за її виходами. Три взаємодоповнюючі сигнали:</p>
+<table>
+<tr><th>Стовп</th><th>На що відповідає</th><th>Приклади</th></tr>
+<tr><td><strong>Метрики</strong></td><td>Чи здорова система? (числа в часі)</td><td>LCP, частота помилок, використання пам'яті, затримка API</td></tr>
+<tr><td><strong>Логи</strong></td><td>Що сталося? (події з контекстом)</td><td>JS-помилки, дії користувача, відповіді API</td></tr>
+<tr><td><strong>Трейси</strong></td><td>Куди пішов час? (життєвий цикл запиту)</td><td>Клік → виклик API → БД → таймлайн рендерингу</td></tr>
+</table>
+<table>
+<tr><th>Тип моніторингу</th><th>Опис</th><th>Інструменти</th></tr>
+<tr><td><strong>RUM</strong> (Real User Monitoring)</td><td>Дані з браузерів реальних користувачів у продакшні</td><td>Sentry, DataDog RUM, New Relic Browser</td></tr>
+<tr><td><strong>Синтетичний</strong></td><td>Скриптовані тести з контрольованих середовищ (без реальних користувачів)</td><td>Playwright, Checkly, Lighthouse CI</td></tr>
+<tr><td><strong>Відстеження помилок</strong></td><td>Перехоплення, групування, сповіщення про JS-винятки</td><td>Sentry, Bugsnag, Rollbar</td></tr>
+<tr><td><strong>APM</strong> (App Performance)</td><td>Кореляція бекенду та фронтенду</td><td>DataDog, New Relic, Dynatrace</td></tr>
+</table>
+<div class="tip">RUM показує реальний досвід користувачів. Синтетичні тести працюють 24/7 до того, як проблеми торкнуться користувачів. Використовуйте обидва підходи.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Core Web Vitals — метрики, що мають значення</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Орієнтовані на користувача метрики продуктивності від Google. Впливають на позицію в пошуку та досвід користувача.</p>
+<table>
+<tr><th>Метрика</th><th>Вимірює</th><th>Добре</th><th>Погано</th></tr>
+<tr><td><strong>LCP</strong> — Largest Contentful Paint</td><td>Завантаження — коли основний контент видимий</td><td>&lt; 2.5s</td><td>&gt; 4s</td></tr>
+<tr><td><strong>INP</strong> — Interaction to Next Paint</td><td>Реактивність — UI реагує на введення</td><td>&lt; 200ms</td><td>&gt; 500ms</td></tr>
+<tr><td><strong>CLS</strong> — Cumulative Layout Shift</td><td>Візуальна стабільність — елементи не стрибають</td><td>&lt; 0.1</td><td>&gt; 0.25</td></tr>
+<tr><td><strong>TTFB</strong> — Time to First Byte</td><td>Швидкість відповіді сервера</td><td>&lt; 800ms</td><td>&gt; 1.8s</td></tr>
+<tr><td><strong>FCP</strong> — First Contentful Paint</td><td>Перший відрендерений піксель</td><td>&lt; 1.8s</td><td>&gt; 3s</td></tr>
+</table>
+<pre><span class="cm">// Вимірювання Core Web Vitals у коді</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+onLCP(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+onINP(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+onCLS(metric =&gt; sendToAnalytics({ name: metric.name, value: metric.value }));
+
+<span class="cm">// Також доступно через PerformanceObserver (нативний API браузера)</span>
+<span class="kw">new</span> PerformanceObserver((list) =&gt; {
+  list.getEntries().forEach(entry =&gt; <span class="fn">console</span>.log(entry));
+}).observe({ type: <span class="str">'largest-contentful-paint'</span>, buffered: <span class="kw">true</span> });</pre>
+<div class="tip">INP замінив FID як Core Web Vital у 2024 році. FID вимірював лише першу взаємодію; INP вимірює всі взаємодії протягом усього часу роботи зі сторінкою.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Відстеження помилок — Sentry в Angular</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// main.ts — ініціалізувати перед bootstrapApplication</span>
+<span class="kw">import</span> * as Sentry <span class="kw">from</span> <span class="str">'@sentry/angular'</span>;
+
+Sentry.init({
+  dsn: <span class="str">'https://...@sentry.io/...'</span>,
+  environment: <span class="str">'production'</span>,
+  release: <span class="str">'my-app@1.2.3'</span>,
+  integrations: [
+    Sentry.browserTracingIntegration(),   <span class="cm">// трейсинг продуктивності</span>
+    Sentry.replayIntegration(),           <span class="cm">// запис сесії при помилці</span>
+  ],
+  tracesSampleRate: <span class="num">0.1</span>,    <span class="cm">// 10% транзакцій</span>
+  replaysOnErrorSampleRate: <span class="num">1.0</span>,  <span class="cm">// 100% при помилках</span>
+});
+
+<span class="cm">// app.config.ts — реєстрація обробника помилок Angular</span>
+{
+  provide: ErrorHandler,
+  useValue: Sentry.createErrorHandler({ showDialog: <span class="kw">false</span> })
+},
+{
+  provide: Sentry.TraceService,
+  deps: [Router]
+}
+
+<span class="cm">// Ручне захоплення помилки з контекстом</span>
+Sentry.withScope(scope =&gt; {
+  scope.setUser({ id: userId, email: userEmail });
+  scope.setTag(<span class="str">'feature'</span>, <span class="str">'checkout'</span>);
+  scope.setExtra(<span class="str">'cartItems'</span>, cartItems.length);
+  Sentry.captureException(error);
+});
+
+<span class="cm">// Source maps — завантажувати під час збирання, щоб Sentry показував оригінальний TS</span>
+<span class="cm">// sentry-cli releases files upload-sourcemaps ./dist</span></pre>
+<div class="tip">Без source maps Sentry показує мініфіковані стектрейси — марні. Завжди завантажуйте source maps до Sentry і не публікуйте їх на публічному сервері.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Стратегія моніторингу продуктивності та сповіщень</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Що моніторити</th><th>Метрика / Сигнал</th><th>Сповіщати коли</th></tr>
+<tr><td>JS-помилки</td><td>Частота помилок (помилки / перегляди сторінок)</td><td>Частота зростає &gt; baseline + 2σ</td></tr>
+<tr><td>Завантаження сторінки</td><td>LCP p75 (75-й перцентиль)</td><td>&gt; 2.5s</td></tr>
+<tr><td>API-виклики</td><td>Частота HTTP 4xx / 5xx, затримка p95</td><td>5xx &gt; 1%, затримка &gt; SLA</td></tr>
+<tr><td>Шлях користувача</td><td>Відтік з воронки, rage-кліки</td><td>Завершення оформлення замовлення падає &gt; 5%</td></tr>
+<tr><td>Витоки пам'яті</td><td>Розмір JS heap протягом сесії</td><td>Heap монотонно зростає</td></tr>
+</table>
+<pre><span class="cm">// Власна мітка продуктивності — вимірювання конкретного сценарію користувача</span>
+performance.mark(<span class="str">'checkout-start'</span>);
+<span class="cm">// ... виконати дії</span>
+performance.mark(<span class="str">'checkout-end'</span>);
+performance.measure(<span class="str">'checkout-duration'</span>, <span class="str">'checkout-start'</span>, <span class="str">'checkout-end'</span>);
+
+<span class="kw">const</span> [measure] = performance.getEntriesByName(<span class="str">'checkout-duration'</span>);
+sendMetric({ name: <span class="str">'checkout.duration'</span>, value: measure.duration });
+
+<span class="cm">// Angular-специфічне: відстеження продуктивності CD за допомогою профайлера (лише dev)</span>
+<span class="cm">// import { enableProdMode } from '@angular/core';</span>
+<span class="cm">// Використовуйте вкладку "Profiler" Angular DevTools у Chrome</span></pre>
+<ul>
+<li><strong>p50 проти p95 проти p99</strong> — завжди моніторте перцентилі, а не середні значення. Повільний p99 впливає на 1% користувачів, але може сигналізувати про реальну проблему.</li>
+<li><strong>Втома від сповіщень</strong> — сповіщати про симптоми (вплив на користувача), а не причини. "Частота помилок зросла в 3 рази" &gt; "CPU на рівні 80%".</li>
+<li><strong>Runbooks</strong> — кожне сповіщення має містити посилання на runbook: що це означає, що перевірити, як виправити.</li>
+</ul>
+</div></div>
+</div>
+
+<!-- ===== DOCKER ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Docker <span class="badge b-grn">DevOps</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні концепції</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Концепція</th><th>Опис</th></tr>
+<tr><td><strong>Image</strong></td><td>Шаблон лише для читання. Будується з Dockerfile. Схожий на клас.</td></tr>
+<tr><td><strong>Container</strong></td><td>Запущений екземпляр image. Схожий на об'єкт.</td></tr>
+<tr><td><strong>Dockerfile</strong></td><td>Скрипт з інструкціями для збирання image</td></tr>
+<tr><td><strong>Volume</strong></td><td>Постійне сховище, підключене до контейнера</td></tr>
+<tr><td><strong>Network</strong></td><td>Віртуальна мережа для з'єднання контейнерів</td></tr>
+<tr><td><strong>Registry</strong></td><td>Сховище образів (Docker Hub, ECR, GCR)</td></tr>
+<tr><td><strong>docker-compose</strong></td><td>Налаштування кількох контейнерів через YAML-конфіг</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Dockerfile для Angular-застосунку (багатоетапний)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Етап 1 — збирання</span>
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci                        <span class="cm"># відтворювана установка</span>
+COPY . .
+RUN npm run build -- --configuration=production
+
+<span class="cm"># Етап 2 — роздача (nginx, ~23MB)</span>
+FROM nginx:alpine
+COPY --from=builder /app/dist/my-app /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD [<span class="str">"nginx"</span>, <span class="str">"-g"</span>, <span class="str">"daemon off;"</span>]</pre>
+<pre><span class="cm"># nginx.conf — обробка Angular-роутингу</span>
+server {
+  listen 80;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ /index.html;   <span class="cm"># SPA-роутинг</span>
+  }
+
+  location /api {
+    proxy_pass http://backend:3000;     <span class="cm"># проксі до бекенду</span>
+  }
+
+  gzip on;
+  gzip_types text/plain application/javascript text/css;
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>docker-compose для локальної розробки</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># docker-compose.yml</span>
+version: <span class="str">'3.9'</span>
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: builder           <span class="cm"># використовувати етап builder для розробки</span>
+    ports:
+      - <span class="str">"4200:4200"</span>
+    volumes:
+      - ./frontend:/app         <span class="cm"># гаряче перезавантаження</span>
+      - /app/node_modules       <span class="cm"># анонімний volume — не перезаписувати</span>
+    command: npm run start -- --host 0.0.0.0
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - <span class="str">"3000:3000"</span>
+    command: npm run dev
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - <span class="str">"5432:5432"</span>
+
+volumes:
+  pgdata:</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні команди Docker</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm"># Збирання та запуск</span>
+docker build -t my-app:latest .
+docker run -p 4200:80 my-app:latest
+docker run -d --name my-app -p 80:80 my-app:latest
+
+<span class="cm"># docker-compose</span>
+docker-compose up -d          <span class="cm"># запустити всі сервіси</span>
+docker-compose down           <span class="cm"># зупинити та видалити контейнери</span>
+docker-compose logs -f frontend <span class="cm"># стежити за логами</span>
+docker-compose exec frontend sh <span class="cm"># відкрити shell у контейнері</span>
+
+<span class="cm"># Образи</span>
+docker images
+docker pull nginx:alpine
+docker push my-registry/my-app:v1.0.0
+docker rmi my-app:latest
+
+<span class="cm"># Контейнери</span>
+docker ps                     <span class="cm"># запущені контейнери</span>
+docker ps -a                  <span class="cm"># всі контейнери</span>
+docker logs -f container_id
+docker stop container_id
+docker rm container_id</pre>
+<div class="tip">Багатоетапні збирання — необхідність: тримайте фінальний образ малим (використовуйте nginx:alpine замість node). Ніколи не запускайте від root у продакшні (<code>USER nginx</code>). Використовуйте <code>.dockerignore</code> для виключення <code>node_modules</code>, <code>dist</code>, <code>.git</code>.</div>
+</div></div>
+</div>

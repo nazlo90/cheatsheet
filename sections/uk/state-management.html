@@ -1,0 +1,249 @@
+<!-- ===== STATE MANAGEMENT COMPARISON ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Порівняння підходів до управління станом <span class="badge b-key">Співбесіда</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>NgRx vs SignalStore vs ComponentStore vs Akita vs BehaviorSubject</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>NgRx Store</th><th>NgRx SignalStore</th><th>ComponentStore</th><th>Akita</th><th>BehaviorSubject-сервіс</th></tr>
+<tr><td>Стиль API</td><td>Actions/Reducers/Effects</td><td>Signals + методи</td><td>RxJS + updater/effect</td><td>Store-клас + query</td><td>Ручний RxJS</td></tr>
+<tr><td>Шаблонний код</td><td>Багато</td><td>Мало</td><td>Середньо</td><td>Середньо</td><td>Мінімум</td></tr>
+<tr><td>Область</td><td>Глобальна</td><td>Фіча/глобальна</td><td>Локальна для компонента</td><td>Глобальна/фіча</td><td>Час життя сервісу</td></tr>
+<tr><td>DevTools</td><td>Повний time-travel</td><td>Базовий</td><td>Відсутній</td><td>Akita DevTools</td><td>Відсутній</td></tr>
+<tr><td>Реактивність</td><td>RxJS Observables</td><td>Signals</td><td>RxJS Observables</td><td>RxJS Observables</td><td>RxJS</td></tr>
+<tr><td>Найкраще для</td><td>Великий, складний глобальний стан</td><td>Стан фічі, сучасні аплікації</td><td>Локальний стан компонента</td><td>CRUD-аплікації з великою кількістю сутностей</td><td>Простий спільний стан</td></tr>
+</table>
+<div class="tip">Коли глобальний стан стає проблемою? Коли кожна дрібна зміна UI (відкриття підказки, вибір вкладки) проходить через actions та reducers — це ознака того, що варто використати локальний стан компонента (ComponentStore або Signals).</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ComponentStore — локальний, реактивний стан</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// ComponentStore: локальний стан для розумного компонента — глобальний стор не потрібен</span>
+<span class="kw">import</span> { ComponentStore } <span class="kw">from</span> <span class="str">'@ngrx/component-store'</span>;
+
+<span class="kw">interface</span> <span class="cls">TodoState</span> { todos: Todo[]; loading: <span class="kw">boolean</span>; }
+
+@Injectable()
+<span class="kw">class</span> <span class="cls">TodoStore</span> <span class="kw">extends</span> ComponentStore&lt;TodoState&gt; {
+  constructor() { super({ todos: [], loading: <span class="kw">false</span> }); }
+
+  <span class="cm">// Selector — зріз стану як Observable</span>
+  <span class="kw">readonly</span> todos$ = <span class="kw">this</span>.select(s =&gt; s.todos);
+  <span class="kw">readonly</span> loading$ = <span class="kw">this</span>.select(s =&gt; s.loading);
+
+  <span class="cm">// Updater — синхронна мутація стану</span>
+  <span class="kw">readonly</span> addTodo = <span class="kw">this</span>.updater((state, todo: Todo) =&gt; ({
+    ...state, todos: [...state.todos, todo]
+  }));
+
+  <span class="cm">// Effect — обробляє асинхронні побічні ефекти</span>
+  <span class="kw">readonly</span> loadTodos = <span class="kw">this</span>.effect&lt;<span class="kw">void</span>&gt;($ =&gt;
+    $.pipe(
+      tap(() =&gt; <span class="kw">this</span>.patchState({ loading: <span class="kw">true</span> })),
+      switchMap(() =&gt; <span class="kw">this</span>.http.get&lt;Todo[]&gt;(<span class="str">'/api/todos'</span>).pipe(
+        tap(todos =&gt; <span class="kw">this</span>.patchState({ todos, loading: <span class="kw">false</span> }))
+      ))
+    )
+  );
+}
+
+<span class="cm">// Використання: надати у компоненті — знищується разом з компонентом</span>
+@Component({ providers: [TodoStore] })
+<span class="kw">class</span> <span class="cls">TodoComponent</span> {
+  <span class="kw">readonly</span> store = inject(TodoStore);
+  todos$ = <span class="kw">this</span>.store.todos$;
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== NGRX ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">NgRx — повний посібник <span class="badge b-key">Стан</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні концепції + повний приклад</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Store → Selector → Component → dispatch(Action) → Reducer/Effect → Store</strong></p>
+<pre><span class="cm">// Actions: прості об'єкти, що описують те, що сталося. Мають тип та необов'язкові дані.</span>
+<span class="kw">const</span> loadUsers = createAction(<span class="str">'[Users] Load'</span>);
+<span class="kw">const</span> loadSuccess = createAction(<span class="str">'[Users] Success'</span>, props&lt;{ users: User[] }&gt;());
+<span class="kw">const</span> loadFailure = createAction(<span class="str">'[Users] Failure'</span>, props&lt;{ error: string }&gt;());
+
+<span class="cm">// Reducers: чисті функції, що приймають поточний стан та дію і повертають новий стан.</span>
+<span class="kw">const</span> reducer = createReducer(initialState,
+  on(loadUsers, s =&gt; ({ ...s, loading: <span class="kw">true</span> })),
+  on(loadSuccess, (s, { users }) =&gt; ({ ...s, users, loading: <span class="kw">false</span> })),
+  on(loadFailure, (s, { error }) =&gt; ({ ...s, error, loading: <span class="kw">false</span> }))
+);
+
+<span class="cm">// Selectors: функції, що вибирають (витягують) зрізи стану зі стору.</span>
+<span class="kw">const</span> selectState  = createFeatureSelector&lt;UsersState&gt;(<span class="str">'users'</span>);
+<span class="kw">const</span> selectAll    = createSelector(selectState, s =&gt; s.users);
+<span class="kw">const</span> selectById   = (id: string) =&gt; createSelector(selectAll, us =&gt; us.find(u =&gt; u.id === id));
+
+<span class="cm">// Effects: обробляють побічні ефекти (наприклад, HTTP-запити), слухаючи дії та асинхронно диспатчуючи нові.</span>
+loadUsers$ = createEffect(() =&gt; <span class="kw">this</span>.actions$.pipe(
+  ofType(loadUsers),
+  switchMap(() =&gt; <span class="kw">this</span>.svc.getAll().pipe(
+    map(users =&gt; loadSuccess({ users })),
+    catchError(err =&gt; of(loadFailure({ error: err.message })))
+  ))
+));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Поради щодо NgRx та коли його НЕ використовувати</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li>Actions описують <strong>події</strong>, а не команди — <code>[Users Page] Load Requested</code></li>
+<li>Reducers мають бути <strong>чистими та незмінними</strong> — ніколи не мутуйте стан</li>
+<li>Використовуйте <strong>selectors</strong> — від'єднуйте компоненти від форми стану + мемоізація</li>
+<li>Використовуйте DevTools для time-travel відлагодження</li>
+</ul>
+<div class="tip">Не використовуйте NgRx для: простого локального стану фічі, стану одного компонента, простих форм. Натомість використовуйте сервіси на <code>BehaviorSubject</code> або Signals.</div>
+</div></div>
+</div>
+
+<!-- ===== NGRX SIGNAL STORE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">NgRx SignalStore <span class="badge b-grn">Angular 17+</span></div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Що таке SignalStore та коли його використовувати</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>SignalStore</strong> (<code>@ngrx/signals</code>) — це легковагове рішення для управління станом на основі Signals, представлене у NgRx 17. Воно замінює Redux-стиль (actions/reducers/effects) для локального або середньої складності стану, що не потребує глобального NgRx Store.</p>
+<table>
+<tr><th></th><th>NgRx Store</th><th>NgRx SignalStore</th></tr>
+<tr><td>Стиль API</td><td>Actions → Reducers → Effects</td><td>Signals + методи безпосередньо на сторі</td></tr>
+<tr><td>Шаблонний код</td><td>Багато</td><td>Мало</td></tr>
+<tr><td>Область</td><td>Глобальна / фіча</td><td>Локальна для фічі або глобальна</td></tr>
+<tr><td>Реактивність</td><td>RxJS Observables</td><td>Angular Signals (+ необов'язковий RxJS через <code>rxMethod</code>)</td></tr>
+<tr><td>DevTools</td><td>Повний NgRx DevTools</td><td>Базовий (підтримка знімків стану)</td></tr>
+<tr><td>Найкраще для</td><td>Великий загальний стан аплікації</td><td>Стан фічі, стан UI, невеликі аплікації</td></tr>
+</table>
+<div class="tip">Використовуйте SignalStore для стану в межах фічі, де NgRx Store здається громіздким. Використовуйте NgRx Store, коли потрібне time-travel відлагодження, складний міжфічевий стан або конвенції великої команди.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Основні будівельні блоки</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Функція</th><th>Метод</th><th>Призначення</th></tr>
+<tr><td>Зріз стану</td><td><code>withState()</code></td><td>Визначення початкової форми стану — кожна властивість стає Signal</td></tr>
+<tr><td>Обчислювані</td><td><code>withComputed()</code></td><td>Похідні Signals (мемоізовані, як NgRx selectors)</td></tr>
+<tr><td>Методи</td><td><code>withMethods()</code></td><td>Actions — синхронні оновлення стану або асинхронні побічні ефекти</td></tr>
+<tr><td>Lifecycle</td><td><code>withHooks()</code></td><td>Хуки <code>onInit</code> / <code>onDestroy</code> для стору</td></tr>
+<tr><td>Міст RxJS</td><td><code>rxMethod()</code></td><td>Обгортає Observable-пайплайн як метод стору (замінює Effects)</td></tr>
+<tr><td>Сутності</td><td><code>withEntities()</code></td><td>Вбудовані CRUD-помічники (як NgRx Entity)</td></tr>
+</table>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Базовий стор — повний приклад</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { signalStore, withState, withComputed, withMethods, withHooks, patchState } from <span class="str">'@ngrx/signals'</span>;
+<span class="kw">import</span> { rxMethod } from <span class="str">'@ngrx/signals/rxjs-interop'</span>;
+<span class="kw">import</span> { computed, inject } from <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { switchMap, tap } from <span class="str">'rxjs/operators'</span>;
+
+<span class="kw">interface</span> <span class="cls">UsersState</span> {
+  users: User[];
+  loading: <span class="kw">boolean</span>;
+  error: <span class="kw">string</span> | <span class="kw">null</span>;
+}
+
+<span class="kw">export const</span> <span class="cls">UsersStore</span> = <span class="fn">signalStore</span>(
+  { providedIn: <span class="str">'root'</span> },          <span class="cm">// або надати у компоненті для локальної області</span>
+
+  <span class="fn">withState</span>&lt;<span class="cls">UsersState</span>&gt;({           <span class="cm">// початковий стан</span>
+    users: [],
+    loading: <span class="kw">false</span>,
+    error: <span class="kw">null</span>,
+  }),
+
+  <span class="fn">withComputed</span>(({ users }) =&gt; ({    <span class="cm">// похідні Signals</span>
+    totalUsers: <span class="fn">computed</span>(() =&gt; users().length),
+    activeUsers: <span class="fn">computed</span>(() =&gt; users().<span class="fn">filter</span>(u =&gt; u.active)),
+  })),
+
+  <span class="fn">withMethods</span>((store, http = <span class="fn">inject</span>(<span class="cls">HttpClient</span>)) =&gt; ({
+    <span class="cm">// Синхронне оновлення</span>
+    clearError() {
+      <span class="fn">patchState</span>(store, { error: <span class="kw">null</span> });
+    },
+    <span class="cm">// Асинхронне через rxMethod (замінює Effects)</span>
+    loadUsers: <span class="fn">rxMethod</span>&lt;<span class="kw">void</span>&gt;(
+      pipe(
+        <span class="fn">tap</span>(() =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">true</span>, error: <span class="kw">null</span> })),
+        <span class="fn">switchMap</span>(() =&gt; http.<span class="fn">get</span>&lt;User[]&gt;(<span class="str">'/api/users'</span>)),
+        <span class="fn">tap</span>({
+          next: users =&gt; <span class="fn">patchState</span>(store, { users, loading: <span class="kw">false</span> }),
+          error: err  =&gt; <span class="fn">patchState</span>(store, { error: err.message, loading: <span class="kw">false</span> }),
+        })
+      )
+    ),
+  })),
+
+  <span class="fn">withHooks</span>({
+    onInit(store) { store.<span class="fn">loadUsers</span>(); },  <span class="cm">// автоматичне завантаження при створенні</span>
+  })
+);</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Використання стору в компоненті</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Впровадити та використати — без selectors, без dispatch, лише Signals</span>
+@<span class="fn">Component</span>({
+  template: <span class="str">`
+    @if (store.loading()) { &lt;p&gt;Loading…&lt;/p&gt; }
+    @for (user of store.activeUsers(); track user.id) {
+      &lt;li&gt;{{ user.name }}&lt;/li&gt;
+    }
+    &lt;p&gt;Total: {{ store.totalUsers() }}&lt;/p&gt;
+  `</span>,
+  providers: [<span class="cls">UsersStore</span>],  <span class="cm">// опустити, якщо providedIn:'root'</span>
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+<span class="kw">export class</span> <span class="cls">UsersComponent</span> {
+  <span class="kw">readonly</span> store = <span class="fn">inject</span>(<span class="cls">UsersStore</span>);
+}</pre>
+<div class="tip">Кожна властивість у <code>withState()</code> автоматично стає Signal на екземплярі стору — читайте через <code>store.users()</code>, оновлюйте лише через <code>patchState()</code>, щоб мутації залишались відстежуваними.</div>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>withEntities — вбудований CRUD</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { withEntities, setAllEntities, addEntity, updateEntity, removeEntity } from <span class="str">'@ngrx/signals/entities'</span>;
+
+<span class="kw">export const</span> <span class="cls">ProductsStore</span> = <span class="fn">signalStore</span>(
+  <span class="fn">withEntities</span>&lt;<span class="cls">Product</span>&gt;(),   <span class="cm">// додає: ids[], entities{}, entityMap</span>
+
+  <span class="fn">withMethods</span>((store, http = <span class="fn">inject</span>(<span class="cls">HttpClient</span>)) =&gt; ({
+    load: <span class="fn">rxMethod</span>&lt;<span class="kw">void</span>&gt;(
+      pipe(
+        <span class="fn">switchMap</span>(() =&gt; http.<span class="fn">get</span>&lt;Product[]&gt;(<span class="str">'/api/products'</span>)),
+        <span class="fn">tap</span>(products =&gt; <span class="fn">patchState</span>(store, <span class="fn">setAllEntities</span>(products)))
+      )
+    ),
+    add:    (p: Product) =&gt; <span class="fn">patchState</span>(store, <span class="fn">addEntity</span>(p)),
+    update: (id: <span class="kw">string</span>, changes: Partial&lt;Product&gt;) =&gt;
+              <span class="fn">patchState</span>(store, <span class="fn">updateEntity</span>({ id, changes })),
+    remove: (id: <span class="kw">string</span>) =&gt; <span class="fn">patchState</span>(store, <span class="fn">removeEntity</span>(id)),
+  }))
+);</pre>
+</div></div>
+
+<div class="card"><div class="ch" onclick="T(this)"><h3>Кастомні функції стору (багаторазові міксини)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Виносьте наскрізні аспекти у багаторазові <strong>функції стору</strong> — аналог мета-редюсерів NgRx у SignalStore.</p>
+<pre><span class="cm">// Багаторазова функція для стану завантаження/помилки</span>
+<span class="kw">function</span> <span class="fn">withLoadingState</span>() {
+  <span class="kw">return</span> <span class="fn">signalStoreFeature</span>(
+    <span class="fn">withState</span>({ loading: <span class="kw">false</span>, error: <span class="kw">null</span> <span class="kw">as string</span> | <span class="kw">null</span> }),
+    <span class="fn">withMethods</span>(store =&gt; ({
+      setLoading: () =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">true</span>,  error: <span class="kw">null</span> }),
+      setError:  (error: <span class="kw">string</span>) =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">false</span>, error }),
+      setLoaded: () =&gt; <span class="fn">patchState</span>(store, { loading: <span class="kw">false</span> }),
+    }))
+  );
+}
+
+<span class="cm">// Використання у будь-якому сторі</span>
+<span class="kw">export const</span> <span class="cls">OrdersStore</span> = <span class="fn">signalStore</span>(
+  <span class="fn">withState</span>({ orders: [] <span class="kw">as</span> Order[] }),
+  <span class="fn">withLoadingState</span>(),   <span class="cm">// додає loading + error + допоміжні методи</span>
+  <span class="fn">withMethods</span>(store =&gt; ({ <span class="cm">/* … */</span> }))
+);</pre>
+</div></div>
+
+</div>

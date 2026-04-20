@@ -1,0 +1,1047 @@
+<!-- ===== ANGULAR FUNDAMENTALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Основи Angular <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>AngularJS проти Angular 2+ та ключові будівельні блоки</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Angular</strong> — це фреймворк на основі TypeScript для побудови SPA з компонентною архітектурою, вбудованим DI, маршрутизацією, реактивними формами та потужним CLI.</p>
+<table>
+<tr><th></th><th>AngularJS (1.x)</th><th>Angular (2+)</th></tr>
+<tr><td>Мова</td><td>JavaScript</td><td>TypeScript</td></tr>
+<tr><td>Архітектура</td><td>MVC</td><td>MVVM (Component + Template + Service)</td></tr>
+<tr><td>Будівельний блок</td><td>Directives</td><td>Components</td></tr>
+<tr><td>Виявлення змін</td><td>Digest cycle</td><td>Zone.js + OnPush + Signals</td></tr>
+</table>
+<ul>
+<li><strong>Component</strong> — UI-блок. <code>@Component</code></li>
+<li><strong>Directive</strong> — модифікує DOM. Структурні (<code>@if</code>, <code>@for</code>) або атрибутні</li>
+<li><strong>Pipe</strong> — трансформує значення в шаблоні. Чисті Pipe-и кешуються.</li>
+<li><strong>Service</strong> — спільна бізнес-логіка через DI</li>
+<li><strong>Guard</strong> — захист маршрутів (<code>CanActivate</code>, <code>CanDeactivate</code>, <code>Resolve</code>)</li>
+<li><strong>Interceptor</strong> — HTTP-проміжне ПО (заголовки авторизації, обробка помилок, кешування)</li>
+</ul>
+<div class="tip">Чистий Pipe проти функції в шаблоні: Pipe кешується — не перезапускається, якщо вхідні дані не змінились. Завжди надавайте перевагу Pipe-ам для трансформацій у шаблоні.</div>
+</div></div>
+</div>
+
+<!-- ===== DIRECTIVES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Directives <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Що таке Directive та її типи</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Directive</strong> — це клас, декорований <code>@Directive</code>, що додає поведінку або структуру до DOM-елементів. Component — це особливий вид Directive з шаблоном.</p>
+<table>
+<tr><th>Тип</th><th>Призначення</th><th>Приклади</th></tr>
+<tr><td><strong>Component</strong></td><td>Directive + шаблон + стилі</td><td><code>@Component</code> — кожен Component</td></tr>
+<tr><td><strong>Structural</strong></td><td>Змінює структуру DOM (додає/видаляє елементи)</td><td><code>*ngIf</code>, <code>*ngFor</code>, <code>*ngSwitch</code>, <code>@if</code>, <code>@for</code></td></tr>
+<tr><td><strong>Attribute</strong></td><td>Змінює зовнішній вигляд або поведінку елемента-хоста</td><td><code>NgClass</code>, <code>NgStyle</code>, <code>RouterLink</code>, власні</td></tr>
+</table>
+<pre><span class="cm">// Attribute directive — підсвічування при наведенні</span>
+@Directive({
+  selector: <span class="str">'[appHighlight]'</span>,
+  standalone: <span class="kw">true</span>
+})
+<span class="kw">export class</span> <span class="cls">HighlightDirective</span> {
+  @Input(<span class="str">'appHighlight'</span>) color = <span class="str">'yellow'</span>;
+
+  <span class="kw">private</span> el = inject(ElementRef);
+
+  @HostListener(<span class="str">'mouseenter'</span>) onEnter() {
+    <span class="kw">this</span>.el.nativeElement.style.backgroundColor = <span class="kw">this</span>.color;
+  }
+  @HostListener(<span class="str">'mouseleave'</span>) onLeave() {
+    <span class="kw">this</span>.el.nativeElement.style.backgroundColor = <span class="str">''</span>;
+  }
+}
+
+<span class="cm">&lt;!-- &lt;p [appHighlight]="'lightblue'"&gt;Hover me&lt;/p&gt; --&gt;</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Структурні Directive — мікросинтаксис та власні</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Структурні Directive використовують синтаксичний цукор <code>*</code> — <code>*ngIf="x"</code> розгортається до <code>[ngIf]="x"</code> на прихованому <code>&lt;ng-template&gt;</code>. Власні структурні Directive впроваджують <code>TemplateRef</code> та <code>ViewContainerRef</code>.</p>
+<pre><span class="cm">// Власна структурна Directive — *appUnless (протилежна до *ngIf)</span>
+@Directive({ selector: <span class="str">'[appUnless]'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">UnlessDirective</span> {
+  <span class="kw">private</span> vcr = inject(ViewContainerRef);
+  <span class="kw">private</span> tmpl = inject(TemplateRef);
+  <span class="kw">private</span> hasView = <span class="kw">false</span>;
+
+  @Input() <span class="kw">set</span> <span class="fn">appUnless</span>(condition: boolean) {
+    <span class="kw">if</span> (!condition &amp;&amp; !<span class="kw">this</span>.hasView) {
+      <span class="kw">this</span>.vcr.createEmbeddedView(<span class="kw">this</span>.tmpl);
+      <span class="kw">this</span>.hasView = <span class="kw">true</span>;
+    } <span class="kw">else if</span> (condition &amp;&amp; <span class="kw">this</span>.hasView) {
+      <span class="kw">this</span>.vcr.clear();
+      <span class="kw">this</span>.hasView = <span class="kw">false</span>;
+    }
+  }
+}
+
+<span class="cm">&lt;!-- &lt;div *appUnless="isLoggedIn"&gt;Please log in&lt;/div&gt; --&gt;</span>
+
+<span class="cm">// Сучасні вбудовані еквіваленти (синтаксис шаблонів Angular 17+)</span>
+<span class="cm">// @if (show) { &lt;p&gt;visible&lt;/p&gt; } @else { &lt;p&gt;hidden&lt;/p&gt; }</span>
+<span class="cm">// @for (item of items; track item.id) { &lt;li&gt;{{ item.name }}&lt;/li&gt; }</span>
+<span class="cm">// @switch (status) { @case ('active') { &lt;span&gt;Active&lt;/span&gt; } }</span></pre>
+<div class="tip">Надавайте перевагу сучасному синтаксису <code>@if</code>/<code>@for</code>/<code>@switch</code> (Angular 17+) перед <code>*ngIf</code>/<code>*ngFor</code> — він компілюється ефективніше (без зайвої DOM-обгортки) та має чистіший синтаксис.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>HostBinding, HostListener та exportAs</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// @HostBinding — прив'язує властивість Directive до атрибута/класу/стилю елемента-хоста</span>
+@Directive({ selector: <span class="str">'[appActive]'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">ActiveDirective</span> {
+  @Input() appActive = <span class="kw">false</span>;
+
+  @HostBinding(<span class="str">'class.active'</span>) <span class="kw">get</span> <span class="fn">isActive</span>() { <span class="kw">return this</span>.appActive; }
+  @HostBinding(<span class="str">'attr.aria-selected'</span>) <span class="kw">get</span> <span class="fn">ariaSelected</span>() { <span class="kw">return this</span>.appActive; }
+  @HostBinding(<span class="str">'style.fontWeight'</span>) <span class="kw">get</span> <span class="fn">fw</span>() { <span class="kw">return this</span>.appActive ? <span class="str">'bold'</span> : <span class="str">'normal'</span>; }
+}
+
+<span class="cm">// exportAs — надає доступ до екземпляра Directive через змінну шаблону</span>
+@Directive({ selector: <span class="str">'[appTooltip]'</span>, exportAs: <span class="str">'tooltip'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">TooltipDirective</span> {
+  visible = <span class="kw">false</span>;
+  <span class="fn">show</span>() { <span class="kw">this</span>.visible = <span class="kw">true</span>; }
+  <span class="fn">hide</span>() { <span class="kw">this</span>.visible = <span class="kw">false</span>; }
+}
+
+<span class="cm">&lt;!-- &lt;span appTooltip #tip="tooltip" (click)="tip.show()"&gt;Hover&lt;/span&gt; --&gt;</span></pre>
+</div></div>
+</div>
+
+<!-- ===== PIPES ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Angular Pipes <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Що таке Pipe та вбудовані Pipe-и</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Pipe</strong> — це функція трансформації для шаблону: приймає вхідне значення та необов'язкові аргументи й повертає перетворене значення. Використовується з оператором <code>|</code> у шаблонах.</p>
+<table>
+<tr><th>Pipe</th><th>Приклад</th><th>Результат</th></tr>
+<tr><td><code>date</code></td><td><code>{{ today | date:'dd/MM/yyyy' }}</code></td><td><code>20/04/2026</code></td></tr>
+<tr><td><code>currency</code></td><td><code>{{ 1234.5 | currency:'USD' }}</code></td><td><code>$1,234.50</code></td></tr>
+<tr><td><code>number</code></td><td><code>{{ 3.14159 | number:'1.2-2' }}</code></td><td><code>3.14</code></td></tr>
+<tr><td><code>percent</code></td><td><code>{{ 0.25 | percent }}</code></td><td><code>25%</code></td></tr>
+<tr><td><code>uppercase / lowercase</code></td><td><code>{{ 'hello' | uppercase }}</code></td><td><code>HELLO</code></td></tr>
+<tr><td><code>titlecase</code></td><td><code>{{ 'hello world' | titlecase }}</code></td><td><code>Hello World</code></td></tr>
+<tr><td><code>json</code></td><td><code>{{ obj | json }}</code></td><td>JSON з форматуванням</td></tr>
+<tr><td><code>slice</code></td><td><code>{{ items | slice:0:3 }}</code></td><td>перші 3 елементи</td></tr>
+<tr><td><code>keyvalue</code></td><td><code>*ngFor="let p of obj | keyvalue"</code></td><td>пари ключ/значення</td></tr>
+<tr><td><code>async</code></td><td><code>{{ users$ | async }}</code></td><td>розгорнутий Observable/Promise</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Чисті та нечисті Pipe-и, власний Pipe</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>Чистий Pipe (за замовчуванням)</th><th>Нечистий Pipe</th></tr>
+<tr><td>Перезапускається коли</td><td>Змінюється посилання на вхідні дані</td><td>Кожен цикл виявлення змін</td></tr>
+<tr><td>Продуктивність</td><td>Кешується — пропускається, якщо вхідні дані не змінились ✓</td><td>Викликається постійно ✗</td></tr>
+<tr><td>Використовувати для</td><td>Форматування, сортування незмінних даних</td><td>Фільтрація змінних масивів, <code>async</code> pipe</td></tr>
+<tr><td>Оголошення</td><td><code>pure: true</code> (за замовчуванням)</td><td><code>pure: false</code></td></tr>
+</table>
+<pre><span class="cm">// Власний чистий Pipe — форматування розміру файлу</span>
+@Pipe({ name: <span class="str">'fileSize'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">FileSizePipe</span> <span class="kw">implements</span> PipeTransform {
+  transform(bytes: number, decimals = <span class="num">2</span>): string {
+    <span class="kw">if</span> (!bytes) <span class="kw">return</span> <span class="str">'0 B'</span>;
+    <span class="kw">const</span> k = <span class="num">1024</span>;
+    <span class="kw">const</span> units = [<span class="str">'B'</span>, <span class="str">'KB'</span>, <span class="str">'MB'</span>, <span class="str">'GB'</span>];
+    <span class="kw">const</span> i = Math.floor(Math.log(bytes) / Math.log(k));
+    <span class="kw">return</span> `${(bytes / k ** i).toFixed(decimals)} ${units[i]}`;
+  }
+}
+<span class="cm">&lt;!-- {{ 1048576 | fileSize }} → '1.00 MB' --&gt;</span>
+
+<span class="cm">// Власний нечистий Pipe — фільтрація змінного масиву</span>
+@Pipe({ name: <span class="str">'filterBy'</span>, standalone: <span class="kw">true</span>, pure: <span class="kw">false</span> })
+<span class="kw">export class</span> <span class="cls">FilterByPipe</span> <span class="kw">implements</span> PipeTransform {
+  transform&lt;T&gt;(items: T[], key: keyof T, value: unknown): T[] {
+    <span class="kw">return</span> items.filter(item =&gt; item[key] === value);
+  }
+}
+<span class="cm">&lt;!-- {{ users | filterBy:'role':'admin' }} --&gt;</span>
+
+<span class="cm">// Pipe з DI — впровадження сервісів у Pipe</span>
+@Pipe({ name: <span class="str">'translate'</span>, standalone: <span class="kw">true</span> })
+<span class="kw">export class</span> <span class="cls">TranslatePipe</span> <span class="kw">implements</span> PipeTransform {
+  <span class="kw">private</span> i18n = inject(I18nService);
+  transform(key: string): string { <span class="kw">return this</span>.i18n.get(key); }
+}</pre>
+<div class="warn-box">Уникайте нечистих Pipe-ів на великих списках — вони запускаються при <em>кожному</em> циклі виявлення змін. Надавайте перевагу чистим Pipe-ам із незмінними даними або використовуйте сигнал <code>computed()</code> для реактивної фільтрації.</div>
+</div></div>
+</div>
+
+<!-- ===== DI ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Dependency Injection <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Система DI — ієрархічні інжектори</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Angular має <strong>ієрархічну систему DI</strong>. Кожен Component має власний інжектор; якщо залежність не знайдена, відбувається підйом до батьківського інжектора, потім до кореневого.</p>
+<p><strong>Ієрархія інжекторів:</strong> Platform → Root (AppModule) → Feature Module → Component → Element</p>
+<pre><span class="cm">// Singleton у кореневому інжекторі</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })   <span class="cm">// підтримує tree-shaking</span>
+<span class="kw">class</span> <span class="cls">AuthService</span> {}
+
+<span class="cm">// Область видимості Component (новий екземпляр для кожного Component)</span>
+@Component({ providers: [<span class="cls">MyService</span>] })
+<span class="kw">class</span> <span class="cls">MyComponent</span> {}
+
+<span class="cm">// InjectionToken — для значень, що не є класами</span>
+<span class="kw">const</span> API_URL = <span class="kw">new</span> InjectionToken&lt;string&gt;(<span class="str">'API_URL'</span>);
+<span class="cm">// providers: [{ provide: API_URL, useValue: 'https://...' }]</span>
+inject(API_URL); <span class="cm">// функціональне впровадження (Angular 14+)</span>
+
+<span class="cm">// @Optional — null, якщо не знайдено</span>
+constructor(@Optional() <span class="kw">private</span> logger?: LoggerService) {}
+
+<span class="cm">// @Self — шукає лише у власному інжекторі</span>
+constructor(@Self() <span class="kw">private</span> svc: MyService) {}
+
+<span class="cm">// @SkipSelf — пропускає власний, шукає у батьківському</span>
+constructor(@SkipSelf() <span class="kw">private</span> parent: MyService) {}
+
+<span class="cm">// @Host — зупиняється на межі елемента-хоста</span>
+constructor(@Host() <span class="kw">private</span> svc: MyService) {}
+
+<span class="cm">// Factory provider — використовуйте, коли створення потребує логіки або асинхронної ініціалізації</span>
+{ provide: Logger, useFactory: (http: HttpClient) =&gt; <span class="kw">new</span> RemoteLogger(http), deps: [HttpClient] }
+
+<span class="cm">// Multi-provider (interceptors, validators)</span>
+{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: <span class="kw">true</span> }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Factory provider — патерни та асинхронна ініціалізація</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>useFactory</strong> надає повний контроль над створенням екземпляра — приймає впроваджені залежності, може містити умовну логіку та є єдиним типом провайдера, що підтримує асинхронну ініціалізацію через <code>APP_INITIALIZER</code>.</p>
+<pre><span class="cm">// 1. Умовна фабрика — обирає реалізацію залежно від середовища</span>
+<span class="kw">const</span> loggerProvider = {
+  provide: Logger,
+  useFactory: (env: Environment) =&gt;
+    env.production ? <span class="kw">new</span> RemoteLogger() : <span class="kw">new</span> ConsoleLogger(),
+  deps: [Environment]
+};
+
+<span class="cm">// 2. Асинхронна фабрика через APP_INITIALIZER — блокує завантаження застосунку до завершення</span>
+<span class="kw">export function</span> <span class="fn">initializeApp</span>(configService: ConfigService) {
+  <span class="kw">return</span> () =&gt; configService.load();  <span class="cm">// повертає Promise або Observable</span>
+}
+
+providers: [
+  ConfigService,
+  {
+    provide: APP_INITIALIZER,
+    useFactory: initializeApp,
+    deps: [ConfigService],
+    multi: <span class="kw">true</span>
+  }
+]
+
+<span class="cm">// 3. Фабрика InjectionToken (функціональний стиль Angular 14+)</span>
+<span class="kw">const</span> BASE_URL = <span class="kw">new</span> InjectionToken&lt;string&gt;(<span class="str">'BASE_URL'</span>, {
+  providedIn: <span class="str">'root'</span>,
+  factory: () =&gt; inject(DOCUMENT).location.origin
+});</pre>
+<div class="warn-box">Усі залежності у масиві <code>deps</code> мають бути зареєстровані в тому самому або батьківському інжекторі. Для необов'язкових залежностей використовуйте <code>new Optional()</code> у масиві deps: <code>deps: [HttpClient, new Optional(), SomeOptionalDep]</code></div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Multi-providers — збирання кількох реалізацій</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><strong>multi: true</strong> вказує Angular накопичувати всі провайдери для токена в масив замість заміни попереднього. Впроваджене значення має тип <code>T[]</code>.</p>
+<pre><span class="cm">// Вбудовані multi-provider токени</span>
+<span class="cm">// HTTP_INTERCEPTORS   → HttpInterceptor[]</span>
+<span class="cm">// APP_INITIALIZER     → (() => Promise|Observable)[]</span>
+<span class="cm">// NG_VALIDATORS       → Validator[]</span>
+
+<span class="cm">// Власний токен плагіна</span>
+<span class="kw">interface</span> <span class="cls">DashboardWidget</span> { render(): string; }
+<span class="kw">const</span> DASHBOARD_WIDGETS = <span class="kw">new</span> InjectionToken&lt;DashboardWidget[]&gt;(<span class="str">'DASHBOARD_WIDGETS'</span>);
+
+providers: [
+  { provide: DASHBOARD_WIDGETS, useClass: SalesWidget,   multi: <span class="kw">true</span> },
+  { provide: DASHBOARD_WIDGETS, useClass: UsersWidget,   multi: <span class="kw">true</span> },
+  { provide: DASHBOARD_WIDGETS, useClass: RevenueWidget, multi: <span class="kw">true</span> },
+]
+
+<span class="cm">// Впровадження як масив</span>
+<span class="kw">class</span> <span class="cls">DashboardComponent</span> {
+  widgets = inject(DASHBOARD_WIDGETS);  <span class="cm">// DashboardWidget[]</span>
+}
+
+<span class="cm">// Власний multi-provider NG_VALIDATORS</span>
+@Directive({ selector: <span class="str">'[appForbiddenName]'</span>, providers: [
+  { provide: NG_VALIDATORS, useExisting: ForbiddenNameDirective, multi: <span class="kw">true</span> }
+]})
+<span class="kw">class</span> <span class="cls">ForbiddenNameDirective</span> <span class="kw">implements</span> Validator {
+  validate(control: AbstractControl): ValidationErrors | null { <span class="cm">/* ... */</span> }
+}</pre>
+<div class="tip">Використовуйте <code>useExisting</code> (а не <code>useClass</code>) при реєстрації Directive як валідатора — <code>useClass</code> створює другий екземпляр; <code>useExisting</code> повторно використовує той, що вже створений Angular.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Функціональний inject() API (Angular 14+)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Використання inject() поза конструктором — у фабриках, Guards, Pipe-ах</span>
+<span class="kw">export function</span> <span class="fn">authGuard</span>(): CanActivateFn {
+  <span class="kw">return</span> () =&gt; {
+    <span class="kw">const</span> auth = inject(AuthService);
+    <span class="kw">const</span> router = inject(Router);
+    <span class="kw">return</span> auth.isLoggedIn() || router.createUrlTree([<span class="str">'/login'</span>]);
+  };
+}
+
+<span class="cm">// inject() у полях класу</span>
+<span class="kw">class</span> <span class="cls">MyComponent</span> {
+  <span class="kw">private</span> store = inject(Store);
+  users$ = <span class="kw">this</span>.store.select(selectAllUsers);
+}</pre>
+</div></div>
+</div>
+
+<!-- ===== CHANGE DETECTION ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Виявлення змін (Change Detection) <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Default проти OnPush + Zone.js</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Zone.js</strong> патчить усі асинхронні API та сповіщає Angular після виконання асинхронних завдань. <strong>Default</strong>: перевіряє все дерево. <strong>OnPush</strong>: пропускає піддерево, якщо не виконано одну з умов:</p>
+<ul>
+<li>Змінюється <em>посилання</em> на <code>@Input()</code> (не мутація)</li>
+<li>Подія відбувається всередині Component</li>
+<li>Observable видає значення через <code>async</code> pipe</li>
+<li>Викликано <code>markForCheck()</code> / <code>detectChanges()</code></li>
+</ul>
+<pre>@Component({ changeDetection: ChangeDetectionStrategy.OnPush })
+<span class="kw">class</span> <span class="cls">CardComponent</span> {
+  @Input() data!: Data;   <span class="cm">// необхідно передати НОВЕ посилання</span>
+
+  constructor(<span class="kw">private</span> cd: ChangeDetectorRef) {}
+
+  update() {
+    <span class="kw">this</span>.cd.markForCheck();    <span class="cm">// запланувати перевірку в наступному циклі</span>
+    <span class="cm">// АБО</span>
+    <span class="kw">this</span>.cd.detectChanges();   <span class="cm">// негайна синхронна перевірка</span>
+  }
+  pauseCD()  { <span class="kw">this</span>.cd.detach(); }
+  resumeCD() { <span class="kw">this</span>.cd.reattach(); }</pre>
+</div></div>
+</div>
+
+<!-- ===== RxJS vs SIGNALS CD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Виявлення змін: RxJS проти Signals <span class="badge b-key">Співбесіда</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Як спрацьовує виявлення змін — дві парадигми</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Ключове питання: <em>як Angular знає, що щось змінилося і які представлення потрібно оновити?</em></p>
+<table>
+<tr><th></th><th>RxJS + Zone.js</th><th>Signals (Angular 16+)</th></tr>
+<tr><td>Тригер виявлення змін</td><td>Zone.js патчить асинхронні API → сповіщає Angular після кожного завдання</td><td>Мутація Signal → Angular позначає лише представлення, що читають цей Signal</td></tr>
+<tr><td>Гранулярність</td><td>Піддерево Component (груба)</td><td>Вираз шаблону (точна)</td></tr>
+<tr><td>Потрібен Zone.js</td><td>Так</td><td>Ні (підтримується zoneless-режим)</td></tr>
+<tr><td>Синтаксис шаблону</td><td><code>{{ users$ | async }}</code></td><td><code>{{ users() }}</code> — виклик як функція</td></tr>
+<tr><td>Як працює async pipe</td><td>Підписується + викликає <code>markForCheck()</code> при emitted значенні</td><td>Не застосовується — <code>toSignal(obs$)</code> забезпечує interop</td></tr>
+<tr><td>Ручний тригер</td><td><code>markForCheck()</code> / <code>detectChanges()</code></td><td>Немає ручного тригера — реактивно автоматично</td></tr>
+<tr><td>Стеля продуктивності</td><td>OnPush зменшує перевірки, але залишається на рівні Component</td><td>Перераховується лише точне прив'язування</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Порівняння коду — одна функція, два підходи</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// ─── Підхід RxJS / Zone.js ────────────────────────────────</span>
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: <span class="str">`
+    &lt;div *ngFor="let u of users$ | async"&gt;{{ u.name }}&lt;/div&gt;
+    &lt;span&gt;{{ count$ | async }}&lt;/span&gt;
+  `</span>
+})
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users$ = <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));
+  count$ = <span class="kw">this</span>.users$.pipe(map(u =&gt; u.length));
+  <span class="cm">// async pipe: підписується + викликає markForCheck() при кожному emitted значенні</span>
+  <span class="cm">// Zone.js: запускає виявлення змін після HTTP, setTimeout, подій...</span>
+  <span class="cm">// з OnPush: перевіряє лише ЦЕ піддерево, а не все дерево</span>
+}
+
+<span class="cm">// ─── Підхід Signals ───────────────────────────────────────</span>
+@Component({
+  template: <span class="str">`
+    &lt;div *ngFor="let u of users()"&gt;{{ u.name }}&lt;/div&gt;
+    &lt;span&gt;{{ count() }}&lt;/span&gt;
+  `</span>
+})
+<span class="kw">class</span> <span class="cls">UserListComponent</span> {
+  users = signal&lt;User[]&gt;([]);
+  count = computed(() =&gt; <span class="kw">this</span>.users().length);  <span class="cm">// автоматично відстежує users</span>
+
+  constructor(<span class="kw">private</span> http: HttpClient) {}
+
+  ngOnInit() {
+    <span class="kw">this</span>.http.get&lt;User[]&gt;(<span class="str">'/api/users'</span>).subscribe(u =&gt; <span class="kw">this</span>.users.set(u));
+    <span class="cm">// АБО: users = toSignal(this.http.get(...), { initialValue: [] });</span>
+  }
+  <span class="cm">// Angular відстежує, які вирази шаблону читають users()</span>
+  <span class="cm">// При users.set() → лише ці прив'язування перераховуються, нічого більше</span>
+  <span class="cm">// Не потрібні Zone.js, markForCheck()</span>
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>RxJS interop — toSignal / toObservable</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { toSignal, toObservable } <span class="kw">from</span> <span class="str">'@angular/core/rxjs-interop'</span>;
+
+<span class="cm">// Observable → Signal (підписується автоматично, завершується при знищенні)</span>
+<span class="kw">class</span> <span class="cls">SearchComponent</span> {
+  query = signal(<span class="str">''</span>);
+
+  <span class="cm">// Signal → Observable → застосування операторів RxJS → назад у Signal</span>
+  results = toSignal(
+    toObservable(<span class="kw">this</span>.query).pipe(
+      debounceTime(<span class="num">300</span>),
+      distinctUntilChanged(),
+      switchMap(q =&gt; <span class="kw">this</span>.http.get(<span class="str">`/search?q=${q}`</span>))
+    ),
+    { initialValue: [] }
+  );
+  <span class="cm">// шаблон: &lt;li *ngFor="let r of results()"&gt;{{ r.name }}&lt;/li&gt;</span>
+  <span class="cm">// Найкраще з обох світів: оператори RxJS + Signals у шаблоні</span>
+}
+
+<span class="cm">// Правило великого пальця:</span>
+<span class="cm">// - Використовуйте RxJS для складних асинхронних потоків (debounce, retry, об'єднання потоків)</span>
+<span class="cm">// - Використовуйте Signals для стану UI, похідних значень, прив'язувань шаблону</span>
+<span class="cm">// - З'єднуйте через toSignal() на межі</span></pre>
+<div class="tip">Шлях міграції: залиште RxJS для бізнес-логіки, загорніть у <code>toSignal()</code> на межі Component. Поступово замінюйте простий стан BehaviorSubject на Signals.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Коли що використовувати</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Сценарій</th><th>Використовувати</th><th>Чому</th></tr>
+<tr><td>HTTP-запити з операторами (debounce, retry, switchMap)</td><td>RxJS</td><td>Потоки природно є Observable</td></tr>
+<tr><td>Стан UI (відкрито/закрито, активна вкладка, значення форми)</td><td>Signals</td><td>Простіше, без управління підписками</td></tr>
+<tr><td>Похідні/обчислені значення</td><td><code>computed()</code></td><td>Автоматично відстежує залежності, кешується</td></tr>
+<tr><td>Об'єднання кількох асинхронних потоків</td><td>RxJS <code>combineLatest</code></td><td>Еквівалент на Signals є громіздким</td></tr>
+<tr><td>Прив'язування шаблону</td><td>Signals</td><td>Не потрібен async pipe, точне виявлення змін</td></tr>
+<tr><td>Побічні ефекти при зміні стану</td><td><code>effect()</code></td><td>Запускається при зміні будь-якого залежного Signal</td></tr>
+<tr><td>Легасі кодова база</td><td>RxJS + OnPush</td><td>Поступово приймайте Signals через toSignal()</td></tr>
+<tr><td>Zoneless-застосунок</td><td>Signals</td><td>Лише Signals ініціюють виявлення змін без Zone.js</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== SIGNALS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Signals (Angular 16+, стабільний у 19) <span class="badge b-key">Нове</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>signal / computed / effect</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Signal</strong> — це реактивний примітив, що зберігає значення та автоматично сповіщає споживачів при змінах — забезпечує точне виявлення змін без Zone.js.</p>
+<pre><span class="kw">import</span> { signal, computed, effect } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+
+<span class="cm">// Записуваний Signal</span>
+<span class="kw">const</span> count = signal(<span class="num">0</span>);
+count.set(<span class="num">5</span>);
+count.update(v =&gt; v + <span class="num">1</span>);
+
+<span class="cm">// Computed — автоматично відстежує залежності</span>
+<span class="kw">const</span> doubled = computed(() =&gt; count() * <span class="num">2</span>);
+
+<span class="cm">// Effect — виконує побічні ефекти при зміні залежностей</span>
+effect(() =&gt; <span class="fn">console</span>.log(<span class="str">'count changed:'</span>, count()));
+
+<span class="cm">// У шаблоні</span>
+<span class="cm">// &lt;p&gt;{{ count() }}&lt;/p&gt;  &lt;!-- виклик як функція --&gt;</span>
+
+<span class="cm">// Signal inputs (Angular 17.1+)</span>
+<span class="kw">import</span> { input, output, model } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">class</span> <span class="cls">MyComponent</span> {
+  name = input&lt;string&gt;(<span class="str">''</span>);        <span class="cm">// замінює @Input()</span>
+  nameChange = output&lt;string&gt;();  <span class="cm">// замінює @Output()</span>
+  value = model&lt;string&gt;(<span class="str">''</span>);      <span class="cm">// двостороннє прив'язування</span>
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>toSignal / toObservable + zoneless</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { toSignal, toObservable } <span class="kw">from</span> <span class="str">'@angular/core/rxjs-interop'</span>;
+
+<span class="cm">// Observable → Signal</span>
+<span class="kw">const</span> users = toSignal(<span class="kw">this</span>.store.select(selectAllUsers), { initialValue: [] });
+
+<span class="cm">// Signal → Observable</span>
+<span class="kw">const</span> count$ = toObservable(count);
+
+<span class="cm">// Zoneless (Angular 18+, експериментальний)</span>
+<span class="cm">// bootstrapApplication(AppComponent, {</span>
+<span class="cm">//   providers: [provideExperimentalZonelessChangeDetection()]</span>
+<span class="cm">// });</span></pre>
+<div class="tip">Signals повністю обходять Zone.js — точна реактивність без зайвих перевірок. Angular 21 планує zoneless за замовчуванням. Надавайте перевагу Signals у новому коді.</div>
+</div></div>
+</div>
+
+<!-- ===== FORMS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Форми — всі типи <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Template-driven проти Reactive — порівняння</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>Angular надає дві стратегії для форм: <strong>template-driven</strong> (орієнтовані на HTML, прості форми) та <strong>reactive</strong> (на основі класу, явна модель, простіше тестувати та обробляти динамічні поля).</p>
+<table>
+<tr><th></th><th>Template-driven</th><th>Reactive</th></tr>
+<tr><td>Визначення</td><td>У шаблоні через Directive</td><td>У класі Component</td></tr>
+<tr><td>Модель даних</td><td>Неявна (NgModel)</td><td>Явна (FormGroup/Control)</td></tr>
+<tr><td>Валідація</td><td>Директиви в шаблоні</td><td>Функції-валідатори</td></tr>
+<tr><td>Тестованість</td><td>Складніше</td><td>Легко (чистий TypeScript)</td></tr>
+<tr><td>Асинхронні оновлення</td><td>Потрібні <code>ngModel</code> + <code>[(ngModel)]</code></td><td>Observable через <code>valueChanges</code></td></tr>
+<tr><td>Використовувати коли</td><td>Прості форми</td><td>Складні, динамічні, тестовані форми</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Reactive Forms — повний приклад</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="kw">import</span> { FormBuilder, Validators, FormGroup, FormArray } <span class="kw">from</span> <span class="str">'@angular/forms'</span>;
+
+<span class="kw">class</span> <span class="cls">ProfileComponent</span> {
+  <span class="kw">private</span> fb = inject(FormBuilder);
+
+  form = <span class="kw">this</span>.fb.group({
+    name:  [<span class="str">''</span>, [Validators.required, Validators.minLength(<span class="num">2</span>)]],
+    email: [<span class="str">''</span>, [Validators.required, Validators.email]],
+    age:   [<span class="kw">null</span>, [Validators.min(<span class="num">18</span>), Validators.max(<span class="num">99</span>)]],
+    tags:  <span class="kw">this</span>.fb.array([]),   <span class="cm">// FormArray</span>
+    address: <span class="kw">this</span>.fb.group({    <span class="cm">// вкладений FormGroup</span>
+      city: [<span class="str">''</span>, Validators.required]
+    })
+  });
+
+  <span class="kw">get</span> tags() { <span class="kw">return</span> <span class="kw">this</span>.form.get(<span class="str">'tags'</span>) <span class="kw">as</span> FormArray; }
+  addTag() { <span class="kw">this</span>.tags.push(<span class="kw">this</span>.fb.control(<span class="str">''</span>)); }
+
+  ngOnInit() {
+    <span class="cm">// Реагування на зміни значення</span>
+    <span class="kw">this</span>.form.get(<span class="str">'email'</span>)!.valueChanges.pipe(
+      debounceTime(<span class="num">300</span>),
+      distinctUntilChanged(),
+      switchMap(email =&gt; <span class="kw">this</span>.api.checkEmail(email))
+    ).subscribe(taken =&gt; { ... });
+
+    <span class="cm">// Програмні оновлення</span>
+    <span class="kw">this</span>.form.patchValue({ name: <span class="str">'Alice'</span> });  <span class="cm">// часткове</span>
+    <span class="kw">this</span>.form.setValue({ name: <span class="str">'Alice'</span>, email: <span class="str">'alice@example.com'</span>, age: <span class="num">25</span>, tags: [], address: { city: <span class="str">'Kyiv'</span> } }); <span class="cm">// повне</span>
+    <span class="kw">this</span>.form.reset();
+  }
+
+  submit() {
+    <span class="kw">if</span> (<span class="kw">this</span>.form.invalid) <span class="kw">return</span>;
+    <span class="fn">console</span>.log(<span class="kw">this</span>.form.getRawValue());
+  }
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Динамічні форми</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Побудова форми динамічно з конфігурації</span>
+<span class="kw">interface</span> <span class="cls">FieldConfig</span> { key: string; type: string; validators?: ValidatorFn[]; }
+
+<span class="kw">function</span> <span class="fn">buildForm</span>(fields: FieldConfig[], fb: FormBuilder): FormGroup {
+  <span class="kw">return</span> fb.group(
+    fields.reduce((acc, f) =&gt; ({
+      ...acc,
+      [f.key]: [<span class="str">''</span>, f.validators ?? []]
+    }), {})
+  );
+}
+
+<span class="cm">// Додавання/видалення контролів під час виконання</span>
+form.addControl(<span class="str">'phone'</span>, <span class="kw">new</span> FormControl(<span class="str">''</span>));
+form.removeControl(<span class="str">'phone'</span>);
+form.get(<span class="str">'email'</span>)!.disable();
+form.get(<span class="str">'email'</span>)!.enable();</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Власні валідатори та асинхронні валідатори</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Синхронний власний валідатор</span>
+<span class="kw">function</span> <span class="fn">noSpacesValidator</span>(control: AbstractControl): ValidationErrors | null {
+  <span class="kw">return</span> control.value?.includes(<span class="str">' '</span>)
+    ? { noSpaces: <span class="kw">true</span> }
+    : null;
+}
+
+<span class="cm">// Асинхронний валідатор (перевірка унікальності email)</span>
+<span class="kw">function</span> <span class="fn">emailTakenValidator</span>(api: ApiService): AsyncValidatorFn {
+  <span class="kw">return</span> (control) =&gt; <span class="kw">of</span>(control.value).pipe(
+    debounceTime(<span class="num">300</span>),
+    switchMap(v =&gt; api.emailExists(v)),
+    map(exists =&gt; exists ? { emailTaken: <span class="kw">true</span> } : null)
+  );
+}
+
+<span class="cm">// Міжпольовий валідатор (на рівні групи)</span>
+<span class="kw">function</span> <span class="fn">passwordMatch</span>(group: AbstractControl): ValidationErrors | null {
+  <span class="kw">const</span> pwd = group.get(<span class="str">'password'</span>)?.value;
+  <span class="kw">const</span> confirm = group.get(<span class="str">'confirmPassword'</span>)?.value;
+  <span class="kw">return</span> pwd === confirm ? null : { mismatch: <span class="kw">true</span> };
+}
+
+<span class="cm">// Використання</span>
+fb.group({ password: [<span class="str">''</span>], confirmPassword: [<span class="str">''</span>] }, { validators: passwordMatch })</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Signal Forms (Angular 21, експериментальні)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Експериментальний API — може змінитися</span>
+<span class="kw">import</span> { formGroup, formControl } <span class="kw">from</span> <span class="str">'@angular/forms/experimental'</span>;
+
+<span class="kw">const</span> form = formGroup({
+  name: formControl(<span class="str">''</span>, { validators: [Validators.required] }),
+  email: formControl(<span class="str">''</span>)
+});
+
+<span class="cm">// Значення є Signals — реактивно без підписок</span>
+<span class="fn">console</span>.log(form.value());  <span class="cm">// { name: '', email: '' }</span>
+form.controls.name.set(<span class="str">'Alice'</span>);</pre>
+<div class="tip">Signal Forms є компонованими, типобезпечними та напряму інтегруються з Signal-based виявленням змін Angular — Zone.js не потрібен.</div>
+</div></div>
+</div>
+
+<!-- ===== PERFORMANCE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Посібник з продуктивності Angular <span class="badge b-key">Обов'язково знати</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Оптимізація виявлення змін</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ul>
+<li><strong>OnPush скрізь</strong> — різко зменшує кількість перевірок виявлення змін</li>
+<li><strong>Signals</strong> — обходить Zone.js, точкові оновлення</li>
+<li><strong>Уникайте викликів функцій у шаблонах</strong> — використовуйте Pipe-и або computed Signals</li>
+<li><strong>trackBy у *ngFor / track у @for</strong> — запобігає повному повторному рендерингу DOM</li>
+<li><strong>async pipe</strong> — автоматично відписується + ініціює виявлення змін лише при emitted значенні</li>
+<li><strong>detach/reattach</strong> — ручне управління виявленням змін для важких компонентів реального часу</li>
+</ul>
+<pre><span class="cm">// ПОГАНО — перераховується при кожному циклі виявлення змін</span>
+<span class="cm">// &lt;li *ngFor="let item of items"&gt;{{ format(item) }}&lt;/li&gt;</span>
+
+<span class="cm">// ДОБРЕ — Pipe кешується</span>
+<span class="cm">// &lt;li *ngFor="let item of items; trackBy: trackById"&gt;{{ item | myFormat }}&lt;/li&gt;</span>
+
+trackById(index: number, item: Item) { <span class="kw">return</span> item.id; }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Ліниве завантаження та розбиття коду</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Ледачий маршрут (standalone)</span>
+{ path: <span class="str">'admin'</span>, loadComponent: () =&gt; <span class="kw">import</span>(<span class="str">'./admin/admin.component'</span>) }
+
+<span class="cm">// Ледачий feature module</span>
+{ path: <span class="str">'shop'</span>, loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'./shop/shop.routes'</span>) }
+
+<span class="cm">// Стратегія попереднього завантаження</span>
+RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })
+
+<span class="cm">// Блок @defer — Angular 17</span>
+<span class="cm">// @defer (on viewport) {</span>
+<span class="cm">//   &lt;heavy-component /&gt;</span>
+<span class="cm">// } @loading { &lt;spinner /&gt; } @placeholder { &lt;div&gt;Незабаром...&lt;/div&gt; }</span></pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Оптимізації бандла та рантайму</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<ul>
+<li><strong>AOT-компіляція</strong> — компілює шаблони під час збирання (за замовчуванням); менші бандли, швидший старт</li>
+<li><strong>Tree-shaking</strong> — невикористаний код видаляється ESBuild (за замовчуванням Angular 17+)</li>
+<li><strong>Source map explorer</strong> / <code>ng build --stats-json</code> + Webpack Bundle Analyzer</li>
+<li><strong>Angular SSR + hydration</strong> — швидший First Contentful Paint</li>
+<li><strong>Оптимізація зображень</strong> — Directive <code>NgOptimizedImage</code> (Angular 15+)</li>
+<li><strong>Віртуальна прокрутка</strong> — <code>CdkVirtualScrollViewport</code> для великих списків</li>
+<li><strong>Web Workers</strong> — винесення важких обчислень</li>
+<li><strong>HTTP-кешування</strong> — <code>shareReplay(1)</code> для HTTP-запитів</li>
+</ul>
+<pre><span class="cm">// HTTP-кешування</span>
+users$ = <span class="kw">this</span>.http.get(<span class="str">'/api/users'</span>).pipe(shareReplay(<span class="num">1</span>));</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Рендеринг великих списків — virtual scroll проти пагінації проти infinite scroll</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th></th><th>Virtual Scroll (CDK)</th><th>Пагінація</th><th>Infinite Scroll</th></tr>
+<tr><td>DOM-вузли</td><td>Фіксоване вікно (~10–20 відрендерених)</td><td>Одна сторінка за раз</td><td>Зростає з кожним завантаженням</td></tr>
+<tr><td>Використання пам'яті</td><td>Постійне ✓</td><td>Постійне ✓</td><td>Зростає з часом ✗</td></tr>
+<tr><td>UX</td><td>Плавне прокручування</td><td>Явна навігація</td><td>Плавне, дослідницьке</td></tr>
+<tr><td>Глибокі посилання</td><td>Складно (позиція не в URL)</td><td>Легко ✓ (сторінка в URL)</td><td>Складно</td></tr>
+<tr><td>Висота елементів</td><td>Найкраще з фіксованою висотою</td><td>Будь-яка</td><td>Будь-яка</td></tr>
+<tr><td>Коли використовувати</td><td>Стрічки реального часу, логи, рядки фіксованої висоти</td><td>Результати пошуку, таблиці з сортуванням</td><td>Стрічки соцмереж, дослідження контенту</td></tr>
+</table>
+<pre><span class="cm">// CDK Virtual Scroll — рендерить лише видимі рядки</span>
+<span class="cm">// &lt;cdk-virtual-scroll-viewport itemSize="50" style="height:400px"&gt;</span>
+<span class="cm">//   &lt;div *cdkVirtualFor="let item of items; trackBy: trackById"&gt;</span>
+<span class="cm">//     {{ item.name }}</span>
+<span class="cm">//   &lt;/div&gt;</span>
+<span class="cm">// &lt;/cdk-virtual-scroll-viewport&gt;</span>
+
+<span class="cm">// Рядки змінної висоти — використовуйте AutoSizeVirtualScrollStrategy</span>
+<span class="cm">// з @angular/cdk-experimental/scrolling (експериментальний)</span>
+
+<span class="cm">// Тригер infinite scroll — IntersectionObserver на sentinel-елементі</span>
+<span class="kw">const</span> sentinel = document.querySelector(<span class="str">'#sentinel'</span>);
+<span class="kw">new</span> IntersectionObserver(([entry]) =&gt; {
+  <span class="kw">if</span> (entry.isIntersecting) <span class="kw">this</span>.loadNextPage();
+}).observe(sentinel!);</pre>
+<div class="tip">Для 10 000+ елементів: virtual scroll є єдиним варіантом, що підтримує постійне використання пам'яті й час рендерингу. Пагінація виграє для SEO та глибоких посилань. Infinite scroll зручний для UX, але втрачає позицію при натисканні кнопки "назад".</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>@defer — відкладене завантаження (Angular 17+)</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p><code>@defer</code> ліниво завантажує Component/блок та його залежності — це управляється компілятором, а не рантаймом. Чанк завантажується лише при спрацюванні тригера.</p>
+<table>
+<tr><th>Тригер</th><th>Коли спрацьовує</th><th>Типове використання</th></tr>
+<tr><td><code>on idle</code></td><td>Браузер неактивний (<code>requestIdleCallback</code>)</td><td>Контент нижче згину, аналітичні віджети</td></tr>
+<tr><td><code>on viewport</code></td><td>Placeholder потрапляє у видиму область (<code>IntersectionObserver</code>)</td><td>Графіки, зображення, елементи infinite scroll</td></tr>
+<tr><td><code>on interaction</code></td><td>Користувач клікає або торкається placeholder</td><td>Розширені редактори, діалоги, що відкриваються при кліку</td></tr>
+<tr><td><code>on hover</code></td><td>Користувач наводить курсор на placeholder</td><td>Підказки, панелі попереднього перегляду</td></tr>
+<tr><td><code>on immediate</code></td><td>Якомога швидше після рендерингу</td><td>Некритичний, але видимий без прокручування контент</td></tr>
+<tr><td><code>on timer(Xms)</code></td><td>Після фіксованої затримки</td><td>Заставки, відкладені банери</td></tr>
+<tr><td><code>when (expr)</code></td><td>Коли булевий вираз стає true</td><td>Прапори функцій, гейти авторизації, керування даними</td></tr>
+</table>
+<pre><span class="cm">// Повна анатомія @defer</span>
+@defer (on viewport; prefetch on idle) {
+  &lt;heavy-chart [data]="data" /&gt;
+} @loading (minimum 150ms) {
+  &lt;skeleton-loader /&gt;
+} @placeholder (minimum 500ms) {
+  &lt;div class="chart-placeholder"&gt;Chart loading soon&lt;/div&gt;
+} @error {
+  &lt;p&gt;Failed to load. &lt;button (click)="retry()"&gt;Retry&lt;/button&gt;&lt;/p&gt;
+}
+
+<span class="cm">// when() — тригер на основі даних</span>
+@defer (when userLoaded) {
+  &lt;user-profile [user]="user" /&gt;
+}
+
+<span class="cm">// Тригер на іменованому посиланні елемента</span>
+&lt;button #loadBtn&gt;Load Comments&lt;/button&gt;
+@defer (on interaction(loadBtn)) {
+  &lt;comments-section /&gt;
+}
+
+<span class="cm">// Тригер prefetch може відрізнятися від тригера рендерингу</span>
+@defer (on interaction; prefetch on hover) {
+  &lt;rich-editor /&gt;
+}</pre>
+<div class="tip"><code>@placeholder</code> відображається до спрацювання тригера. <code>@loading</code> відображається під час завантаження чанку. Використовуйте <code>minimum</code>, щоб запобігти миготінню — Angular показує його щонайменше стільки часу, навіть якщо чанк завантажився швидше.</div>
+</div></div>
+</div>
+
+<!-- ===== IVY COMPILER ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Компілятор Ivy проти View Engine <span class="badge b-key">Співбесіда</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Відмінність моделей компіляції</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>View Engine (до Angular 9)</th><th>Ivy (Angular 9+, за замовчуванням)</th></tr>
+<tr><td>Модель компіляції</td><td>Глобальна — файли NgFactory, потребує повного контексту застосунку</td><td>Інкрементальна — кожен Component компілюється незалежно</td></tr>
+<tr><td>Розмір бандла</td><td>Великий — включає рантайм фреймворку для кожного Component</td><td>Менший — видаляє невикористані частини фреймворку через tree-shaking</td></tr>
+<tr><td>Принцип локальності</td><td>Ні — компілятору потрібен повний граф модулів</td><td>Так — Component потребує лише власних метаданих</td></tr>
+<tr><td>SSR</td><td>Складне, потрібні окремі бандли</td><td>Вбудований — той самий код виконується на сервері й у браузері</td></tr>
+<tr><td>Налагодження</td><td>Обмежене — скомпільовані шаблони непрозорі</td><td><code>ng.getComponent()</code>, кращі стек-трейси</td></tr>
+<tr><td>Перевірка типів шаблону</td><td>Базова</td><td>Повна сувора перевірка типів (<code>strictTemplates</code>)</td></tr>
+<tr><td>Ліниве завантаження</td><td>Лише на основі NgModule</td><td>Standalone components — NgModule не потрібен</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Incremental DOM — як Ivy оновлює DOM</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<p>Ivy використовує підхід <strong>incremental DOM</strong>: інструкції генеруються на рівні Component та обходять DOM на місці, а не створюють дерево віртуального DOM. Це означає:</p>
+<ul>
+<li><strong>Пам'ять</strong> — немає повного снапшоту віртуального DOM у пам'яті; виділяється лише те, що змінюється</li>
+<li><strong>Tree-shaking</strong> — невикористані інструкції рендерингу (наприклад, <code>ɵɵlistener</code>, <code>ɵɵtext</code>) видаляються з бандла</li>
+<li><strong>Розмір бандла</strong> — малі застосунки отримують найбільший виграш; рантайм масштабується з використовуваними функціями, а не розміром фреймворку</li>
+<li><strong>SSR</strong> — той самий код Component рендериться на сервері через platform-server; <code>provideClientHydration()</code> повторно використовує серверний DOM без повного повторного рендерингу</li>
+</ul>
+<pre><span class="cm">// Скомпільований Ivy Component генерує послідовності інструкцій на кшталт:</span>
+<span class="cm">// ɵɵelementStart(0, 'div')  ɵɵtext(1)  ɵɵelementEnd()</span>
+<span class="cm">// ɵɵadvance(1); ɵɵtextInterpolate(ctx.title)</span>
+<span class="cm">// Вони виконуються В ІСНУЮЧОМУ DOM — алгоритм порівняння не потрібен</span>
+
+<span class="cm">// Non-destructive hydration (Angular 17+)</span>
+bootstrapApplication(AppComponent, {
+  providers: [provideClientHydration()]  <span class="cm">// повторно використовує SSR DOM, без мерехтіння</span>
+});</pre>
+<div class="tip">Локальність Ivy дозволяє бібліотекам Angular постачатися попередньо скомпільованими. <code>strictTemplates: true</code> у tsconfig виявляє помилки типів шаблону під час збирання — використовуйте це.</div>
+</div></div>
+</div>
+
+<!-- ===== ANGULAR VERSIONS ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Оновлення Angular 15–21 <span class="badge b-key">Обов'язково знати</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Хронологія версій</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th>Версія</th><th>Ключова функція</th></tr>
+<tr><td><strong>15</strong></td><td>Стабільні Standalone Components, Directive Composition API, NgOptimizedImage</td></tr>
+<tr><td><strong>16</strong></td><td>Signals (експериментальний), Zone.js необов'язковий, <code>takeUntilDestroyed</code>, обов'язкові inputs</td></tr>
+<tr><td><strong>17</strong></td><td>ESBuild за замовчуванням, новий синтаксис <code>@if</code>/<code>@for</code>/<code>@switch</code>, блоки <code>@defer</code>, переходи між представленнями</td></tr>
+<tr><td><strong>18</strong></td><td>Zoneless (експериментальний), стабільні типізовані форми, підтримка Web Worker</td></tr>
+<tr><td><strong>19</strong></td><td>Signals стабільні, Standalone за замовчуванням у нових проектах, стабільні <code>input()</code>/<code>output()</code>/<code>model()</code></td></tr>
+<tr><td><strong>20</strong></td><td>Повна інтеграція Signals, підтримка micro frontend, покращений DX</td></tr>
+<tr><td><strong>21</strong></td><td>Zoneless за замовчуванням, Signal Forms (експериментальні), Vitest за замовчуванням, Angular ARIA</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== NX MONOREPO ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Nx Monorepo та межі модулів <span class="badge b-key">Архітектура</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Таксономія бібліотек + правила залежностей</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p>У Nx monorepo бібліотеки класифікуються за <strong>типом</strong> та <strong>областю</strong> — правила лінтингу гарантують, що бібліотеки нижнього рівня ніколи не залежать від бібліотек вищого рівня, запобігаючи "великій кулі болота".</p>
+<table>
+<tr><th>Тип бібліотеки</th><th>Містить</th><th>Може залежати від</th><th>Не може залежати від</th></tr>
+<tr><td><strong>feature</strong></td><td>Розумні/контейнерні Component, маршрутизація</td><td>ui, data-access, util</td><td>Feature інших застосунків</td></tr>
+<tr><td><strong>ui</strong></td><td>Презентаційні (dumb) Component</td><td>ui, util</td><td>data-access, feature</td></tr>
+<tr><td><strong>data-access</strong></td><td>Сервіси, HTTP, сховища стану</td><td>util, data-access</td><td>ui, feature</td></tr>
+<tr><td><strong>util</strong></td><td>Чисті функції, Pipe-и, константи</td><td>лише util</td><td>Все інше</td></tr>
+</table>
+<pre><span class="cm">// nx.json — впровадження меж через ESLint</span>
+<span class="cm">// правило "@nx/enforce-module-boundaries" у .eslintrc.json:</span>
+{
+  <span class="str">"depConstraints"</span>: [
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:ui"</span>,          <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:ui"</span>, <span class="str">"type:util"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:feature"</span>,     <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:ui"</span>, <span class="str">"type:data-access"</span>, <span class="str">"type:util"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"type:data-access"</span>, <span class="str">"onlyDependOnLibsWithTags"</span>: [<span class="str">"type:util"</span>, <span class="str">"type:data-access"</span>] },
+    { <span class="str">"sourceTag"</span>: <span class="str">"scope:admin"</span>,      <span class="str">"notDependOnLibsWithTags"</span>:  [<span class="str">"scope:shop"</span>] }
+  ]
+}
+
+<span class="cm">// теги бібліотеки у project.json</span>
+{ <span class="str">"tags"</span>: [<span class="str">"scope:shared"</span>, <span class="str">"type:ui"</span>] }</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Граф проекту Nx + ключові команди</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Типова структура monorepo</span>
+<span class="cm">// apps/</span>
+<span class="cm">//   admin-app/         ← повний Angular-застосунок</span>
+<span class="cm">//   shop-app/</span>
+<span class="cm">// libs/</span>
+<span class="cm">//   shared/ui/         ← type:ui, scope:shared</span>
+<span class="cm">//   shared/util/       ← type:util, scope:shared</span>
+<span class="cm">//   admin/feature-users/  ← type:feature, scope:admin</span>
+<span class="cm">//   admin/data-access-users/ ← type:data-access, scope:admin</span>
+
+<span class="cm">// Команди affected — лише перезбирають/тестують змінений код</span>
+nx affected:build    <span class="cm">// збирає лише бібліотеки/застосунки, що зачіпаються git diff</span>
+nx affected:test     <span class="cm">// тестує лише affected</span>
+nx graph             <span class="cm">// відкриває візуальний граф залежностей у браузері</span>
+nx lint my-lib       <span class="cm">// перевіряє порушення меж</span>
+
+<span class="cm">// Генерація нової бібліотеки</span>
+nx g @nx/angular:lib shared/ui-buttons --tags="scope:shared,type:ui"</pre>
+<div class="tip">Граф проекту (<code>nx graph</code>) візуалізує залежності між бібліотеками — використовуйте його в PR для виявлення порушень меж. <code>nx affected</code> — ключова перевага для CI: 10 застосунків → перезбирайте лише 2, що змінились.</div>
+</div></div>
+</div>
+
+<!-- ===== DIRECTIVE COMP ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Directive Composition API <span class="badge b-ng">Angular 15+</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>hostDirectives — стиль mixin</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<pre>@Component({
+  selector: <span class="str">'app-button'</span>,
+  standalone: <span class="kw">true</span>,
+  hostDirectives: [
+    HighlightDirective,
+    { directive: ClickTrackDirective, inputs: [<span class="str">'trackLabel'</span>], outputs: [<span class="str">'tracked'</span>] }
+  ],
+  template: <span class="str">'&lt;ng-content /&gt;'</span>
+})
+<span class="kw">class</span> <span class="cls">ButtonComponent</span> {}</pre>
+<div class="tip">Замінює успадкування базового класу. Ідеально для: доступності, аналітики, валідації, тематизації. Компонований + підтримує tree-shaking.</div>
+</div></div>
+</div>
+
+<!-- ===== VIEWCHILD / CONTENTCHILD ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">ViewChild, ContentChild та ViewContainerRef <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>ViewChild проти ContentChild проти ViewContainerRef</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>ViewChild</th><th>ContentChild</th><th>ViewContainerRef</th></tr>
+<tr><td>Що запитує</td><td>Елементи у власному шаблоні</td><td>Проектований вміст (<code>ng-content</code>)</td><td>Якір для динамічних представлень</td></tr>
+<tr><td>Доступний з</td><td><code>ngAfterViewInit</code></td><td><code>ngAfterContentInit</code></td><td>Впроваджується через DI або <code>@ViewChild</code></td></tr>
+<tr><td>Типове використання</td><td>Доступ до DOM, API дочірнього Component</td><td>Обгортання вмісту, відкриття стану проекту</td><td>Динамічне створення Component/шаблону</td></tr>
+</table>
+<pre><span class="cm">// ViewChild — доступ до дочірнього Component або DOM-елемента</span>
+@Component({ template: <span class="str">`&lt;canvas #myCanvas&gt;&lt;/canvas&gt; &lt;app-chart #chart /&gt;`</span> })
+<span class="kw">class</span> <span class="cls">DashboardComponent</span> <span class="kw">implements</span> AfterViewInit {
+  @ViewChild(<span class="str">'myCanvas'</span>) canvas!: ElementRef&lt;HTMLCanvasElement&gt;;
+  @ViewChild(ChartComponent) chart!: ChartComponent;  <span class="cm">// за типом</span>
+
+  ngAfterViewInit() {
+    <span class="cm">// canvas і chart гарантовано існують тут</span>
+    <span class="kw">this</span>.chart.render(<span class="kw">this</span>.data);
+  }
+}
+
+<span class="cm">// ContentChild — доступ до проектованого вмісту</span>
+@Component({
+  selector: <span class="str">'app-panel'</span>,
+  template: <span class="str">`&lt;div class="panel"&gt;&lt;ng-content /&gt;&lt;/div&gt;`</span>
+})
+<span class="kw">class</span> <span class="cls">PanelComponent</span> <span class="kw">implements</span> AfterContentInit {
+  @ContentChild(PanelHeaderComponent) header?: PanelHeaderComponent;
+
+  ngAfterContentInit() {
+    <span class="cm">// проектований дочірній елемент доступний тут, а не в ngAfterViewInit</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.header) <span class="kw">this</span>.header.highlight();
+  }
+}
+
+<span class="cm">// ViewContainerRef — динамічне створення Component</span>
+@Component({ template: <span class="str">`&lt;ng-template #anchor&gt;&lt;/ng-template&gt;`</span> })
+<span class="kw">class</span> <span class="cls">HostComponent</span> {
+  @ViewChild(<span class="str">'anchor'</span>, { read: ViewContainerRef }) vcr!: ViewContainerRef;
+
+  loadDialog() {
+    <span class="kw">this</span>.vcr.clear();
+    <span class="kw">const</span> ref = <span class="kw">this</span>.vcr.createComponent(DialogComponent);
+    ref.instance.title = <span class="str">'Hello'</span>;
+    ref.instance.closed.subscribe(() =&gt; ref.destroy());
+  }
+}
+
+<span class="cm">// ViewContainerRef впроваджується напряму — поточний хост стає якорем</span>
+@Directive({ selector: <span class="str">'[appDynamic]'</span> })
+<span class="kw">class</span> <span class="cls">DynamicDirective</span> {
+  <span class="kw">private</span> vcr = inject(ViewContainerRef);
+  create() { <span class="kw">this</span>.vcr.createComponent(TooltipComponent); }
+}</pre>
+<div class="tip"><code>ViewChildren</code> / <code>ContentChildren</code> (множина) повертають <code>QueryList</code> — підписуйтесь на <code>.changes</code> для динамічних оновлень списку. Використовуйте <code>{ static: true }</code> для <code>@ViewChild</code> лише якщо він потрібен у <code>ngOnInit</code>.</div>
+</div></div>
+</div>
+
+<!-- ===== DI & LIFECYCLE ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Хуки життєвого циклу та Route Guards <span class="badge b-ng">Angular</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Порядок хуків життєвого циклу</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<ol>
+<li><code>ngOnChanges</code> — зміни @Input (до ініціалізації та при кожній зміні)</li>
+<li><code>ngOnInit</code> — ініціалізовано (один раз)</li>
+<li><code>ngDoCheck</code> — кожен цикл виявлення змін</li>
+<li><code>ngAfterContentInit</code> — проектований вміст готовий</li>
+<li><code>ngAfterContentChecked</code></li>
+<li><code>ngAfterViewInit</code> — представлення та дочірні представлення готові</li>
+<li><code>ngAfterViewChecked</code></li>
+<li><code>ngOnDestroy</code> — очищення ресурсів</li>
+</ol>
+<div class="tip"><code>ngAfterContentInit</code> спрацьовує перед <code>ngAfterViewInit</code> — вміст має бути готовим до представлення.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Route Guards</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Guard</th><th>Призначення</th></tr>
+<tr><td><code>CanActivate</code></td><td>Чи може користувач перейти на цей маршрут?</td></tr>
+<tr><td><code>CanDeactivate</code></td><td>Чи може користувач покинути? (незбережені зміни)</td></tr>
+<tr><td><code>CanLoad</code></td><td>Чи може модуль бути ліниво завантажений?</td></tr>
+<tr><td><code>Resolve</code></td><td>Попереднє отримання даних перед активацією</td></tr>
+<tr><td><code>CanActivateChild</code></td><td>Захист дочірніх маршрутів</td></tr>
+</table>
+</div></div>
+</div>
+
+<!-- ===== MONOLITH VS MICRO FRONTEND ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Моноліт проти Micro Frontend <span class="badge b-key">Архітектура</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Порівняння — коли що обирати</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<table>
+<tr><th></th><th>Моноліт (Single SPA)</th><th>Micro Frontend (MFE)</th></tr>
+<tr><td>Деплой</td><td>Одне збирання, один деплой</td><td>Кожна команда деплоїть незалежно</td></tr>
+<tr><td>Спільний код</td><td>Легко — єдина кодова база</td><td>Складно — спільні бібліотеки мають версіонуватись</td></tr>
+<tr><td>Масштаб команди</td><td>Добре працює до ~10 інженерів</td><td>Потрібен при кількох автономних командах</td></tr>
+<tr><td>Розмір бандла</td><td>Один великий бандл (code-splitting допомагає)</td><td>Менші чанки на MFE; спільні залежності складно вирішити</td></tr>
+<tr><td>Узгодженість UI</td><td>Легко — спільна бібліотека Component</td><td>Складно — ризик розходження дизайну</td></tr>
+<tr><td>Гнучкість технологій</td><td>Прив'язаний до одного стеку</td><td>Кожен MFE може використовувати інший фреймворк</td></tr>
+<tr><td>Локальна розробка</td><td>Запускаєте один застосунок</td><td>Потрібно запускати shell + affected remotes</td></tr>
+<tr><td>Складність</td><td>Низька ✓</td><td>Висока — оркестрація, контракти, маршрутизація</td></tr>
+<tr><td>Коли обирати</td><td>Одна команда, greenfield, ранній етап</td><td>Кілька команд, окремі цикли релізів, велика організація</td></tr>
+</table>
+<div class="warn-box">MFE додають реальну складність. Не приймайте їх лише тому, що вони "масштабуються" — приймайте лише тоді, коли незалежний деплой насправді вирішує проблему команди/організації. Добре структурований monorepo (Nx) часто дає 80% переваг без накладних витрат рантайму.</div>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Стратегії інтеграції MFE</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<table>
+<tr><th>Стратегія</th><th>Як</th><th>Переваги</th><th>Недоліки</th></tr>
+<tr><td><strong>Інтеграція під час збирання</strong></td><td>Публікація MFE як npm-пакетів; shell їх встановлює</td><td>Просто; TypeScript-типи; tree-shaking</td><td>Потрібно перезбирати shell для оновлення MFE ✗</td></tr>
+<tr><td><strong>Runtime Module Federation</strong></td><td>Shell завантажує remote JS-чанки під час виконання (Webpack 5 / Native Federation)</td><td>Справжній незалежний деплой; ліниве завантаження</td><td>Конфлікти версій спільних залежностей; складна конфігурація</td></tr>
+<tr><td><strong>iframe</strong></td><td>Кожен MFE у власному iframe</td><td>Повна ізоляція; будь-який технологічний стек</td><td>Немає спільного DOM, поганий UX, проблеми з продуктивністю</td></tr>
+<tr><td><strong>Web Components</strong></td><td>Кожен MFE відкриває Custom Elements</td><td>Незалежний від фреймворку</td><td>Angular DI не перетинає межу; проблеми зі стилями</td></tr>
+</table>
+<div class="tip">Angular 20+ постачається з <strong>Native Federation</strong> (на основі esbuild, без Webpack) як рекомендований підхід до MFE. Використовуйте <code>@angular-architects/native-federation</code> для Angular 17–19.</div>
+</div></div>
+</div>
+
+<!-- ===== ANGULAR OBSERVABILITY ===== -->
+<div class="section">
+<div class="sec-hdr"><div class="sec-num"></div><div class="sec-title">Спостережуваність Angular-застосунку <span class="badge b-key">Обов'язково знати</span></div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Три стовпи: Логи · Метрики · Трейси</h3><span class="arrow">▶</span></div>
+<div class="cb open">
+<p><strong>Спостережуваність</strong> = здатність розуміти, що відбувається всередині Angular-застосунку за його зовнішніми виходами — без розгортання нового коду.</p>
+<table>
+<tr><th>Стовп</th><th>Що фіксує</th><th>Інструменти / підхід Angular</th></tr>
+<tr><td><strong>Логи</strong></td><td>Дискретні події: помилки, дії користувача, API-виклики</td><td>Sentry, DataDog logs, власний ErrorHandler</td></tr>
+<tr><td><strong>Метрики</strong></td><td>Числові вимірювання в часі: LCP, CLS, частота помилок, затримка API</td><td>Web Vitals API, Prometheus + Grafana, DataDog RUM</td></tr>
+<tr><td><strong>Трейси</strong></td><td>Наскрізні потоки запитів: Angular → API → БД</td><td>OpenTelemetry, Jaeger, Zipkin, DataDog APM</td></tr>
+</table>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Глобальний ErrorHandler + логування через HTTP interceptor</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Власний глобальний обробник помилок — перехоплює всі необроблені помилки</span>
+@Injectable()
+<span class="kw">export class</span> <span class="cls">GlobalErrorHandler</span> <span class="kw">implements</span> ErrorHandler {
+  <span class="kw">private</span> logger = inject(LoggingService);
+
+  handleError(error: unknown): <span class="kw">void</span> {
+    <span class="kw">const</span> err = error <span class="kw">instanceof</span> Error ? error : <span class="kw">new</span> Error(String(error));
+    <span class="kw">this</span>.logger.captureException(err);
+    console.error(<span class="str">'[GlobalError]'</span>, err);
+  }
+}
+
+providers: [{ provide: ErrorHandler, useClass: GlobalErrorHandler }]
+
+<span class="cm">// HTTP interceptor — логування кожного запиту/відповіді з таймінгом</span>
+@Injectable()
+<span class="kw">export class</span> <span class="cls">LoggingInterceptor</span> <span class="kw">implements</span> HttpInterceptor {
+  intercept(req: HttpRequest&lt;unknown&gt;, next: HttpHandler): Observable&lt;HttpEvent&lt;unknown&gt;&gt; {
+    <span class="kw">const</span> start = Date.now();
+    <span class="kw">return</span> next.handle(req).pipe(
+      tap(event =&gt; {
+        <span class="kw">if</span> (event <span class="kw">instanceof</span> HttpResponse)
+          console.log(`[${req.method}] ${req.url} → ${event.status} (${Date.now() - start}ms)`);
+      }),
+      catchError(err =&gt; {
+        console.error(`[${req.method}] ${req.url} FAILED`, err);
+        <span class="kw">return throwError</span>(() =&gt; err);
+      })
+    );
+  }
+}</pre>
+</div></div>
+<div class="card"><div class="ch" onclick="T(this)"><h3>Web Vitals та порогові значення Core Web Vitals</h3><span class="arrow">▶</span></div>
+<div class="cb">
+<pre><span class="cm">// Вимірювання Core Web Vitals у Angular-застосунку</span>
+<span class="kw">import</span> { onCLS, onLCP, onINP, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+<span class="kw">function</span> <span class="fn">sendToAnalytics</span>({ name, value, id }: Metric) {
+  navigator.sendBeacon(<span class="str">'/analytics'</span>, JSON.stringify({ name, value, id }));
+}
+
+onCLS(sendToAnalytics);   <span class="cm">// Cumulative Layout Shift</span>
+onLCP(sendToAnalytics);   <span class="cm">// Largest Contentful Paint</span>
+onINP(sendToAnalytics);   <span class="cm">// Interaction to Next Paint</span>
+onFCP(sendToAnalytics);   <span class="cm">// First Contentful Paint</span>
+onTTFB(sendToAnalytics);  <span class="cm">// Time to First Byte</span>
+
+<span class="cm">// Відстеження таймінгу навігації на кожному маршруті</span>
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="cls">RouteTimingService</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> router: Router) {
+    <span class="kw">let</span> navStart = <span class="num">0</span>;
+    router.events.pipe(
+      filter(e =&gt; e <span class="kw">instanceof</span> NavigationStart || e <span class="kw">instanceof</span> NavigationEnd)
+    ).subscribe(e =&gt; {
+      <span class="kw">if</span> (e <span class="kw">instanceof</span> NavigationStart) navStart = Date.now();
+      <span class="kw">if</span> (e <span class="kw">instanceof</span> NavigationEnd)
+        console.log(`Route ${e.url} loaded in ${Date.now() - navStart}ms`);
+    });
+  }
+}</pre>
+<table>
+<tr><th>Метрика</th><th>Добре</th><th>Потребує уваги</th><th>Що вимірює</th></tr>
+<tr><td>LCP</td><td>&lt; 2.5s</td><td>&gt; 4s</td><td>Найбільший видимий елемент відрендерений</td></tr>
+<tr><td>INP</td><td>&lt; 200ms</td><td>&gt; 500ms</td><td>Відгук на взаємодію користувача</td></tr>
+<tr><td>CLS</td><td>&lt; 0.1</td><td>&gt; 0.25</td><td>Візуальна стабільність (неочікувані зсуви макету)</td></tr>
+<tr><td>FCP</td><td>&lt; 1.8s</td><td>&gt; 3s</td><td>Перший відрендерений текст/зображення</td></tr>
+<tr><td>TTFB</td><td>&lt; 800ms</td><td>&gt; 1.8s</td><td>Час відповіді сервера</td></tr>
+</table>
+</div></div>
+</div>
