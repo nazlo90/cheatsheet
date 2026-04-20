@@ -1,0 +1,475 @@
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">SQL Fundamentals &amp; SELECT <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>SELECT clause execution order</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Order</th><th>Clause</th><th>What it does</th></tr>
+        <tr><td>1</td><td>FROM / JOIN</td><td>Define source tables</td></tr>
+        <tr><td>2</td><td>WHERE</td><td>Filter rows before grouping</td></tr>
+        <tr><td>3</td><td>GROUP BY</td><td>Aggregate rows into groups</td></tr>
+        <tr><td>4</td><td>HAVING</td><td>Filter groups (after aggregation)</td></tr>
+        <tr><td>5</td><td>SELECT</td><td>Compute output columns</td></tr>
+        <tr><td>6</td><td>DISTINCT</td><td>Remove duplicates</td></tr>
+        <tr><td>7</td><td>ORDER BY</td><td>Sort result set</td></tr>
+        <tr><td>8</td><td>OFFSET / FETCH (or TOP)</td><td>Paginate</td></tr>
+      </table>
+      <div class="warn-box">Column aliases defined in SELECT cannot be used in WHERE or GROUP BY — those clauses are evaluated earlier.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>JOINs</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>JOIN type</th><th>Returns</th></tr>
+        <tr><td>INNER JOIN</td><td>Only matching rows from both tables</td></tr>
+        <tr><td>LEFT JOIN</td><td>All rows from left + matched from right (NULL if no match)</td></tr>
+        <tr><td>RIGHT JOIN</td><td>All rows from right + matched from left</td></tr>
+        <tr><td>FULL OUTER JOIN</td><td>All rows from both, NULLs where no match</td></tr>
+        <tr><td>CROSS JOIN</td><td>Cartesian product (every combination)</td></tr>
+        <tr><td>SELF JOIN</td><td>Table joined to itself (e.g., manager/employee)</td></tr>
+      </table>
+      <pre><span class="cm">-- Find customers with no orders (anti-join pattern)</span>
+<span class="kw">SELECT</span> c.CustomerId, c.Name
+<span class="kw">FROM</span>   Customers c
+<span class="kw">LEFT JOIN</span> Orders o <span class="kw">ON</span> o.CustomerId = c.CustomerId
+<span class="kw">WHERE</span>  o.OrderId <span class="kw">IS NULL</span>;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Window Functions <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>OVER, PARTITION BY, ORDER BY</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">-- Ranking within each department by salary</span>
+<span class="kw">SELECT</span>
+    Name, Dept, Salary,
+    <span class="fn">ROW_NUMBER</span>()  <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> RowNum,
+    <span class="fn">RANK</span>()        <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> Rnk,
+    <span class="fn">DENSE_RANK</span>()  <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> DRnk,
+    <span class="fn">LAG</span>(Salary, <span class="num">1</span>) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary) <span class="kw">AS</span> PrevSalary,
+    <span class="fn">SUM</span>(Salary)   <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept) <span class="kw">AS</span> DeptTotal
+<span class="kw">FROM</span> Employees;</pre>
+      <table>
+        <tr><th>Function</th><th>Tie handling</th><th>Gaps in sequence</th></tr>
+        <tr><td>ROW_NUMBER</td><td>Arbitrary ordering</td><td>No gaps</td></tr>
+        <tr><td>RANK</td><td>Same rank for ties</td><td>Gaps after ties</td></tr>
+        <tr><td>DENSE_RANK</td><td>Same rank for ties</td><td>No gaps</td></tr>
+        <tr><td>NTILE(n)</td><td>Splits into n buckets</td><td>—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Running totals &amp; frame clauses</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Running total with frame</span>
+<span class="kw">SELECT</span>
+    OrderDate, Amount,
+    <span class="fn">SUM</span>(Amount) <span class="kw">OVER</span> (
+        <span class="kw">ORDER BY</span> OrderDate
+        <span class="kw">ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</span>
+    ) <span class="kw">AS</span> RunningTotal,
+    <span class="cm">-- 3-day moving average</span>
+    <span class="fn">AVG</span>(Amount) <span class="kw">OVER</span> (
+        <span class="kw">ORDER BY</span> OrderDate
+        <span class="kw">ROWS BETWEEN</span> <span class="num">2</span> <span class="kw">PRECEDING AND CURRENT ROW</span>
+    ) <span class="kw">AS</span> MovingAvg3
+<span class="kw">FROM</span> Orders;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">CTEs &amp; Subqueries <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>CTE (Common Table Expression)</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">-- Multiple CTEs chained</span>
+<span class="kw">WITH</span> ActiveCustomers <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> CustomerId, Name
+    <span class="kw">FROM</span>   Customers
+    <span class="kw">WHERE</span>  IsActive = <span class="num">1</span>
+),
+CustomerRevenue <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> ac.CustomerId, <span class="fn">SUM</span>(o.Total) <span class="kw">AS</span> Revenue
+    <span class="kw">FROM</span>   ActiveCustomers ac
+    <span class="kw">JOIN</span>   Orders o <span class="kw">ON</span> o.CustomerId = ac.CustomerId
+    <span class="kw">GROUP BY</span> ac.CustomerId
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> CustomerRevenue <span class="kw">WHERE</span> Revenue &gt; <span class="num">1000</span>;</pre>
+      <div class="tip">CTEs improve readability and can be referenced multiple times in the same query. In SQL Server they are NOT materialized by default — the optimizer may inline them.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Recursive CTE</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Traverse org hierarchy</span>
+<span class="kw">WITH</span> OrgTree <span class="kw">AS</span> (
+    <span class="cm">-- Anchor: top-level employees</span>
+    <span class="kw">SELECT</span> EmployeeId, Name, ManagerId, <span class="num">0</span> <span class="kw">AS</span> Level
+    <span class="kw">FROM</span>   Employees
+    <span class="kw">WHERE</span>  ManagerId <span class="kw">IS NULL</span>
+
+    <span class="kw">UNION ALL</span>
+
+    <span class="cm">-- Recursive: subordinates</span>
+    <span class="kw">SELECT</span> e.EmployeeId, e.Name, e.ManagerId, ot.Level + <span class="num">1</span>
+    <span class="kw">FROM</span>   Employees e
+    <span class="kw">JOIN</span>   OrgTree ot <span class="kw">ON</span> ot.EmployeeId = e.ManagerId
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> OrgTree <span class="kw">ORDER BY</span> Level, Name;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">T-SQL Specific Features (MS SQL Server) <span class="badge b-hot">MSSQL</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Stored procedures, variables &amp; flow control</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="kw">CREATE OR ALTER PROCEDURE</span> dbo.<span class="fn">usp_GetTopOrders</span>
+    @CustomerId <span class="kw">INT</span>,
+    @TopN       <span class="kw">INT</span> = <span class="num">10</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET NOCOUNT ON</span>;
+
+    <span class="kw">DECLARE</span> @Revenue <span class="kw">DECIMAL</span>(<span class="num">18</span>,<span class="num">2</span>);
+
+    <span class="kw">SELECT TOP</span> (@TopN)
+        OrderId, Total, OrderDate
+    <span class="kw">FROM</span>   Orders
+    <span class="kw">WHERE</span>  CustomerId = @CustomerId
+    <span class="kw">ORDER BY</span> Total <span class="kw">DESC</span>;
+
+    <span class="kw">IF</span> @@ROWCOUNT = <span class="num">0</span>
+        <span class="kw">RAISERROR</span>(<span class="str">'No orders found'</span>, <span class="num">16</span>, <span class="num">1</span>);
+<span class="kw">END</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Transactions &amp; error handling</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">BEGIN TRY</span>
+    <span class="kw">BEGIN TRANSACTION</span>;
+
+    <span class="kw">UPDATE</span> Accounts <span class="kw">SET</span> Balance -= <span class="num">100</span> <span class="kw">WHERE</span> Id = <span class="num">1</span>;
+    <span class="kw">UPDATE</span> Accounts <span class="kw">SET</span> Balance += <span class="num">100</span> <span class="kw">WHERE</span> Id = <span class="num">2</span>;
+
+    <span class="kw">COMMIT TRANSACTION</span>;
+<span class="kw">END TRY</span>
+<span class="kw">BEGIN CATCH</span>
+    <span class="kw">ROLLBACK TRANSACTION</span>;
+    <span class="kw">THROW</span>; <span class="cm">-- re-raise original error</span>
+<span class="kw">END CATCH</span>;</pre>
+      <div class="warn-box">Always check <code>XACT_STATE()</code> before ROLLBACK in nested transactions — a -1 state means the transaction is doomed and cannot commit.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Table variables vs temp tables vs CTEs</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th></th><th>@TableVar</th><th>#TempTable</th><th>CTE</th></tr>
+        <tr><td>Scope</td><td>Batch/proc</td><td>Session (##global)</td><td>Statement only</td></tr>
+        <tr><td>Statistics</td><td>No</td><td>Yes</td><td>N/A</td></tr>
+        <tr><td>Transaction rollback</td><td>Not rolled back</td><td>Rolled back</td><td>N/A</td></tr>
+        <tr><td>Best for</td><td>Small row counts</td><td>Large intermediate sets</td><td>Readability</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>T-SQL useful functions</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- String</span>
+<span class="fn">STRING_AGG</span>(Name, <span class="str">', '</span>) <span class="kw">WITHIN GROUP</span> (<span class="kw">ORDER BY</span> Name)
+<span class="fn">STRING_SPLIT</span>(<span class="str">'a,b,c'</span>, <span class="str">','</span>)
+<span class="fn">FORMAT</span>(Amount, <span class="str">'C2'</span>, <span class="str">'en-US'</span>)
+<span class="fn">TRIM</span>(<span class="str">'  text  '</span>)
+
+<span class="cm">-- Date</span>
+<span class="fn">GETDATE</span>() / <span class="fn">SYSDATETIME</span>()   <span class="cm">-- current datetime</span>
+<span class="fn">DATEADD</span>(<span class="kw">DAY</span>, <span class="num">7</span>, OrderDate)
+<span class="fn">DATEDIFF</span>(<span class="kw">DAY</span>, StartDate, EndDate)
+<span class="fn">EOMONTH</span>(OrderDate)            <span class="cm">-- last day of month</span>
+
+<span class="cm">-- Conditional</span>
+<span class="kw">IIF</span>(Score &gt; <span class="num">50</span>, <span class="str">'Pass'</span>, <span class="str">'Fail'</span>)
+<span class="fn">COALESCE</span>(Phone, Mobile, <span class="str">'N/A'</span>)
+<span class="fn">NULLIF</span>(Value, <span class="num">0</span>)               <span class="cm">-- returns NULL if equal</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Indexes &amp; Query Performance <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Clustered vs Non-clustered index</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>Clustered</th><th>Non-clustered</th></tr>
+        <tr><td>Count per table</td><td>1 (the data IS the index)</td><td>Many</td></tr>
+        <tr><td>Data order</td><td>Table physically sorted by key</td><td>Separate structure with pointer</td></tr>
+        <tr><td>Lookup cost</td><td>O(log n) — data read directly</td><td>O(log n) + bookmark lookup</td></tr>
+        <tr><td>Best key</td><td>Narrow, unique, ever-increasing (IDENTITY)</td><td>Columns in WHERE/JOIN/ORDER BY</td></tr>
+      </table>
+      <pre><span class="cm">-- Covering index — includes all needed columns, avoids bookmark lookup</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> ix_Orders_Customer
+    <span class="kw">ON</span> Orders (CustomerId)
+    <span class="kw">INCLUDE</span> (OrderDate, Total);
+
+<span class="cm">-- Filtered index — index a subset of rows</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> ix_Orders_Active
+    <span class="kw">ON</span> Orders (OrderDate)
+    <span class="kw">WHERE</span> Status = <span class="str">'Active'</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Reading execution plans &amp; common pitfalls</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>Operator</th><th>Meaning</th><th>Action</th></tr>
+        <tr><td>Index Seek</td><td>Efficient range lookup</td><td>Good</td></tr>
+        <tr><td>Index Scan</td><td>Reads whole index</td><td>Check if index is useful</td></tr>
+        <tr><td>Key Lookup</td><td>Extra I/O to fetch columns not in index</td><td>Add INCLUDE columns</td></tr>
+        <tr><td>Hash Match</td><td>Large join/aggregation</td><td>Consider index on join key</td></tr>
+        <tr><td>Sort</td><td>Explicit sort needed</td><td>Consider indexed ORDER BY</td></tr>
+      </table>
+      <div class="warn-box">Functions on indexed columns kill index seeks: <code>WHERE YEAR(OrderDate) = 2024</code> scans. Use <code>WHERE OrderDate &gt;= '2024-01-01' AND OrderDate &lt; '2025-01-01'</code> instead (sargable predicate).</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Statistics &amp; plan cache</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Update statistics on a table</span>
+<span class="kw">UPDATE STATISTICS</span> dbo.Orders;
+
+<span class="cm">-- Clear plan cache (dev/test only!)</span>
+<span class="kw">DBCC FREEPROCCACHE</span>;
+
+<span class="cm">-- Find expensive queries in plan cache</span>
+<span class="kw">SELECT TOP</span> <span class="num">10</span>
+    qs.total_worker_time / qs.execution_count <span class="kw">AS</span> AvgCPU,
+    <span class="fn">SUBSTRING</span>(qt.text, (qs.statement_start_offset/<span class="num">2</span>)+<span class="num">1</span>,
+        ((qs.statement_end_offset - qs.statement_start_offset)/<span class="num">2</span>)+<span class="num">1</span>) <span class="kw">AS</span> QueryText
+<span class="kw">FROM</span>   sys.dm_exec_query_stats qs
+<span class="kw">CROSS APPLY</span> sys.dm_exec_sql_text(qs.sql_handle) qt
+<span class="kw">ORDER BY</span> AvgCPU <span class="kw">DESC</span>;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Transactions &amp; Isolation Levels <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Isolation levels &amp; concurrency problems</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Isolation Level</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th></tr>
+        <tr><td>READ UNCOMMITTED</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>READ COMMITTED (default)</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>REPEATABLE READ</td><td>No</td><td>No</td><td>Yes</td></tr>
+        <tr><td>SERIALIZABLE</td><td>No</td><td>No</td><td>No</td></tr>
+        <tr><td>SNAPSHOT (MSSQL)</td><td>No</td><td>No</td><td>No (row versioning)</td></tr>
+      </table>
+      <pre><span class="kw">SET TRANSACTION ISOLATION LEVEL READ COMMITTED</span>;
+
+<span class="cm">-- MSSQL: enable RCSI (row versioning, no shared locks on reads)</span>
+<span class="kw">ALTER DATABASE</span> MyDb <span class="kw">SET READ_COMMITTED_SNAPSHOT ON</span>;</pre>
+      <div class="tip">SNAPSHOT isolation uses tempdb for row versions — no read locks, writers don't block readers. Preferred for OLTP in SQL Server.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">MS SQL Server vs Oracle vs PostgreSQL <span class="badge b-hot">Multi-DB</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Syntax differences cheatsheet</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Feature</th><th>MS SQL Server (T-SQL)</th><th>Oracle (PL/SQL)</th><th>PostgreSQL</th></tr>
+        <tr><td>Auto-increment</td><td>IDENTITY(1,1)</td><td>SEQUENCE + NEXTVAL / GENERATED AS IDENTITY</td><td>SERIAL / GENERATED ALWAYS AS IDENTITY</td></tr>
+        <tr><td>Top N rows</td><td>SELECT TOP 10</td><td>WHERE ROWNUM &lt;= 10 / FETCH FIRST 10 ROWS ONLY</td><td>LIMIT 10</td></tr>
+        <tr><td>String concat</td><td>+ operator or CONCAT()</td><td>|| operator</td><td>|| operator or CONCAT()</td></tr>
+        <tr><td>Current date/time</td><td>GETDATE() / SYSDATETIME()</td><td>SYSDATE / SYSTIMESTAMP</td><td>NOW() / CURRENT_TIMESTAMP</td></tr>
+        <tr><td>If-null fallback</td><td>ISNULL(val, default)</td><td>NVL(val, default)</td><td>COALESCE(val, default)</td></tr>
+        <tr><td>String length</td><td>LEN()</td><td>LENGTH()</td><td>LENGTH() / CHAR_LENGTH()</td></tr>
+        <tr><td>Pagination</td><td>OFFSET x ROWS FETCH NEXT y ROWS ONLY</td><td>OFFSET x ROWS FETCH NEXT y ROWS ONLY</td><td>LIMIT y OFFSET x</td></tr>
+        <tr><td>Upsert</td><td>MERGE statement</td><td>MERGE statement</td><td>INSERT ... ON CONFLICT DO UPDATE</td></tr>
+        <tr><td>Explain plan</td><td>SET STATISTICS IO ON; SHOWPLAN</td><td>EXPLAIN PLAN FOR ...</td><td>EXPLAIN (ANALYZE, BUFFERS) ...</td></tr>
+        <tr><td>Temp tables</td><td>#local, ##global</td><td>Global temp (GTT)</td><td>CREATE TEMP TABLE</td></tr>
+        <tr><td>Schemas</td><td>dbo.Table</td><td>Owner.Table (schema = user)</td><td>public.Table (default schema)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>PostgreSQL-specific features</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- JSONB — binary JSON with indexing</span>
+<span class="kw">SELECT</span> data-&gt;&gt;<span class="str">'name'</span> <span class="kw">AS</span> name
+<span class="kw">FROM</span>   products
+<span class="kw">WHERE</span>  data @&gt; <span class="str">'{"category": "electronics"}'</span>;
+
+<span class="cm">-- Array type</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> posts <span class="kw">WHERE</span> <span class="num">5</span> = <span class="fn">ANY</span>(tag_ids);
+
+<span class="cm">-- Upsert</span>
+<span class="kw">INSERT INTO</span> users (id, email) <span class="kw">VALUES</span> (<span class="num">1</span>, <span class="str">'a@b.com'</span>)
+<span class="kw">ON CONFLICT</span> (id) <span class="kw">DO UPDATE SET</span> email = <span class="kw">EXCLUDED</span>.email;
+
+<span class="cm">-- GIN index for JSONB/full-text</span>
+<span class="kw">CREATE INDEX</span> idx_data <span class="kw">ON</span> products <span class="kw">USING GIN</span>(data);
+
+<span class="cm">-- EXPLAIN ANALYZE</span>
+<span class="kw">EXPLAIN</span> (ANALYZE, BUFFERS, <span class="kw">FORMAT</span> JSON)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> orders <span class="kw">WHERE</span> customer_id = <span class="num">42</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Oracle PL/SQL specifics</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Anonymous block</span>
+<span class="kw">DECLARE</span>
+    v_count <span class="kw">NUMBER</span>;
+<span class="kw">BEGIN</span>
+    <span class="kw">SELECT COUNT</span>(*) <span class="kw">INTO</span> v_count <span class="kw">FROM</span> Orders;
+    <span class="fn">DBMS_OUTPUT</span>.<span class="fn">PUT_LINE</span>(<span class="str">'Count: '</span> || v_count);
+<span class="kw">EXCEPTION</span>
+    <span class="kw">WHEN NO_DATA_FOUND THEN</span>
+        <span class="fn">DBMS_OUTPUT</span>.<span class="fn">PUT_LINE</span>(<span class="str">'No rows'</span>);
+<span class="kw">END</span>;
+/
+
+<span class="cm">-- Sequence</span>
+<span class="kw">CREATE SEQUENCE</span> seq_order_id <span class="kw">START WITH</span> <span class="num">1</span> <span class="kw">INCREMENT BY</span> <span class="num">1</span>;
+<span class="kw">INSERT INTO</span> Orders (Id) <span class="kw">VALUES</span> (seq_order_id.<span class="fn">NEXTVAL</span>);
+
+<span class="cm">-- Analytic (window) function — same as SQL standard</span>
+<span class="fn">RANK</span>() <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> dept_id <span class="kw">ORDER BY</span> salary <span class="kw">DESC</span>)</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Normalization &amp; Schema Design <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Normal forms</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>NF</th><th>Rule</th><th>Violation example</th></tr>
+        <tr><td>1NF</td><td>Atomic values, no repeating groups</td><td>Storing "tag1,tag2" in one column</td></tr>
+        <tr><td>2NF</td><td>1NF + no partial dependency on composite PK</td><td>OrderItem.ProductName depends only on ProductId, not full PK</td></tr>
+        <tr><td>3NF</td><td>2NF + no transitive dependency</td><td>Employee.DeptName depends on DeptId, not EmployeeId</td></tr>
+        <tr><td>BCNF</td><td>Every determinant is a candidate key</td><td>Edge case of overlapping candidate keys</td></tr>
+      </table>
+      <div class="tip">Most production schemas target 3NF. Deliberate denormalization (e.g., stored aggregates) is acceptable for read-heavy queries when measured.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Keys &amp; constraints</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">CREATE TABLE</span> Orders (
+    OrderId    <span class="kw">INT IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    CustomerId <span class="kw">INT NOT NULL</span>
+                   <span class="kw">REFERENCES</span> Customers(CustomerId)
+                   <span class="kw">ON DELETE CASCADE</span>,
+    Status     <span class="kw">VARCHAR</span>(<span class="num">20</span>)
+                   <span class="kw">CONSTRAINT</span> chk_status
+                   <span class="kw">CHECK</span> (Status <span class="kw">IN</span> (<span class="str">'Pending'</span>,<span class="str">'Shipped'</span>,<span class="str">'Cancelled'</span>)),
+    Total      <span class="kw">DECIMAL</span>(<span class="num">18</span>,<span class="num">2</span>) <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    UNIQUE (CustomerId, OrderDate)
+);</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Stored Procedures, Views &amp; Triggers</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Views vs Materialized Views</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>View</th><th>Indexed View (MSSQL) / Materialized View (PG/Oracle)</th></tr>
+        <tr><td>Data stored</td><td>No — runs query each time</td><td>Yes — physically stored result</td></tr>
+        <tr><td>Performance</td><td>Same as inline query</td><td>Pre-computed — fast reads</td></tr>
+        <tr><td>Freshness</td><td>Always current</td><td>Refreshed on schedule or on commit</td></tr>
+        <tr><td>Use for</td><td>Simplify complex queries, security</td><td>Reporting, slow aggregations</td></tr>
+      </table>
+      <pre><span class="cm">-- PostgreSQL materialized view</span>
+<span class="kw">CREATE MATERIALIZED VIEW</span> mv_monthly_revenue <span class="kw">AS</span>
+    <span class="kw">SELECT</span> <span class="fn">DATE_TRUNC</span>(<span class="str">'month'</span>, OrderDate) <span class="kw">AS</span> Month,
+           <span class="fn">SUM</span>(Total) <span class="kw">AS</span> Revenue
+    <span class="kw">FROM</span>   Orders
+    <span class="kw">GROUP BY</span> <span class="num">1</span>;
+
+<span class="kw">REFRESH MATERIALIZED VIEW CONCURRENTLY</span> mv_monthly_revenue;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Triggers (T-SQL)</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">CREATE OR ALTER TRIGGER</span> trg_Orders_AuditUpdate
+<span class="kw">ON</span> dbo.Orders
+<span class="kw">AFTER UPDATE</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET NOCOUNT ON</span>;
+    <span class="kw">INSERT INTO</span> OrderAudit (OrderId, OldTotal, NewTotal, ChangedAt)
+    <span class="kw">SELECT</span> d.OrderId, d.Total, i.Total, <span class="fn">GETDATE</span>()
+    <span class="kw">FROM</span>   deleted d
+    <span class="kw">JOIN</span>   inserted i <span class="kw">ON</span> i.OrderId = d.OrderId
+    <span class="kw">WHERE</span>  d.Total &lt;&gt; i.Total;
+<span class="kw">END</span>;</pre>
+      <div class="warn-box">Triggers run in the same transaction as the DML. Heavy logic inside triggers can cause lock contention and slow down writes.</div>
+    </div>
+  </div>
+</div>

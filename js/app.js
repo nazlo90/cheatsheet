@@ -15,6 +15,8 @@ const CATS = [
   { id: 'graphql',          label: 'GraphQL'            },
   { id: 'electron',         label: 'Electron'           },
   { id: 'webrtc',           label: 'WebRTC & VoIP'      },
+  { id: 'csharp',           label: 'C#'                 },
+  { id: 'sql',              label: 'SQL / Databases'    },
 ];
 const STORAGE_KEY = 'cheatsheet-cats';
 

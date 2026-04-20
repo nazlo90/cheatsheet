@@ -4922,5 +4922,948 @@ pluginHandle.<span class="fn">send</span>({ message: { request: <span class="str
 </ul>
 </div></div>
 </div>
+`,
+  "csharp":`<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">C# Type System &amp; Value vs Reference Types <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Value types vs Reference types</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Aspect</th><th>Value Types</th><th>Reference Types</th></tr>
+        <tr><td>Storage</td><td>Stack (usually)</td><td>Heap</td></tr>
+        <tr><td>Assignment</td><td>Copies data</td><td>Copies reference</td></tr>
+        <tr><td>Null by default</td><td>No (nullable&lt;T&gt; needed)</td><td>Yes</td></tr>
+        <tr><td>Examples</td><td>int, bool, struct, enum</td><td>class, string, array, delegate</td></tr>
+        <tr><td>Inheritance</td><td>Sealed implicitly</td><td>Supports inheritance</td></tr>
+      </table>
+      <pre><span class="cm">// Value type — copy semantics</span>
+<span class="kw">int</span> a = <span class="num">5</span>;
+<span class="kw">int</span> b = a;
+b = <span class="num">10</span>; <span class="cm">// a is still 5</span>
+
+<span class="cm">// Reference type — shared reference</span>
+<span class="kw">var</span> list1 = <span class="kw">new</span> <span class="cls">List</span>&lt;<span class="kw">int</span>&gt; { <span class="num">1</span>, <span class="num">2</span> };
+<span class="kw">var</span> list2 = list1;
+list2.<span class="fn">Add</span>(<span class="num">3</span>); <span class="cm">// list1 also has 3</span></pre>
+      <div class="warn-box">Boxing occurs when a value type is assigned to <code>object</code> — allocates heap memory. Avoid in hot paths.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Nullable value types &amp; null-coalescing operators</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">int</span>? age = <span class="kw">null</span>;
+age ??= <span class="num">18</span>;           <span class="cm">// assign if null</span>
+<span class="kw">int</span> val = age ?? <span class="num">0</span>;   <span class="cm">// fallback</span>
+<span class="kw">string</span>? name = <span class="kw">null</span>;
+<span class="kw">int</span> len = name?.<span class="fn">Length</span> ?? <span class="num">0</span>; <span class="cm">// null-conditional</span></pre>
+      <table>
+        <tr><th>Operator</th><th>Meaning</th></tr>
+        <tr><td><code>??</code></td><td>Return left if not null, else right</td></tr>
+        <tr><td><code>??=</code></td><td>Assign right to left only if left is null</td></tr>
+        <tr><td><code>?.</code></td><td>Null-conditional member access</td></tr>
+        <tr><td><code>?[]</code></td><td>Null-conditional index access</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Classes, Structs &amp; Records <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>class vs struct vs record</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Feature</th><th>class</th><th>struct</th><th>record</th></tr>
+        <tr><td>Type</td><td>Reference</td><td>Value</td><td>Reference (record class) / Value (record struct)</td></tr>
+        <tr><td>Inheritance</td><td>Yes</td><td>No</td><td>Yes (record)</td></tr>
+        <tr><td>Equality</td><td>Reference</td><td>Value (field-by-field)</td><td>Value (auto-generated)</td></tr>
+        <tr><td>Immutability</td><td>Manual</td><td>Manual</td><td>Built-in with <code>init</code></td></tr>
+        <tr><td>Best for</td><td>Entities, services</td><td>Small value objects</td><td>DTOs, immutable data</td></tr>
+      </table>
+      <pre><span class="cm">// Record — immutable by default, value equality</span>
+<span class="kw">record</span> <span class="cls">Point</span>(<span class="kw">int</span> X, <span class="kw">int</span> Y);
+
+<span class="kw">var</span> p1 = <span class="kw">new</span> <span class="cls">Point</span>(<span class="num">1</span>, <span class="num">2</span>);
+<span class="kw">var</span> p2 = p1 <span class="kw">with</span> { X = <span class="num">10</span> }; <span class="cm">// non-destructive mutation</span>
+<span class="fn">Console</span>.<span class="fn">WriteLine</span>(p1 == p2); <span class="cm">// False</span>
+
+<span class="cm">// Struct — stack allocated, value semantics</span>
+<span class="kw">readonly struct</span> <span class="cls">Vector2</span>(<span class="kw">float</span> X, <span class="kw">float</span> Y);</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Access modifiers</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>Modifier</th><th>Accessible from</th></tr>
+        <tr><td><code>public</code></td><td>Everywhere</td></tr>
+        <tr><td><code>private</code></td><td>Same class only</td></tr>
+        <tr><td><code>protected</code></td><td>Same class + derived classes</td></tr>
+        <tr><td><code>internal</code></td><td>Same assembly</td></tr>
+        <tr><td><code>protected internal</code></td><td>Same assembly OR derived class</td></tr>
+        <tr><td><code>private protected</code></td><td>Same assembly AND derived class</td></tr>
+        <tr><td><code>file</code> (C# 11)</td><td>Same source file only</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Interfaces &amp; Abstract Classes <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Interface vs Abstract class</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>Interface</th><th>Abstract class</th></tr>
+        <tr><td>Multiple inheritance</td><td>Yes (multiple allowed)</td><td>No (single only)</td></tr>
+        <tr><td>State (fields)</td><td>No (only properties)</td><td>Yes</td></tr>
+        <tr><td>Constructor</td><td>No</td><td>Yes</td></tr>
+        <tr><td>Default implementation</td><td>Yes (C# 8+)</td><td>Yes</td></tr>
+        <tr><td>Use when</td><td>Define capability/contract</td><td>Share base behaviour</td></tr>
+      </table>
+      <pre><span class="kw">interface</span> <span class="cls">IRepository</span>&lt;T&gt;
+{
+    <span class="cls">Task</span>&lt;T?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id);
+    <span class="cls">Task</span>&lt;<span class="cls">IEnumerable</span>&lt;T&gt;&gt; <span class="fn">GetAllAsync</span>();
+    <span class="cls">Task</span> <span class="fn">SaveAsync</span>(T entity);
+}
+
+<span class="kw">abstract class</span> <span class="cls">BaseService</span>&lt;T&gt;
+{
+    <span class="kw">protected readonly</span> <span class="cls">IRepository</span>&lt;T&gt; _repo;
+    <span class="kw">protected</span> <span class="cls">BaseService</span>(<span class="cls">IRepository</span>&lt;T&gt; repo) =&gt; _repo = repo;
+    <span class="kw">public abstract</span> <span class="cls">Task</span> <span class="fn">ValidateAsync</span>(T entity);
+}</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Generics &amp; Constraints</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Generic constraints</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Constraint</th><th>Meaning</th></tr>
+        <tr><td><code>where T : class</code></td><td>T must be a reference type</td></tr>
+        <tr><td><code>where T : struct</code></td><td>T must be a value type</td></tr>
+        <tr><td><code>where T : new()</code></td><td>T must have a public parameterless ctor</td></tr>
+        <tr><td><code>where T : SomeBase</code></td><td>T must inherit SomeBase</td></tr>
+        <tr><td><code>where T : IFoo</code></td><td>T must implement IFoo</td></tr>
+        <tr><td><code>where T : notnull</code></td><td>T must be non-nullable</td></tr>
+        <tr><td><code>where T : unmanaged</code></td><td>T is an unmanaged type (no refs)</td></tr>
+      </table>
+      <pre><span class="kw">public</span> T <span class="fn">Create</span>&lt;T&gt;() <span class="kw">where</span> T : <span class="kw">class</span>, <span class="cls">IEntity</span>, <span class="kw">new</span>()
+    =&gt; <span class="kw">new</span> T();</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">LINQ <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Deferred vs immediate execution</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Deferred (lazy)</th><th>Immediate (eager)</th></tr>
+        <tr><td>Where, Select, OrderBy, GroupBy, Skip, Take</td><td>ToList, ToArray, ToDictionary, Count, First, Any, Sum, Max</td></tr>
+        <tr><td>Query built, not run yet</td><td>Query executed right away</td></tr>
+      </table>
+      <pre><span class="kw">var</span> query = users
+    .<span class="fn">Where</span>(u =&gt; u.IsActive)        <span class="cm">// deferred</span>
+    .<span class="fn">OrderBy</span>(u =&gt; u.Name)           <span class="cm">// deferred</span>
+    .<span class="fn">Select</span>(u =&gt; <span class="kw">new</span> { u.Id, u.Name }); <span class="cm">// deferred</span>
+
+<span class="kw">var</span> result = query.<span class="fn">ToList</span>(); <span class="cm">// executes here</span></pre>
+      <div class="warn-box">Enumerating a deferred query multiple times hits the source multiple times. Call <code>ToList()</code> to materialize when reuse is needed.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Common LINQ operators</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">// Projection</span>
+users.<span class="fn">Select</span>(u =&gt; u.Name);
+users.<span class="fn">SelectMany</span>(u =&gt; u.Orders); <span class="cm">// flatten nested</span>
+
+<span class="cm">// Filtering</span>
+users.<span class="fn">Where</span>(u =&gt; u.Age &gt; <span class="num">18</span>);
+users.<span class="fn">OfType</span>&lt;<span class="cls">AdminUser</span>&gt;();
+
+<span class="cm">// Aggregation</span>
+orders.<span class="fn">Sum</span>(o =&gt; o.Total);
+orders.<span class="fn">GroupBy</span>(o =&gt; o.CustomerId)
+      .<span class="fn">Select</span>(g =&gt; <span class="kw">new</span> { g.Key, Total = g.<span class="fn">Sum</span>(o =&gt; o.Total) });
+
+<span class="cm">// Joining</span>
+users.<span class="fn">Join</span>(orders, u =&gt; u.Id, o =&gt; o.UserId,
+    (u, o) =&gt; <span class="kw">new</span> { u.Name, o.Total });
+
+<span class="cm">// Set operations</span>
+a.<span class="fn">Union</span>(b); a.<span class="fn">Intersect</span>(b); a.<span class="fn">Except</span>(b);</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Query syntax vs method syntax</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">// Method (fluent) syntax</span>
+<span class="kw">var</span> r1 = users
+    .<span class="fn">Where</span>(u =&gt; u.IsActive)
+    .<span class="fn">Select</span>(u =&gt; u.Name);
+
+<span class="cm">// Query syntax (compiles to same IL)</span>
+<span class="kw">var</span> r2 = <span class="kw">from</span> u <span class="kw">in</span> users
+          <span class="kw">where</span> u.IsActive
+          <span class="kw">select</span> u.Name;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Async / Await &amp; Task <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>async/await fundamentals</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">// async method returns Task/Task&lt;T&gt;/ValueTask&lt;T&gt;</span>
+<span class="kw">public async</span> <span class="cls">Task</span>&lt;<span class="cls">User</span>&gt; <span class="fn">GetUserAsync</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> data = <span class="kw">await</span> _db.<span class="fn">QueryAsync</span>(id); <span class="cm">// releases thread</span>
+    <span class="kw">return</span> <span class="kw">new</span> <span class="cls">User</span>(data);
+}
+
+<span class="cm">// Run multiple tasks in parallel</span>
+<span class="kw">var</span> (user, orders) = <span class="kw">await</span> (<span class="cls">Task</span>, <span class="cls">Task</span>).WhenAll(
+    <span class="fn">GetUserAsync</span>(id),
+    <span class="fn">GetOrdersAsync</span>(id));
+
+<span class="cm">// ValueTask — avoid allocation for sync-fast paths</span>
+<span class="kw">public async</span> <span class="cls">ValueTask</span>&lt;<span class="kw">int</span>&gt; <span class="fn">ReadCachedAsync</span>()
+{
+    <span class="kw">if</span> (_cache.TryGetValue(<span class="kw">out var</span> v)) <span class="kw">return</span> v;
+    <span class="kw">return await</span> _db.<span class="fn">ReadAsync</span>();
+}</pre>
+      <div class="warn-box">Never use <code>async void</code> except for event handlers — exceptions can't be caught and will crash the process.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>ConfigureAwait &amp; deadlock prevention</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th></th><th>ConfigureAwait(true)</th><th>ConfigureAwait(false)</th></tr>
+        <tr><td>Resumes on</td><td>Original sync context</td><td>Thread pool thread</td></tr>
+        <tr><td>Use in</td><td>UI / ASP.NET Classic</td><td>Libraries, background services</td></tr>
+      </table>
+      <pre><span class="cm">// In library code — avoid capturing context</span>
+<span class="kw">var</span> data = <span class="kw">await</span> _http.<span class="fn">GetAsync</span>(url).<span class="fn">ConfigureAwait</span>(<span class="kw">false</span>);
+
+<span class="cm">// CancellationToken — always pass it through</span>
+<span class="kw">public async</span> <span class="cls">Task</span> <span class="fn">DoWorkAsync</span>(<span class="cls">CancellationToken</span> ct)
+{
+    <span class="kw">await</span> _service.<span class="fn">ProcessAsync</span>(ct);
+}</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Exception Handling &amp; IDisposable</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>try / catch / finally</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="kw">try</span>
+{
+    <span class="kw">await</span> _db.<span class="fn">SaveAsync</span>(entity);
+}
+<span class="kw">catch</span> (<span class="cls">DbUpdateConcurrencyException</span> ex)
+{
+    _logger.<span class="fn">LogWarning</span>(ex, <span class="str">"Concurrency conflict for {Id}"</span>, entity.Id);
+    <span class="kw">throw</span>; <span class="cm">// re-throw preserves stack trace</span>
+}
+<span class="kw">catch</span> (<span class="cls">Exception</span> ex) <span class="kw">when</span> (ex.<span class="fn">Message</span>.<span class="fn">Contains</span>(<span class="str">"timeout"</span>)) <span class="cm">// exception filter</span>
+{
+    <span class="kw">throw new</span> <span class="cls">ServiceUnavailableException</span>(<span class="str">"DB timeout"</span>, ex);
+}
+<span class="kw">finally</span>
+{
+    _conn.<span class="fn">Close</span>(); <span class="cm">// always runs</span>
+}</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>IDisposable &amp; using</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">// using statement — calls Dispose() on scope exit</span>
+<span class="kw">using var</span> conn = <span class="kw">new</span> <span class="cls">SqlConnection</span>(connStr);
+<span class="kw">await</span> conn.<span class="fn">OpenAsync</span>();
+
+<span class="cm">// Implementing IDisposable correctly</span>
+<span class="kw">public class</span> <span class="cls">FileProcessor</span> : <span class="cls">IDisposable</span>
+{
+    <span class="kw">private</span> <span class="cls">Stream</span>? _stream;
+    <span class="kw">private bool</span> _disposed;
+
+    <span class="kw">public void</span> <span class="fn">Dispose</span>()
+    {
+        <span class="kw">if</span> (_disposed) <span class="kw">return</span>;
+        _stream?.<span class="fn">Dispose</span>();
+        _disposed = <span class="kw">true</span>;
+    }
+}</pre>
+      <div class="tip">Prefer <code>await using</code> for <code>IAsyncDisposable</code> (e.g., EF Core DbContext).</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Delegates, Events &amp; Lambdas</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Func, Action, Predicate</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Type</th><th>Signature</th><th>Use case</th></tr>
+        <tr><td><code>Action&lt;T&gt;</code></td><td>T → void</td><td>Side-effect callbacks</td></tr>
+        <tr><td><code>Func&lt;T, TResult&gt;</code></td><td>T → TResult</td><td>Transformations</td></tr>
+        <tr><td><code>Predicate&lt;T&gt;</code></td><td>T → bool</td><td>Filter conditions</td></tr>
+        <tr><td><code>Comparison&lt;T&gt;</code></td><td>T, T → int</td><td>Custom sorting</td></tr>
+      </table>
+      <pre><span class="cls">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>, <span class="kw">int</span>&gt; add = (a, b) =&gt; a + b;
+<span class="cls">Action</span>&lt;<span class="kw">string</span>&gt; log = msg =&gt; <span class="cls">Console</span>.<span class="fn">WriteLine</span>(msg);
+<span class="cls">Predicate</span>&lt;<span class="kw">int</span>&gt; isEven = n =&gt; n % <span class="num">2</span> == <span class="num">0</span>;
+
+<span class="cm">// Event pattern</span>
+<span class="kw">public event</span> <span class="cls">EventHandler</span>&lt;<span class="cls">OrderEventArgs</span>&gt;? OrderPlaced;
+OrderPlaced?.Invoke(<span class="kw">this</span>, <span class="kw">new</span> <span class="cls">OrderEventArgs</span>(order));</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Collections &amp; Data Structures</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Choosing the right collection</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Collection</th><th>Access</th><th>Insert/Remove</th><th>Best for</th></tr>
+        <tr><td><code>List&lt;T&gt;</code></td><td>O(1) index</td><td>O(n) middle, O(1) end</td><td>General ordered list</td></tr>
+        <tr><td><code>Dictionary&lt;K,V&gt;</code></td><td>O(1) key</td><td>O(1)</td><td>Fast lookup by key</td></tr>
+        <tr><td><code>HashSet&lt;T&gt;</code></td><td>O(1)</td><td>O(1)</td><td>Unique items, set ops</td></tr>
+        <tr><td><code>SortedDictionary&lt;K,V&gt;</code></td><td>O(log n)</td><td>O(log n)</td><td>Ordered key access</td></tr>
+        <tr><td><code>Queue&lt;T&gt;</code></td><td>O(1) front</td><td>O(1)</td><td>FIFO processing</td></tr>
+        <tr><td><code>Stack&lt;T&gt;</code></td><td>O(1) top</td><td>O(1)</td><td>LIFO, undo, DFS</td></tr>
+        <tr><td><code>LinkedList&lt;T&gt;</code></td><td>O(n)</td><td>O(1) at node</td><td>Frequent middle insert</td></tr>
+        <tr><td><code>ConcurrentDictionary&lt;K,V&gt;</code></td><td>O(1)</td><td>O(1) thread-safe</td><td>Multi-threaded access</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Pattern Matching (C# 8–12) <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>switch expressions &amp; patterns</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">// Type pattern + property pattern</span>
+<span class="kw">string</span> <span class="fn">Describe</span>(<span class="kw">object</span> obj) =&gt; obj <span class="kw">switch</span>
+{
+    <span class="cls">Circle</span> { Radius: &gt; <span class="num">10</span> } c =&gt; <span class="str">$"Large circle r={c.Radius}"</span>,
+    <span class="cls">Circle</span> c                  =&gt; <span class="str">$"Small circle r={c.Radius}"</span>,
+    <span class="cls">Rectangle</span> { Width: <span class="kw">var</span> w, Height: <span class="kw">var</span> h } =&gt; <span class="str">$"Rect {w}x{h}"</span>,
+    <span class="kw">null</span>                       =&gt; <span class="str">"null"</span>,
+    _                          =&gt; <span class="str">"unknown"</span>
+};
+
+<span class="cm">// Relational &amp; logical patterns</span>
+<span class="kw">string</span> <span class="fn">Category</span>(<span class="kw">int</span> score) =&gt; score <span class="kw">switch</span>
+{
+    &gt;= <span class="num">90</span>           =&gt; <span class="str">"A"</span>,
+    &gt;= <span class="num">70</span> <span class="kw">and</span> &lt; <span class="num">90</span> =&gt; <span class="str">"B"</span>,
+    &gt;= <span class="num">50</span>           =&gt; <span class="str">"C"</span>,
+    _               =&gt; <span class="str">"F"</span>
+};</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Memory Management &amp; Span&lt;T&gt;</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Span&lt;T&gt;, Memory&lt;T&gt;, ArrayPool</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">// Span — stack-only, zero-copy slice over contiguous memory</span>
+<span class="kw">void</span> <span class="fn">Process</span>(<span class="cls">Span</span>&lt;<span class="kw">byte</span>&gt; data)
+{
+    <span class="kw">var</span> header = data[..<span class="num">4</span>];
+    <span class="kw">var</span> body   = data[<span class="num">4</span>..];
+}
+
+<span class="cm">// Memory&lt;T&gt; — heap-safe, usable across async boundaries</span>
+<span class="kw">async</span> <span class="cls">Task</span> <span class="fn">ReadAsync</span>(<span class="cls">Memory</span>&lt;<span class="kw">byte</span>&gt; buffer)
+{
+    <span class="kw">await</span> _stream.<span class="fn">ReadAsync</span>(buffer);
+}
+
+<span class="cm">// ArrayPool — reuse buffers, avoid GC pressure</span>
+<span class="kw">var</span> pool = <span class="cls">ArrayPool</span>&lt;<span class="kw">byte</span>&gt;.Shared;
+<span class="kw">byte</span>[] buf = pool.<span class="fn">Rent</span>(<span class="num">4096</span>);
+<span class="kw">try</span> { <span class="cm">/* use buf */</span> }
+<span class="kw">finally</span> { pool.<span class="fn">Return</span>(buf); }</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="csharp">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Dependency Injection &amp; .NET DI Container <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Service lifetimes</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Lifetime</th><th>Created</th><th>Use for</th></tr>
+        <tr><td><code>Singleton</code></td><td>Once per app</td><td>Stateless services, caches, config</td></tr>
+        <tr><td><code>Scoped</code></td><td>Once per request/scope</td><td>DbContext, unit-of-work</td></tr>
+        <tr><td><code>Transient</code></td><td>Every injection</td><td>Lightweight stateless helpers</td></tr>
+      </table>
+      <pre><span class="cm">// Registration</span>
+builder.Services.<span class="fn">AddSingleton</span>&lt;<span class="cls">ICache</span>, <span class="cls">MemoryCache</span>&gt;();
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="cls">IUnitOfWork</span>, <span class="cls">UnitOfWork</span>&gt;();
+builder.Services.<span class="fn">AddTransient</span>&lt;<span class="cls">IEmailSender</span>, <span class="cls">SmtpEmailSender</span>&gt;();
+
+<span class="cm">// Constructor injection</span>
+<span class="kw">public class</span> <span class="cls">OrderService</span>(<span class="cls">IUnitOfWork</span> uow, <span class="cls">ILogger</span>&lt;<span class="cls">OrderService</span>&gt; log)
+{
+    <span class="kw">private readonly</span> <span class="cls">IUnitOfWork</span> _uow = uow;
+}</pre>
+      <div class="warn-box">Never inject a Scoped service into a Singleton — it will be captured and reused across requests (captive dependency anti-pattern).</div>
+    </div>
+  </div>
+</div>
+`,
+  "sql":`<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">SQL Fundamentals &amp; SELECT <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>SELECT clause execution order</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Order</th><th>Clause</th><th>What it does</th></tr>
+        <tr><td>1</td><td>FROM / JOIN</td><td>Define source tables</td></tr>
+        <tr><td>2</td><td>WHERE</td><td>Filter rows before grouping</td></tr>
+        <tr><td>3</td><td>GROUP BY</td><td>Aggregate rows into groups</td></tr>
+        <tr><td>4</td><td>HAVING</td><td>Filter groups (after aggregation)</td></tr>
+        <tr><td>5</td><td>SELECT</td><td>Compute output columns</td></tr>
+        <tr><td>6</td><td>DISTINCT</td><td>Remove duplicates</td></tr>
+        <tr><td>7</td><td>ORDER BY</td><td>Sort result set</td></tr>
+        <tr><td>8</td><td>OFFSET / FETCH (or TOP)</td><td>Paginate</td></tr>
+      </table>
+      <div class="warn-box">Column aliases defined in SELECT cannot be used in WHERE or GROUP BY — those clauses are evaluated earlier.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>JOINs</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>JOIN type</th><th>Returns</th></tr>
+        <tr><td>INNER JOIN</td><td>Only matching rows from both tables</td></tr>
+        <tr><td>LEFT JOIN</td><td>All rows from left + matched from right (NULL if no match)</td></tr>
+        <tr><td>RIGHT JOIN</td><td>All rows from right + matched from left</td></tr>
+        <tr><td>FULL OUTER JOIN</td><td>All rows from both, NULLs where no match</td></tr>
+        <tr><td>CROSS JOIN</td><td>Cartesian product (every combination)</td></tr>
+        <tr><td>SELF JOIN</td><td>Table joined to itself (e.g., manager/employee)</td></tr>
+      </table>
+      <pre><span class="cm">-- Find customers with no orders (anti-join pattern)</span>
+<span class="kw">SELECT</span> c.CustomerId, c.Name
+<span class="kw">FROM</span>   Customers c
+<span class="kw">LEFT JOIN</span> Orders o <span class="kw">ON</span> o.CustomerId = c.CustomerId
+<span class="kw">WHERE</span>  o.OrderId <span class="kw">IS NULL</span>;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Window Functions <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>OVER, PARTITION BY, ORDER BY</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">-- Ranking within each department by salary</span>
+<span class="kw">SELECT</span>
+    Name, Dept, Salary,
+    <span class="fn">ROW_NUMBER</span>()  <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> RowNum,
+    <span class="fn">RANK</span>()        <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> Rnk,
+    <span class="fn">DENSE_RANK</span>()  <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> DRnk,
+    <span class="fn">LAG</span>(Salary, <span class="num">1</span>) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept <span class="kw">ORDER BY</span> Salary) <span class="kw">AS</span> PrevSalary,
+    <span class="fn">SUM</span>(Salary)   <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> Dept) <span class="kw">AS</span> DeptTotal
+<span class="kw">FROM</span> Employees;</pre>
+      <table>
+        <tr><th>Function</th><th>Tie handling</th><th>Gaps in sequence</th></tr>
+        <tr><td>ROW_NUMBER</td><td>Arbitrary ordering</td><td>No gaps</td></tr>
+        <tr><td>RANK</td><td>Same rank for ties</td><td>Gaps after ties</td></tr>
+        <tr><td>DENSE_RANK</td><td>Same rank for ties</td><td>No gaps</td></tr>
+        <tr><td>NTILE(n)</td><td>Splits into n buckets</td><td>—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Running totals &amp; frame clauses</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Running total with frame</span>
+<span class="kw">SELECT</span>
+    OrderDate, Amount,
+    <span class="fn">SUM</span>(Amount) <span class="kw">OVER</span> (
+        <span class="kw">ORDER BY</span> OrderDate
+        <span class="kw">ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</span>
+    ) <span class="kw">AS</span> RunningTotal,
+    <span class="cm">-- 3-day moving average</span>
+    <span class="fn">AVG</span>(Amount) <span class="kw">OVER</span> (
+        <span class="kw">ORDER BY</span> OrderDate
+        <span class="kw">ROWS BETWEEN</span> <span class="num">2</span> <span class="kw">PRECEDING AND CURRENT ROW</span>
+    ) <span class="kw">AS</span> MovingAvg3
+<span class="kw">FROM</span> Orders;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">CTEs &amp; Subqueries <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>CTE (Common Table Expression)</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="cm">-- Multiple CTEs chained</span>
+<span class="kw">WITH</span> ActiveCustomers <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> CustomerId, Name
+    <span class="kw">FROM</span>   Customers
+    <span class="kw">WHERE</span>  IsActive = <span class="num">1</span>
+),
+CustomerRevenue <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> ac.CustomerId, <span class="fn">SUM</span>(o.Total) <span class="kw">AS</span> Revenue
+    <span class="kw">FROM</span>   ActiveCustomers ac
+    <span class="kw">JOIN</span>   Orders o <span class="kw">ON</span> o.CustomerId = ac.CustomerId
+    <span class="kw">GROUP BY</span> ac.CustomerId
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> CustomerRevenue <span class="kw">WHERE</span> Revenue &gt; <span class="num">1000</span>;</pre>
+      <div class="tip">CTEs improve readability and can be referenced multiple times in the same query. In SQL Server they are NOT materialized by default — the optimizer may inline them.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Recursive CTE</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Traverse org hierarchy</span>
+<span class="kw">WITH</span> OrgTree <span class="kw">AS</span> (
+    <span class="cm">-- Anchor: top-level employees</span>
+    <span class="kw">SELECT</span> EmployeeId, Name, ManagerId, <span class="num">0</span> <span class="kw">AS</span> Level
+    <span class="kw">FROM</span>   Employees
+    <span class="kw">WHERE</span>  ManagerId <span class="kw">IS NULL</span>
+
+    <span class="kw">UNION ALL</span>
+
+    <span class="cm">-- Recursive: subordinates</span>
+    <span class="kw">SELECT</span> e.EmployeeId, e.Name, e.ManagerId, ot.Level + <span class="num">1</span>
+    <span class="kw">FROM</span>   Employees e
+    <span class="kw">JOIN</span>   OrgTree ot <span class="kw">ON</span> ot.EmployeeId = e.ManagerId
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> OrgTree <span class="kw">ORDER BY</span> Level, Name;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">T-SQL Specific Features (MS SQL Server) <span class="badge b-hot">MSSQL</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Stored procedures, variables &amp; flow control</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <pre><span class="kw">CREATE OR ALTER PROCEDURE</span> dbo.<span class="fn">usp_GetTopOrders</span>
+    @CustomerId <span class="kw">INT</span>,
+    @TopN       <span class="kw">INT</span> = <span class="num">10</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET NOCOUNT ON</span>;
+
+    <span class="kw">DECLARE</span> @Revenue <span class="kw">DECIMAL</span>(<span class="num">18</span>,<span class="num">2</span>);
+
+    <span class="kw">SELECT TOP</span> (@TopN)
+        OrderId, Total, OrderDate
+    <span class="kw">FROM</span>   Orders
+    <span class="kw">WHERE</span>  CustomerId = @CustomerId
+    <span class="kw">ORDER BY</span> Total <span class="kw">DESC</span>;
+
+    <span class="kw">IF</span> @@ROWCOUNT = <span class="num">0</span>
+        <span class="kw">RAISERROR</span>(<span class="str">'No orders found'</span>, <span class="num">16</span>, <span class="num">1</span>);
+<span class="kw">END</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Transactions &amp; error handling</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">BEGIN TRY</span>
+    <span class="kw">BEGIN TRANSACTION</span>;
+
+    <span class="kw">UPDATE</span> Accounts <span class="kw">SET</span> Balance -= <span class="num">100</span> <span class="kw">WHERE</span> Id = <span class="num">1</span>;
+    <span class="kw">UPDATE</span> Accounts <span class="kw">SET</span> Balance += <span class="num">100</span> <span class="kw">WHERE</span> Id = <span class="num">2</span>;
+
+    <span class="kw">COMMIT TRANSACTION</span>;
+<span class="kw">END TRY</span>
+<span class="kw">BEGIN CATCH</span>
+    <span class="kw">ROLLBACK TRANSACTION</span>;
+    <span class="kw">THROW</span>; <span class="cm">-- re-raise original error</span>
+<span class="kw">END CATCH</span>;</pre>
+      <div class="warn-box">Always check <code>XACT_STATE()</code> before ROLLBACK in nested transactions — a -1 state means the transaction is doomed and cannot commit.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Table variables vs temp tables vs CTEs</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th></th><th>@TableVar</th><th>#TempTable</th><th>CTE</th></tr>
+        <tr><td>Scope</td><td>Batch/proc</td><td>Session (##global)</td><td>Statement only</td></tr>
+        <tr><td>Statistics</td><td>No</td><td>Yes</td><td>N/A</td></tr>
+        <tr><td>Transaction rollback</td><td>Not rolled back</td><td>Rolled back</td><td>N/A</td></tr>
+        <tr><td>Best for</td><td>Small row counts</td><td>Large intermediate sets</td><td>Readability</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>T-SQL useful functions</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- String</span>
+<span class="fn">STRING_AGG</span>(Name, <span class="str">', '</span>) <span class="kw">WITHIN GROUP</span> (<span class="kw">ORDER BY</span> Name)
+<span class="fn">STRING_SPLIT</span>(<span class="str">'a,b,c'</span>, <span class="str">','</span>)
+<span class="fn">FORMAT</span>(Amount, <span class="str">'C2'</span>, <span class="str">'en-US'</span>)
+<span class="fn">TRIM</span>(<span class="str">'  text  '</span>)
+
+<span class="cm">-- Date</span>
+<span class="fn">GETDATE</span>() / <span class="fn">SYSDATETIME</span>()   <span class="cm">-- current datetime</span>
+<span class="fn">DATEADD</span>(<span class="kw">DAY</span>, <span class="num">7</span>, OrderDate)
+<span class="fn">DATEDIFF</span>(<span class="kw">DAY</span>, StartDate, EndDate)
+<span class="fn">EOMONTH</span>(OrderDate)            <span class="cm">-- last day of month</span>
+
+<span class="cm">-- Conditional</span>
+<span class="kw">IIF</span>(Score &gt; <span class="num">50</span>, <span class="str">'Pass'</span>, <span class="str">'Fail'</span>)
+<span class="fn">COALESCE</span>(Phone, Mobile, <span class="str">'N/A'</span>)
+<span class="fn">NULLIF</span>(Value, <span class="num">0</span>)               <span class="cm">-- returns NULL if equal</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Indexes &amp; Query Performance <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Clustered vs Non-clustered index</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>Clustered</th><th>Non-clustered</th></tr>
+        <tr><td>Count per table</td><td>1 (the data IS the index)</td><td>Many</td></tr>
+        <tr><td>Data order</td><td>Table physically sorted by key</td><td>Separate structure with pointer</td></tr>
+        <tr><td>Lookup cost</td><td>O(log n) — data read directly</td><td>O(log n) + bookmark lookup</td></tr>
+        <tr><td>Best key</td><td>Narrow, unique, ever-increasing (IDENTITY)</td><td>Columns in WHERE/JOIN/ORDER BY</td></tr>
+      </table>
+      <pre><span class="cm">-- Covering index — includes all needed columns, avoids bookmark lookup</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> ix_Orders_Customer
+    <span class="kw">ON</span> Orders (CustomerId)
+    <span class="kw">INCLUDE</span> (OrderDate, Total);
+
+<span class="cm">-- Filtered index — index a subset of rows</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> ix_Orders_Active
+    <span class="kw">ON</span> Orders (OrderDate)
+    <span class="kw">WHERE</span> Status = <span class="str">'Active'</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Reading execution plans &amp; common pitfalls</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <table>
+        <tr><th>Operator</th><th>Meaning</th><th>Action</th></tr>
+        <tr><td>Index Seek</td><td>Efficient range lookup</td><td>Good</td></tr>
+        <tr><td>Index Scan</td><td>Reads whole index</td><td>Check if index is useful</td></tr>
+        <tr><td>Key Lookup</td><td>Extra I/O to fetch columns not in index</td><td>Add INCLUDE columns</td></tr>
+        <tr><td>Hash Match</td><td>Large join/aggregation</td><td>Consider index on join key</td></tr>
+        <tr><td>Sort</td><td>Explicit sort needed</td><td>Consider indexed ORDER BY</td></tr>
+      </table>
+      <div class="warn-box">Functions on indexed columns kill index seeks: <code>WHERE YEAR(OrderDate) = 2024</code> scans. Use <code>WHERE OrderDate &gt;= '2024-01-01' AND OrderDate &lt; '2025-01-01'</code> instead (sargable predicate).</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Statistics &amp; plan cache</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Update statistics on a table</span>
+<span class="kw">UPDATE STATISTICS</span> dbo.Orders;
+
+<span class="cm">-- Clear plan cache (dev/test only!)</span>
+<span class="kw">DBCC FREEPROCCACHE</span>;
+
+<span class="cm">-- Find expensive queries in plan cache</span>
+<span class="kw">SELECT TOP</span> <span class="num">10</span>
+    qs.total_worker_time / qs.execution_count <span class="kw">AS</span> AvgCPU,
+    <span class="fn">SUBSTRING</span>(qt.text, (qs.statement_start_offset/<span class="num">2</span>)+<span class="num">1</span>,
+        ((qs.statement_end_offset - qs.statement_start_offset)/<span class="num">2</span>)+<span class="num">1</span>) <span class="kw">AS</span> QueryText
+<span class="kw">FROM</span>   sys.dm_exec_query_stats qs
+<span class="kw">CROSS APPLY</span> sys.dm_exec_sql_text(qs.sql_handle) qt
+<span class="kw">ORDER BY</span> AvgCPU <span class="kw">DESC</span>;</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Transactions &amp; Isolation Levels <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Isolation levels &amp; concurrency problems</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Isolation Level</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th></tr>
+        <tr><td>READ UNCOMMITTED</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>READ COMMITTED (default)</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>REPEATABLE READ</td><td>No</td><td>No</td><td>Yes</td></tr>
+        <tr><td>SERIALIZABLE</td><td>No</td><td>No</td><td>No</td></tr>
+        <tr><td>SNAPSHOT (MSSQL)</td><td>No</td><td>No</td><td>No (row versioning)</td></tr>
+      </table>
+      <pre><span class="kw">SET TRANSACTION ISOLATION LEVEL READ COMMITTED</span>;
+
+<span class="cm">-- MSSQL: enable RCSI (row versioning, no shared locks on reads)</span>
+<span class="kw">ALTER DATABASE</span> MyDb <span class="kw">SET READ_COMMITTED_SNAPSHOT ON</span>;</pre>
+      <div class="tip">SNAPSHOT isolation uses tempdb for row versions — no read locks, writers don't block readers. Preferred for OLTP in SQL Server.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">MS SQL Server vs Oracle vs PostgreSQL <span class="badge b-hot">Multi-DB</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Syntax differences cheatsheet</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>Feature</th><th>MS SQL Server (T-SQL)</th><th>Oracle (PL/SQL)</th><th>PostgreSQL</th></tr>
+        <tr><td>Auto-increment</td><td>IDENTITY(1,1)</td><td>SEQUENCE + NEXTVAL / GENERATED AS IDENTITY</td><td>SERIAL / GENERATED ALWAYS AS IDENTITY</td></tr>
+        <tr><td>Top N rows</td><td>SELECT TOP 10</td><td>WHERE ROWNUM &lt;= 10 / FETCH FIRST 10 ROWS ONLY</td><td>LIMIT 10</td></tr>
+        <tr><td>String concat</td><td>+ operator or CONCAT()</td><td>|| operator</td><td>|| operator or CONCAT()</td></tr>
+        <tr><td>Current date/time</td><td>GETDATE() / SYSDATETIME()</td><td>SYSDATE / SYSTIMESTAMP</td><td>NOW() / CURRENT_TIMESTAMP</td></tr>
+        <tr><td>If-null fallback</td><td>ISNULL(val, default)</td><td>NVL(val, default)</td><td>COALESCE(val, default)</td></tr>
+        <tr><td>String length</td><td>LEN()</td><td>LENGTH()</td><td>LENGTH() / CHAR_LENGTH()</td></tr>
+        <tr><td>Pagination</td><td>OFFSET x ROWS FETCH NEXT y ROWS ONLY</td><td>OFFSET x ROWS FETCH NEXT y ROWS ONLY</td><td>LIMIT y OFFSET x</td></tr>
+        <tr><td>Upsert</td><td>MERGE statement</td><td>MERGE statement</td><td>INSERT ... ON CONFLICT DO UPDATE</td></tr>
+        <tr><td>Explain plan</td><td>SET STATISTICS IO ON; SHOWPLAN</td><td>EXPLAIN PLAN FOR ...</td><td>EXPLAIN (ANALYZE, BUFFERS) ...</td></tr>
+        <tr><td>Temp tables</td><td>#local, ##global</td><td>Global temp (GTT)</td><td>CREATE TEMP TABLE</td></tr>
+        <tr><td>Schemas</td><td>dbo.Table</td><td>Owner.Table (schema = user)</td><td>public.Table (default schema)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>PostgreSQL-specific features</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- JSONB — binary JSON with indexing</span>
+<span class="kw">SELECT</span> data-&gt;&gt;<span class="str">'name'</span> <span class="kw">AS</span> name
+<span class="kw">FROM</span>   products
+<span class="kw">WHERE</span>  data @&gt; <span class="str">'{"category": "electronics"}'</span>;
+
+<span class="cm">-- Array type</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> posts <span class="kw">WHERE</span> <span class="num">5</span> = <span class="fn">ANY</span>(tag_ids);
+
+<span class="cm">-- Upsert</span>
+<span class="kw">INSERT INTO</span> users (id, email) <span class="kw">VALUES</span> (<span class="num">1</span>, <span class="str">'a@b.com'</span>)
+<span class="kw">ON CONFLICT</span> (id) <span class="kw">DO UPDATE SET</span> email = <span class="kw">EXCLUDED</span>.email;
+
+<span class="cm">-- GIN index for JSONB/full-text</span>
+<span class="kw">CREATE INDEX</span> idx_data <span class="kw">ON</span> products <span class="kw">USING GIN</span>(data);
+
+<span class="cm">-- EXPLAIN ANALYZE</span>
+<span class="kw">EXPLAIN</span> (ANALYZE, BUFFERS, <span class="kw">FORMAT</span> JSON)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> orders <span class="kw">WHERE</span> customer_id = <span class="num">42</span>;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Oracle PL/SQL specifics</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="cm">-- Anonymous block</span>
+<span class="kw">DECLARE</span>
+    v_count <span class="kw">NUMBER</span>;
+<span class="kw">BEGIN</span>
+    <span class="kw">SELECT COUNT</span>(*) <span class="kw">INTO</span> v_count <span class="kw">FROM</span> Orders;
+    <span class="fn">DBMS_OUTPUT</span>.<span class="fn">PUT_LINE</span>(<span class="str">'Count: '</span> || v_count);
+<span class="kw">EXCEPTION</span>
+    <span class="kw">WHEN NO_DATA_FOUND THEN</span>
+        <span class="fn">DBMS_OUTPUT</span>.<span class="fn">PUT_LINE</span>(<span class="str">'No rows'</span>);
+<span class="kw">END</span>;
+/
+
+<span class="cm">-- Sequence</span>
+<span class="kw">CREATE SEQUENCE</span> seq_order_id <span class="kw">START WITH</span> <span class="num">1</span> <span class="kw">INCREMENT BY</span> <span class="num">1</span>;
+<span class="kw">INSERT INTO</span> Orders (Id) <span class="kw">VALUES</span> (seq_order_id.<span class="fn">NEXTVAL</span>);
+
+<span class="cm">-- Analytic (window) function — same as SQL standard</span>
+<span class="fn">RANK</span>() <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> dept_id <span class="kw">ORDER BY</span> salary <span class="kw">DESC</span>)</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Normalization &amp; Schema Design <span class="badge b-key">Interview</span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Normal forms</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th>NF</th><th>Rule</th><th>Violation example</th></tr>
+        <tr><td>1NF</td><td>Atomic values, no repeating groups</td><td>Storing "tag1,tag2" in one column</td></tr>
+        <tr><td>2NF</td><td>1NF + no partial dependency on composite PK</td><td>OrderItem.ProductName depends only on ProductId, not full PK</td></tr>
+        <tr><td>3NF</td><td>2NF + no transitive dependency</td><td>Employee.DeptName depends on DeptId, not EmployeeId</td></tr>
+        <tr><td>BCNF</td><td>Every determinant is a candidate key</td><td>Edge case of overlapping candidate keys</td></tr>
+      </table>
+      <div class="tip">Most production schemas target 3NF. Deliberate denormalization (e.g., stored aggregates) is acceptable for read-heavy queries when measured.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Keys &amp; constraints</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">CREATE TABLE</span> Orders (
+    OrderId    <span class="kw">INT IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    CustomerId <span class="kw">INT NOT NULL</span>
+                   <span class="kw">REFERENCES</span> Customers(CustomerId)
+                   <span class="kw">ON DELETE CASCADE</span>,
+    Status     <span class="kw">VARCHAR</span>(<span class="num">20</span>)
+                   <span class="kw">CONSTRAINT</span> chk_status
+                   <span class="kw">CHECK</span> (Status <span class="kw">IN</span> (<span class="str">'Pending'</span>,<span class="str">'Shipped'</span>,<span class="str">'Cancelled'</span>)),
+    Total      <span class="kw">DECIMAL</span>(<span class="num">18</span>,<span class="num">2</span>) <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    UNIQUE (CustomerId, OrderDate)
+);</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-cat="sql">
+  <div class="sec-hdr">
+    <div class="sec-num"></div>
+    <div class="sec-title">Stored Procedures, Views &amp; Triggers</div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Views vs Materialized Views</h3><span class="arrow">▶</span></div>
+    <div class="cb open">
+      <table>
+        <tr><th></th><th>View</th><th>Indexed View (MSSQL) / Materialized View (PG/Oracle)</th></tr>
+        <tr><td>Data stored</td><td>No — runs query each time</td><td>Yes — physically stored result</td></tr>
+        <tr><td>Performance</td><td>Same as inline query</td><td>Pre-computed — fast reads</td></tr>
+        <tr><td>Freshness</td><td>Always current</td><td>Refreshed on schedule or on commit</td></tr>
+        <tr><td>Use for</td><td>Simplify complex queries, security</td><td>Reporting, slow aggregations</td></tr>
+      </table>
+      <pre><span class="cm">-- PostgreSQL materialized view</span>
+<span class="kw">CREATE MATERIALIZED VIEW</span> mv_monthly_revenue <span class="kw">AS</span>
+    <span class="kw">SELECT</span> <span class="fn">DATE_TRUNC</span>(<span class="str">'month'</span>, OrderDate) <span class="kw">AS</span> Month,
+           <span class="fn">SUM</span>(Total) <span class="kw">AS</span> Revenue
+    <span class="kw">FROM</span>   Orders
+    <span class="kw">GROUP BY</span> <span class="num">1</span>;
+
+<span class="kw">REFRESH MATERIALIZED VIEW CONCURRENTLY</span> mv_monthly_revenue;</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch" onclick="T(this)"><h3>Triggers (T-SQL)</h3><span class="arrow">▶</span></div>
+    <div class="cb">
+      <pre><span class="kw">CREATE OR ALTER TRIGGER</span> trg_Orders_AuditUpdate
+<span class="kw">ON</span> dbo.Orders
+<span class="kw">AFTER UPDATE</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET NOCOUNT ON</span>;
+    <span class="kw">INSERT INTO</span> OrderAudit (OrderId, OldTotal, NewTotal, ChangedAt)
+    <span class="kw">SELECT</span> d.OrderId, d.Total, i.Total, <span class="fn">GETDATE</span>()
+    <span class="kw">FROM</span>   deleted d
+    <span class="kw">JOIN</span>   inserted i <span class="kw">ON</span> i.OrderId = d.OrderId
+    <span class="kw">WHERE</span>  d.Total &lt;&gt; i.Total;
+<span class="kw">END</span>;</pre>
+      <div class="warn-box">Triggers run in the same transaction as the DML. Heavy logic inside triggers can cause lock contention and slow down writes.</div>
+    </div>
+  </div>
+</div>
 `
 };

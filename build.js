@@ -9,6 +9,7 @@ const cats = [
   'javascript', 'typescript', 'browser', 'web-apis', 'rxjs', 'angular',
   'state-management', 'oop-architecture', 'testing',
   'infrastructure', 'graphics', 'nodejs', 'nestjs', 'graphql', 'electron', 'webrtc',
+  'csharp', 'sql',
 ];
 
 const entries = cats.map(id => {
